@@ -1,473 +1,537 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>일일재고현황표</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>탱크 재고 현황</title>
   <style>
     :root{
       --line:#111;
-      --blue:#1f5cff;
-      --orange:#cc6a00;
-      --green:#7aa63a;
       --zero:#ffd6de;
+      --bg:#fff;
 
-      /* ===== 보기 좋게(겹침 방지) ===== */
-      --cellH: 150px;      /* 사각형 1칸 높이(↑) */
-      --circleD: 96px;     /* 원 지름(↓) */
-      --outerPad: 10px;    /* 원 잘림 방지 여백 */
-      --padTop: calc(var(--circleD)/2 + var(--outerPad));
-      --padBottom: calc(var(--circleD)/2 + var(--outerPad));
+      /* 도면 스타일 */
+      --circle: 74px;
+      --circle-bw: 2px;
+
+      /* 색(도면 기준) */
+      --red:#d60000;     /* Packaging(빨강) */
+      --blue:#0073ff;    /* Bulk Loading / T(파랑) */
+      --purple:#7b3fe4;  /* Semi-finished L1~L5(보라) */
+      --green:#00a651;   /* Premix T3~T6(초록) */
+      --black:#111;      /* B1~B12 / Bran 등 */
+
+      --font: system-ui, -apple-system, Segoe UI, Roboto, "Apple SD Gothic Neo","Noto Sans KR", Arial, sans-serif;
     }
 
-    body{
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Apple SD Gothic Neo","Noto Sans KR", Arial, sans-serif;
-      margin: 18px;
-      color:#111;
-    }
+    body{ font-family:var(--font); margin:18px; color:#111; background:#fff; }
+    h1{ margin:10px 0 12px; font-size:26px; }
+    .hint{ font-size:13px; color:#444; line-height:1.5; margin-bottom:10px; }
 
     textarea{
       width:100%;
-      min-height:150px;
+      min-height:160px;
       padding:12px;
-      font-size:14px;
       border:1px solid #ccc;
       border-radius:10px;
-      outline:none;
+      font-size:14px;
       box-sizing:border-box;
       white-space:pre-wrap;
+      outline:none;
     }
-    .bar{
-      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
-      margin:10px 0 10px;
-    }
+
+    .bar{ display:flex; gap:10px; margin:10px 0 14px; flex-wrap:wrap; }
     button{
-      border:1px solid #222;
-      background:#111;
-      color:#fff;
-      padding:10px 14px;
-      border-radius:10px;
-      cursor:pointer;
-      font-weight:900;
+      border:1px solid #222; background:#111; color:#fff;
+      padding:10px 14px; border-radius:10px; font-weight:900; cursor:pointer;
     }
     button.secondary{ background:#fff; color:#111; }
 
-    .legend{
-      display:flex; gap:10px; flex-wrap:wrap;
-      margin: 6px 0 10px;
-      font-size:13px; color:#333;
-    }
-    .pill{
-      border:1px solid #ccc;
-      padding:4px 8px;
-      border-radius:999px;
-      background:#fafafa;
-    }
-
-    .title{
-      text-align:center;
-      font-size:44px;
-      font-weight:900;
-      letter-spacing:14px;
-      margin:16px 0 12px;
-    }
-
-    .note{
-      font-size:13px;
-      color:#444;
-      line-height:1.55;
-      margin-bottom:10px;
-    }
-
-    /* ===== 도면 ===== */
-    .wrap{ display:flex; justify-content:center; }
-    .board{
-      width: 980px;
-      max-width: 100%;
-      border:2px solid var(--line);
-      padding: 16px 16px 20px;
-      box-sizing:border-box;
-      background:#fff;
-    }
-
-    .stage{
-      position:relative;
-      padding-top: var(--padTop);
-      padding-bottom: var(--padBottom);
-    }
-
-    /* 7칸 x 2줄 = 14개 */
-    .grid{
-      position:relative;
-      width: 100%;
-      height: calc(var(--cellH) * 2);
-      border:2px solid var(--line);
-      box-sizing:border-box;
+    .layout{
       display:grid;
-      grid-template-columns: repeat(7, 1fr);
-      grid-template-rows: repeat(2, 1fr);
-      overflow: visible;
-      background:#fff;
+      grid-template-columns: 1.4fr 0.6fr;
+      gap:16px;
+      align-items:start;
     }
-    .cell{
-      border:1px solid var(--line);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background:#fff;
-      position:relative;
-      z-index:1;
-    }
-    .cell.zero{ background: var(--zero); }
-
-    /* 사각형 텍스트(크기 ↓, 겹침 방지) */
-    .box{
-      text-align:center;
-      line-height:1.08;
-      transform: translateY(2px);
-    }
-    .t-code{
-      font-weight:900;
-      font-size:16px;       /* ↓ */
-      color:var(--blue);
-      letter-spacing:0.2px;
-    }
-    .t-code.orange{ color:var(--orange); }
-
-    .t-qty{
-      font-weight:900;
-      font-size:16px;       /* ↓ */
-      margin-top:4px;
-      color:#000;
-    }
-    .t-loc{
-      font-weight:900;
-      font-size:15px;       /* ↓ */
-      margin-top:6px;
-      color:var(--green);
+    @media (max-width: 1100px){
+      .layout{ grid-template-columns: 1fr; }
     }
 
-    /* ===== 원 6x3 = 18개 (교차점 중앙) ===== */
-    .circles{
-      position:absolute;
-      left:0;
-      top:0;
-      width:100%;
-      height: calc(var(--padTop) + (var(--cellH) * 2) + var(--padBottom));
-      pointer-events:none;
-      z-index:3;
-      overflow: visible;
-    }
-    .circle{
-      position:absolute;
-      width: var(--circleD);
-      height: var(--circleD);
+    /* ===== MAP ===== */
+    .map-wrap{
       border:2px solid var(--line);
+      border-radius:12px;
+      padding:12px;
+      background:#fff;
+      overflow:auto;
+    }
+    .map{
+      position:relative;
+      width: 1200px; /* 도면 가로 */
+      height: 650px; /* 도면 세로 */
+      border:2px solid var(--line);
+      background:#fff;
+    }
+    .label{
+      position:absolute;
+      font-weight:900;
+      font-size:30px;
+      color:#111;
+      opacity:.95;
+    }
+    .small-note{
+      position:absolute;
+      font-weight:900;
+      font-size:18px;
+    }
+
+    .tank{
+      position:absolute;
+      width: var(--circle);
+      height: var(--circle);
+      border: var(--circle-bw) solid var(--line);
       border-radius:999px;
       background:#fff;
-      transform: translate(-50%, -50%);
       display:flex;
-      flex-direction:column;
       align-items:center;
       justify-content:center;
       text-align:center;
-      gap:5px;
+      line-height:1.05;
+      transform: translate(-50%, -50%);
       box-sizing:border-box;
-      line-height:1.06;
+      padding-top:2px;
     }
-    .circle.zero{ background: var(--zero); }
+    .tank.zero{ background: var(--zero); }
 
-    .c-code{
-      font-weight:900;
-      font-size:18px;      /* ↓ */
-      color:var(--blue);
-      letter-spacing:0.2px;
-      white-space:nowrap;
-    }
-    .c-code.orange{ color:var(--orange); }
+    .tank .name{ font-weight:900; font-size:18px; }
+    .tank .qty{ font-weight:900; font-size:16px; margin-top:4px; }
 
-    .c-qty{
+    .tank.red   { border-color: var(--red); color: var(--red); }
+    .tank.blue  { border-color: var(--blue); color: var(--blue); }
+    .tank.purple{ border-color: var(--purple); color: var(--purple); }
+    .tank.green { border-color: var(--green); color: var(--green); }
+    .tank.black { border-color: var(--black); color: var(--black); }
+
+    /* B bin(사각형) */
+    .bin{
+      position:absolute;
+      border:2px solid var(--line);
+      background:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
       font-weight:900;
-      font-size:17px;      /* ↓ */
-      color:#000;
+      line-height:1.05;
+      box-sizing:border-box;
     }
-    .c-loc{
-      font-weight:900;
-      font-size:16px;      /* ↓ */
-      color:var(--green);
+    .bin.zero{ background: var(--zero); }
+
+    /* ===== TABLE ===== */
+    .side{
+      border:2px solid var(--line);
+      border-radius:12px;
+      padding:12px;
+      background:#fff;
     }
+    .side h2{ margin:4px 0 10px; font-size:18px; }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:13px;
+    }
+    th, td{
+      border:1px solid #ddd;
+      padding:6px 8px;
+      vertical-align:top;
+    }
+    th{ background:#f5f5f5; text-align:left; }
+    .muted{ color:#666; font-size:12px; margin-top:10px; line-height:1.4; }
   </style>
 </head>
 <body>
 
-  <div class="note">
-    <b>사용법</b><br/>
-    1) 엑셀에서 표 복사(Ctrl+C) → 아래 칸에 붙여넣기(Ctrl+V)<br/>
+  <h1>탱크 재고 현황 (복붙 자동)</h1>
+  <div class="hint">
+    1) 엑셀 표를 통째로 복사 → 아래에 붙여넣기<br/>
     2) <b>현황표 업데이트</b> 클릭<br/>
-    ※ 이 페이지는 붙여넣은 텍스트에서 <b>A코드 기준</b>으로 자동 배치합니다. (예: <b>A101 WUR 1,600.000</b>)
+    - 수량은 <b>KG → T</b> 변환(뒤 000 제거) 예: 25,000kg → <b>25T</b><br/>
+    - 제품명은 도면에 표시하지 않고, 우측 표에만 표시합니다.
   </div>
 
   <textarea id="paste" placeholder="여기에 엑셀에서 복사한 내용을 그대로 붙여넣으세요."></textarea>
-
   <div class="bar">
     <button id="btnMap">현황표 업데이트</button>
     <button class="secondary" id="btnClear">초기화</button>
     <button class="secondary" id="btnDemo">데모</button>
   </div>
 
-  <div class="legend">
-    <span class="pill"><b style="color:var(--orange)">WCRS/WUR/WNS</b> → 주황색</span>
-    <span class="pill"><b style="background:var(--zero); padding:2px 6px; border-radius:6px;">수량 0</b> → 배경 강조</span>
-    <span class="pill">수량 자동 <b>콤마</b></span>
-  </div>
+  <div class="layout">
+    <!-- MAP -->
+    <div class="map-wrap">
+      <div class="map" id="map">
+        <!-- 큰 라벨(도면) -->
+        <div class="label" style="left:420px; top:170px;">Milling Area (New)</div>
+        <div class="label" style="left:840px; top:170px;">Milling Area (Old)</div>
 
-  <div class="title">일 일 재 고 현 황 표</div>
-
-  <div class="wrap">
-    <div class="board">
-      <div class="stage">
-        <div class="grid" id="grid">
-          <div class="circles" id="circles"></div>
-          <!-- 14 cells appended by JS -->
+        <div class="small-note" style="left:20px; top:10px; color:var(--red);">
+          Packaging Bin : 40M/T x 24Q'ty = 960M/T
         </div>
+        <div class="small-note" style="left:20px; top:36px; color:var(--red);">
+          70M/T x 6Q'ty = 420M/T
+        </div>
+        <div class="small-note" style="left:20px; top:62px; color:var(--blue);">
+          Bulk Loding Bin : 70M/T x 6Q'ty = 420M/T
+        </div>
+
+        <div class="small-note" style="left:410px; top:290px; color:var(--purple);">
+          Semi-finished Bin : 30M/T x 6Q'ty = 180M/T
+        </div>
+        <div class="small-note" style="left:560px; top:340px; color:var(--green);">
+          Premix Bin : 30M/T x 4Q'ty = 120M/T
+        </div>
+
+        <div class="small-note" style="left:735px; top:290px; color:var(--black);">
+          Bran byproduct Bin : 30M/T x 8Q'ty = 240M/T
+        </div>
+
+        <div class="small-note" style="left:420px; top:600px; color:var(--blue);">
+          Bulk Loding Bin : 40M/T x 12Q'ty + 80M/T x 8Q'ty = 1600M/T
+        </div>
+
+        <!-- OFFFICE 텍스트 -->
+        <div class="small-note" style="left:22px; top:520px; writing-mode:vertical-rl; font-size:22px;">
+          OFFICE
+        </div>
+
+        <!-- Bran big circle -->
+        <div class="tank black" data-tank="Bran" style="left:1160px; top:80px;">
+          <div>
+            <div class="name">Bran</div>
+            <div class="qty" data-qty>—</div>
+          </div>
+        </div>
+
+        <!-- B1~B4 (100t bins) -->
+        <div class="bin" data-bin="B4" style="left:1080px; top:325px; width:110px; height:55px;">
+          <div>B4<br/><span data-qty>—</span></div>
+        </div>
+        <div class="bin" data-bin="B3" style="left:1080px; top:385px; width:110px; height:55px;">
+          <div>B3<br/><span data-qty>—</span></div>
+        </div>
+        <div class="bin" data-bin="B2" style="left:1080px; top:445px; width:110px; height:55px;">
+          <div>B2<br/><span data-qty>—</span></div>
+        </div>
+        <div class="bin" data-bin="B1" style="left:1080px; top:505px; width:110px; height:55px;">
+          <div>B1<br/><span data-qty>—</span></div>
+        </div>
+
+        <!-- B5~B12 small bins row -->
+        <div class="bin" data-bin="B12" style="left:740px; top:340px; width:70px; height:70px;">B12<br/><span data-qty>—</span></div>
+        <div class="bin" data-bin="B11" style="left:810px; top:340px; width:70px; height:70px;">B11<br/><span data-qty>—</span></div>
+        <div class="bin" data-bin="B10" style="left:880px; top:340px; width:70px; height:70px;">B10<br/><span data-qty>—</span></div>
+        <div class="bin" data-bin="B9"  style="left:950px; top:340px; width:70px; height:70px;">B9<br/><span data-qty>—</span></div>
+        <div class="bin" data-bin="B8"  style="left:1020px; top:340px; width:70px; height:70px;">B8<br/><span data-qty>—</span></div>
+        <div class="bin" data-bin="B7"  style="left:1090px; top:340px; width:70px; height:70px;">B7<br/><span data-qty>—</span></div>
+        <div class="bin" data-bin="B6"  style="left:1160px; top:340px; width:70px; height:70px;">B6<br/><span data-qty>—</span></div>
+        <div class="bin" data-bin="B5"  style="left:1230px; top:340px; width:70px; height:70px;">B5<br/><span data-qty>—</span></div>
+
+        <!-- ======= Red(포장) 그룹: A1~A6, 1P1~1P8, 2P1~2P8, 3P1~3P8 ======= -->
+        <!-- 맨 위줄: A6 A5 3P8 3P7 2P8 2P7 1P8 1P7 -->
+        <div class="tank red" data-tank="A6"  style="left:60px;  top:120px;"><div><div class="name">A6</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="A5"  style="left:140px; top:120px;"><div><div class="name">A5</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="3P8" style="left:220px; top:120px;"><div><div class="name">3P8</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="3P7" style="left:300px; top:120px;"><div><div class="name">3P7</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="2P8" style="left:380px; top:120px;"><div><div class="name">2P8</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="2P7" style="left:460px; top:120px;"><div><div class="name">2P7</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="1P8" style="left:540px; top:120px;"><div><div class="name">1P8</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="1P7" style="left:620px; top:120px;"><div><div class="name">1P7</div><div class="qty" data-qty>—</div></div></div>
+
+        <!-- 2줄: A4 A3 3P6 3P5 2P6 2P5 1P6 1P5 -->
+        <div class="tank red" data-tank="A4"  style="left:60px;  top:200px;"><div><div class="name">A4</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="A3"  style="left:140px; top:200px;"><div><div class="name">A3</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="3P6" style="left:220px; top:200px;"><div><div class="name">3P6</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="3P5" style="left:300px; top:200px;"><div><div class="name">3P5</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="2P6" style="left:380px; top:200px;"><div><div class="name">2P6</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="2P5" style="left:460px; top:200px;"><div><div class="name">2P5</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="1P6" style="left:540px; top:200px;"><div><div class="name">1P6</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="1P5" style="left:620px; top:200px;"><div><div class="name">1P5</div><div class="qty" data-qty>—</div></div></div>
+
+        <!-- 3줄: A2 A1 3P4 3P3 2P4 2P3 1P4 1P3 -->
+        <div class="tank red" data-tank="A2"  style="left:60px;  top:280px;"><div><div class="name">A2</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="A1"  style="left:140px; top:280px;"><div><div class="name">A1</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="3P4" style="left:220px; top:280px;"><div><div class="name">3P4</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="3P3" style="left:300px; top:280px;"><div><div class="name">3P3</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="2P4" style="left:380px; top:280px;"><div><div class="name">2P4</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="2P3" style="left:460px; top:280px;"><div><div class="name">2P3</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="1P4" style="left:540px; top:280px;"><div><div class="name">1P4</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="1P3" style="left:620px; top:280px;"><div><div class="name">1P3</div><div class="qty" data-qty>—</div></div></div>
+
+        <!-- 4줄(아랫줄): 3P2 3P1 2P2 2P1 1P2 1P1 -->
+        <div class="tank red" data-tank="3P2" style="left:220px; top:360px;"><div><div class="name">3P2</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="3P1" style="left:300px; top:360px;"><div><div class="name">3P1</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="2P2" style="left:380px; top:360px;"><div><div class="name">2P2</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="2P1" style="left:460px; top:360px;"><div><div class="name">2P1</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="1P2" style="left:540px; top:360px;"><div><div class="name">1P2</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank red" data-tank="1P1" style="left:620px; top:360px;"><div><div class="name">1P1</div><div class="qty" data-qty>—</div></div></div>
+
+        <!-- ===== Blue T1~T6 (70t) ===== -->
+        <div class="tank blue" data-tank="T6" style="left:260px; top:450px;"><div><div class="name">T6</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank blue" data-tank="T5" style="left:340px; top:450px;"><div><div class="name">T5</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank blue" data-tank="T4" style="left:420px; top:450px;"><div><div class="name">T4</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank blue" data-tank="T3" style="left:500px; top:450px;"><div><div class="name">T3</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank blue" data-tank="T2" style="left:580px; top:450px;"><div><div class="name">T2</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank blue" data-tank="T1" style="left:660px; top:450px;"><div><div class="name">T1</div><div class="qty" data-qty>—</div></div></div>
+
+        <!-- ===== Purple L1~L5 (30t) ===== -->
+        <div class="tank purple" data-tank="L1" style="left:520px; top:520px;"><div><div class="name">L1</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank purple" data-tank="L2" style="left:600px; top:520px;"><div><div class="name">L2</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank purple" data-tank="L3" style="left:680px; top:520px;"><div><div class="name">L3</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank purple" data-tank="L4" style="left:760px; top:520px;"><div><div class="name">L4</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank purple" data-tank="L5" style="left:840px; top:520px;"><div><div class="name">L5</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank purple" data-tank="L6" style="left:920px; top:520px;"><div><div class="name">L6</div><div class="qty" data-qty>—</div></div></div>
+
+        <!-- ===== Green premix(T3~T6 in small) ===== -->
+        <div class="tank green" data-tank="T6_G" style="left:960px; top:445px;"><div><div class="name">T6</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank green" data-tank="T5_G" style="left:1020px; top:445px;"><div><div class="name">T5</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank green" data-tank="T4_G" style="left:960px; top:505px;"><div><div class="name">T4</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank green" data-tank="T3_G" style="left:1020px; top:505px;"><div><div class="name">T3</div><div class="qty" data-qty>—</div></div></div>
+
+        <!-- ===== Bulk Loading (Blue) L7~L26, L9~L14 etc (도면 아래 그룹) ===== -->
+        <!-- (간단화: 네 데이터에 있는 L10~L26만 좌표 배치) -->
+        <!-- 상단 1줄 -->
+        <div class="tank blue" data-tank="L15" style="left:520px; top:610px;"><div><div class="name">L15</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank blue" data-tank="L16" style="left:600px; top:610px;"><div><div class="name">L16</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank blue" data-tank="L17" style="left:680px; top:610px;"><div><div class="name">L17</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank blue" data-tank="L18" style="left:760px; top:610px;"><div><div class="name">L18</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank blue" data-tank="L19" style="left:840px; top:610px;"><div><div class="name">L19</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank blue" data-tank="L20" style="left:920px; top:610px;"><div><div class="name">L20</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank blue" data-tank="L8"  style="left:1000px; top:610px;"><div><div class="name">L8</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank blue" data-tank="L7"  style="left:1080px; top:610px;"><div><div class="name">L7</div><div class="qty" data-qty>—</div></div></div>
+
+        <!-- 하단 2줄 -->
+        <div class="tank blue" data-tank="L21" style="left:520px; top:690px;"><div><div class="name">L21</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank blue" data-tank="L22" style="left:600px; top:690px;"><div><div class="name">L22</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank blue" data-tank="L23" style="left:680px; top:690px;"><div><div class="name">L23</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank blue" data-tank="L24" style="left:760px; top:690px;"><div><div class="name">L24</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank blue" data-tank="L25" style="left:840px; top:690px;"><div><div class="name">L25</div><div class="qty" data-qty>—</div></div></div>
+        <div class="tank blue" data-tank="L26" style="left:920px; top:690px;"><div><div class="name">L26</div><div class="qty" data-qty>—</div></div></div>
+
+      </div>
+    </div>
+
+    <!-- SIDE TABLE -->
+    <div class="side">
+      <h2>탱크별 상세 (제품명 포함)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Tank</th>
+            <th>재고량(T)</th>
+            <th>제품명</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="3" style="color:#666;">붙여넣기 후 업데이트를 누르면 채워집니다.</td></tr>
+        </tbody>
+      </table>
+      <div class="muted">
+        - 표는 입력 데이터 중 <b>매핑 가능한 탱크</b>만 표시합니다.<br/>
+        - 단위 변환: <b>KG → T</b> (1,000kg = 1T)
       </div>
     </div>
   </div>
 
 <script>
-  const ORANGE = new Set(["WCRS","WUR","WNS"]);
-  const fmt = new Intl.NumberFormat("en-US");
+  // ====== 매핑: 엑셀 B열(SILO/TANK번호) -> 도면 탱크 이름 ======
+  const TANK_MAP = new Map(Object.entries({
+    "ETC_2":"Bran",
+    "ETC_3":"말분",
 
-  // 원 위치: A101~A106 / A301~A306 / A501~A506
-  const CIRCLE_LOCS = [
-    "A101","A102","A103","A104","A105","A106",
-    "A301","A302","A303","A304","A305","A306",
-    "A501","A502","A503","A504","A505","A506",
-  ];
+    "FBL_B1":"B1","FBL_B2":"B2","FBL_B3":"B3","FBL_B4":"B4",
+    "FBL_L1":"L1","FBL_L2":"L2","FBL_L3":"L3","FBL_L4":"L4","FBL_L5":"L5","FBL_L6":"L6",
+    "FBL_L7":"L7","FBL_L8":"L8","FBL_L9":"L9",
+    "FBL_L10":"L10","FBL_L11":"L11","FBL_L12":"L12","FBL_L13":"L13",
+    "FBL_L15":"L15","FBL_L16":"L16","FBL_L17":"L17","FBL_L18":"L18","FBL_L19":"L19",
+    "FBL_L20":"L20","FBL_L21":"L21","FBL_L22":"L22","FBL_L23":"L23","FBL_L24":"L24",
+    "FBL_L25":"L25","FBL_L26":"L26",
 
-  // 사각형 위치: 윗줄 A201~A207 / 아랫줄 A401~A407
-  const RECT_TOP = ["A201","A202","A203","A204","A205","A206","A207"];
-  const RECT_BOT = ["A401","A402","A403","A404","A405","A406","A407"];
+    "FPP_1P1":"1P1","FPP_1P2":"1P2","FPP_1P3":"1P3","FPP_1P4":"1P4",
+    "FPP_1P5":"1P5","FPP_1P6":"1P6","FPP_1P7":"1P7","FPP_1P8":"1P8",
+    "FPP_2P1":"2P1","FPP_2P2":"2P2","FPP_2P3":"2P3","FPP_2P4":"2P4",
+    "FPP_2P5":"2P5","FPP_2P6":"2P6","FPP_2P7":"2P7","FPP_2P8":"2P8",
+    "FPP_3P1":"3P1","FPP_3P2":"3P2","FPP_3P3":"3P3","FPP_3P4":"3P4",
+    "FPP_3P5":"3P5","FPP_3P6":"3P6","FPP_3P7":"3P7","FPP_3P8":"3P8",
+    "FPP_A1":"A1","FPP_A2":"A2","FPP_A3":"A3","FPP_A4":"A4","FPP_A5":"A5","FPP_A6":"A6",
+    "FPP_T1":"T1","FPP_T2":"T2","FPP_T3":"T3","FPP_T4":"T4","FPP_T5":"T5","FPP_T6":"T6",
+  }));
 
-  const grid = document.getElementById("grid");
-  const circlesLayer = document.getElementById("circles");
+  // 도면에 표시될 탱크들(없는 탱크는 표시만 — 상태)
+  const MAP_TANKS = new Set([
+    // 빨강
+    "A1","A2","A3","A4","A5","A6",
+    "1P1","1P2","1P3","1P4","1P5","1P6","1P7","1P8",
+    "2P1","2P2","2P3","2P4","2P5","2P6","2P7","2P8",
+    "3P1","3P2","3P3","3P4","3P5","3P6","3P7","3P8",
+    // 파랑/보라/기타
+    "T1","T2","T3","T4","T5","T6",
+    "L1","L2","L3","L4","L5","L6",
+    "L7","L8","L9","L10","L11","L12","L13","L14",
+    "L15","L16","L17","L18","L19","L20","L21","L22","L23","L24","L25","L26",
+    "B1","B2","B3","B4","B5","B6","B7","B8","B9","B10","B11","B12",
+    "Bran","말분",
+  ]);
 
-  // ===== 사각형 14개 생성 =====
-  const rectCells = [];
-  function makeCell(){
-    const cell = document.createElement("div");
-    cell.className = "cell";
-
-    const box = document.createElement("div");
-    box.className = "box";
-
-    const code = document.createElement("div");
-    code.className = "t-code";
-    const qty = document.createElement("div");
-    qty.className = "t-qty";
-    const loc = document.createElement("div");
-    loc.className = "t-loc";
-
-    box.appendChild(code);
-    box.appendChild(qty);
-    box.appendChild(loc);
-    cell.appendChild(box);
-
-    return { cell, code, qty, loc };
+  // ====== 유틸 ======
+  function toNumber(s){
+    const n = Number(String(s ?? "").replaceAll(",","").replaceAll(" ","").replaceAll("\t",""));
+    return Number.isFinite(n) ? n : null;
+  }
+  function kgToT(kg){
+    // 1000kg = 1T, 25,000 -> 25
+    return kg / 1000;
+  }
+  function fmtT(x){
+    // 소수 없으면 정수로, 있으면 1자리만
+    if (x === null) return "—";
+    const isInt = Math.abs(x - Math.round(x)) < 1e-9;
+    return isInt ? `${Math.round(x).toLocaleString("en-US")}T`
+                 : `${x.toLocaleString("en-US",{maximumFractionDigits:1})}T`;
+  }
+  function isZeroT(x){
+    return x !== null && Math.abs(x) < 1e-9;
   }
 
-  for(let i=0;i<14;i++){
-    const it = makeCell();
-    grid.appendChild(it.cell);
-    rectCells.push(it);
-  }
-
-  // ===== 원 18개 생성 + 교차점 배치(겹침 줄인 크기) =====
-  const circles = [];
-  function makeCircle(){
-    const el = document.createElement("div");
-    el.className = "circle";
-
-    const code = document.createElement("div");
-    code.className = "c-code";
-    const qty = document.createElement("div");
-    qty.className = "c-qty";
-    const loc = document.createElement("div");
-    loc.className = "c-loc";
-
-    el.appendChild(code);
-    el.appendChild(qty);
-    el.appendChild(loc);
-    circlesLayer.appendChild(el);
-
-    return { el, code, qty, loc };
-  }
-
-  // x = (1..6)/7, y = padTop + (0..2)/2 * (2*cellH)
-  for(let r=0; r<3; r++){
-    for(let c=0; c<6; c++){
-      const it = makeCircle();
-
-      const xPct = ((c+1)/7) * 100;     // 6개의 내부 세로선
-      const yPct = (r/2) * 100;         // 0,50,100 (grid 기준)
-
-      it.el.style.left = xPct + "%";
-      it.el.style.top  = `calc(var(--padTop) + ${yPct}% )`;
-
-      circles.push(it);
-    }
-  }
-
-  // ===== 렌더링 =====
-  function applyStyle(codeEl, container, code, qty){
-    const cd = String(code ?? "—").trim();
-    codeEl.textContent = cd;
-    codeEl.classList.toggle("orange", ORANGE.has(cd));
-
-    const n = Number(String(qty ?? "").replaceAll(",","").trim());
-    const isNum = Number.isFinite(n);
-    container.classList.toggle("zero", isNum && n === 0);
-    return { isNum, n };
-  }
-
-  function setRect(i, loc, data){
-    const it = rectCells[i];
-    const code = data?.code ?? "—";
-    const qty  = data?.qty  ?? "—";
-    const {isNum, n} = applyStyle(it.code, it.cell, code, qty);
-    it.qty.textContent = isNum ? fmt.format(n) : qty;
-    it.loc.textContent = loc;
-  }
-
-  function setCircle(i, loc, data){
-    const it = circles[i];
-    const code = data?.code ?? "—";
-    const qty  = data?.qty  ?? "—";
-    const {isNum, n} = applyStyle(it.code, it.el, code, qty);
-    it.qty.textContent = isNum ? fmt.format(n) : qty;
-    it.loc.textContent = loc;
-  }
-
-  function reset(){
-    RECT_TOP.forEach((loc, idx)=> setRect(idx, loc, null));
-    RECT_BOT.forEach((loc, idx)=> setRect(7+idx, loc, null));
-    CIRCLE_LOCS.forEach((loc, idx)=> setCircle(idx, loc, null));
-  }
-
-  // ===== 파싱(핵심 수정): A코드가 먼저 오는 형식을 우선 지원 =====
-  // 지원 형식:
-  // 1) A101 WUR 1,600.000  (너의 RAW)
-  // 2) WUR 1,600.000 A101  (예전 방식도 호환)
-  function parseMap(text){
+  // ====== 파싱: 엑셀 복붙 텍스트에서 (탱크번호, 제품명, 재고량) 추출 ======
+  // 예: "FPP_T6  ...  오티밀가루2호_BULK  KG  75,000."
+  function parseRows(text){
+    const rows = [];
     const lines = text.split(/\r?\n/).map(v => v.trim()).filter(Boolean);
-    const map = new Map();
 
-    // 1) 라인 단위로 "A### CODE QTY" 먼저 잡기 (가장 정확)
-    for(const line of lines){
-      // A코드, 코드, 숫자(콤마/소수) 허용
-      const m = line.match(/\b(A\d{3})\b\s+([A-Z]{2,12}[A-Z0-9.]*)\s+([-]?\d[\d,]*\.?\d*)/);
-      if(m){
-        const loc = m[1];
-        const code = m[2];
-        const qty = m[3];
-        map.set(loc, {code, qty});
-      }
+    for (const line of lines){
+      // 탭 기준이든 공백이든 섞여있으니 "연속 공백/탭"을 구분자로 처리
+      const parts = line.split(/\s+/);
+      if (parts.length < 6) continue;
+
+      // 헤더 스킵
+      if (parts[0].includes("재고구분") || parts[1]?.includes("SILO/TANK")) continue;
+
+      const tankRaw = parts[1];                // B열: SILO/TANK번호
+      const productName = parts.slice(3, parts.length-2).join(" "); // D열(공백 포함 가능)
+      const unit = parts[parts.length-2];      // 재고단위
+      const qtyRaw = parts[parts.length-1];    // 재고량
+
+      if (!tankRaw) continue;
+
+      const kg = toNumber(qtyRaw);
+      if (kg === null) continue;
+
+      rows.push({ tankRaw, productName, unit, kg });
     }
-
-    // 2) 혹시 표 전체를 붙여넣어서 라인 매칭이 누락될 때 대비(토큰 스캔)
-    if(map.size === 0){
-      const tokenRe = /\b(A\d{3})\b|([A-Z]{2,12}[A-Z0-9.]*)|([-]?\d[\d,]*\.?\d*)/g;
-      const tokens = [];
-      let mm;
-      while((mm = tokenRe.exec(text)) !== null){
-        tokens.push(mm[0]);
-      }
-
-      // 패턴1: A### CODE QTY
-      for(let i=0;i<tokens.length-2;i++){
-        if(/^A\d{3}$/.test(tokens[i]) && /^[A-Z]{2,12}[A-Z0-9.]*$/.test(tokens[i+1]) && /^-?\d/.test(tokens[i+2])){
-          map.set(tokens[i], {code: tokens[i+1], qty: tokens[i+2]});
-        }
-      }
-      // 패턴2: CODE QTY A###
-      for(let i=0;i<tokens.length-2;i++){
-        if(/^[A-Z]{2,12}[A-Z0-9.]*$/.test(tokens[i]) && /^-?\d/.test(tokens[i+1]) && /^A\d{3}$/.test(tokens[i+2])){
-          if(!map.has(tokens[i+2])) map.set(tokens[i+2], {code: tokens[i], qty: tokens[i+1]});
-        }
-      }
-    }
-
-    return map;
+    return rows;
   }
 
-  function render(map){
-    RECT_TOP.forEach((loc, idx)=> setRect(idx, loc, map.get(loc)));
-    RECT_BOT.forEach((loc, idx)=> setRect(7+idx, loc, map.get(loc)));
-    CIRCLE_LOCS.forEach((loc, idx)=> setCircle(idx, loc, map.get(loc)));
+  // ====== 렌더: 도면 탱크 채우기 + 우측 표 ======
+  function updateUI(rows){
+    // 탱크별 합산(같은 탱크가 여러 행이면 합)
+    const tankAgg = new Map(); // tankName -> {kgSum, products:Set}
+    for (const r of rows){
+      const tankName = TANK_MAP.get(r.tankRaw);
+      if (!tankName) continue;
+
+      const prev = tankAgg.get(tankName) || {kgSum:0, products:new Set()};
+      prev.kgSum += r.kg;
+      prev.products.add(r.productName);
+      tankAgg.set(tankName, prev);
+    }
+
+    // 1) 도면 원 업데이트
+    document.querySelectorAll("[data-tank]").forEach(el=>{
+      const name = el.getAttribute("data-tank");
+
+      // 일부 도면에서 같은 이름이 두 군데(예: premix T3~T6) 있을 수 있음
+      // -> 본 탱크(T3) 값을 같이 써준다
+      const key = (name.endsWith("_G")) ? name.replace("_G","") : name;
+
+      const data = tankAgg.get(key);
+      const qtyEl = el.querySelector("[data-qty]");
+      const t = data ? kgToT(data.kgSum) : null;
+
+      qtyEl.textContent = fmtT(t);
+      el.classList.toggle("zero", isZeroT(t));
+    });
+
+    // 2) B bin(사각형) 업데이트 (B1~B12/Bran 등)
+    document.querySelectorAll("[data-bin]").forEach(el=>{
+      const name = el.getAttribute("data-bin");
+      const data = tankAgg.get(name);
+      const t = data ? kgToT(data.kgSum) : null;
+      const qtyEl = el.querySelector("[data-qty]");
+      qtyEl.textContent = fmtT(t);
+      el.classList.toggle("zero", isZeroT(t));
+    });
+
+    // 3) 우측 표 업데이트
+    const tbody = document.getElementById("tbody");
+    tbody.innerHTML = "";
+
+    // 탱크명 정렬(사람이 보기 좋게)
+    const orderKey = (k)=>{
+      // A, 1P,2P,3P, T, L, B, 기타
+      if (/^A\d+$/.test(k)) return `1-${k}`;
+      if (/^\dP\d+$/.test(k)) return `2-${k}`;
+      if (/^T\d+$/.test(k)) return `3-${k}`;
+      if (/^L\d+$/.test(k)) return `4-${k.padStart(4,"0")}`;
+      if (/^B\d+$/.test(k)) return `5-${k.padStart(4,"0")}`;
+      return `9-${k}`;
+    };
+
+    const keys = Array.from(tankAgg.keys())
+      .filter(k => MAP_TANKS.has(k))
+      .sort((a,b)=> orderKey(a).localeCompare(orderKey(b), "en"));
+
+    if(keys.length === 0){
+      tbody.innerHTML = `<tr><td colspan="3" style="color:#666;">매핑 가능한 탱크 데이터가 없습니다.</td></tr>`;
+      return;
+    }
+
+    for (const k of keys){
+      const data = tankAgg.get(k);
+      const t = kgToT(data.kgSum);
+      const products = Array.from(data.products).join("<br/>");
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><b>${k}</b></td>
+        <td>${fmtT(t)}</td>
+        <td>${products}</td>
+      `;
+      tbody.appendChild(tr);
+    }
   }
 
-  // ===== 버튼 =====
+  // ====== 버튼 ======
   document.getElementById("btnMap").addEventListener("click", ()=>{
     const text = document.getElementById("paste").value || "";
-    const map = parseMap(text);
-
-    reset();
-    render(map);
-
-    const must = [...RECT_TOP, ...RECT_BOT, ...CIRCLE_LOCS];
-    const missing = must.filter(k => !map.has(k));
-    if(missing.length){
-      alert(`누락된 A코드(${missing.length}개):\n${missing.join(", ")}`);
-    }
+    const rows = parseRows(text);
+    updateUI(rows);
   });
 
   document.getElementById("btnClear").addEventListener("click", ()=>{
     document.getElementById("paste").value = "";
-    reset();
+    // 화면 리셋(—)
+    document.querySelectorAll("[data-qty]").forEach(el=> el.textContent="—");
+    document.querySelectorAll(".zero").forEach(el=> el.classList.remove("zero"));
+    document.getElementById("tbody").innerHTML = `<tr><td colspan="3" style="color:#666;">붙여넣기 후 업데이트를 누르면 채워집니다.</td></tr>`;
   });
 
   document.getElementById("btnDemo").addEventListener("click", ()=>{
-    document.getElementById("paste").value = `
-A101 WUR 1,600.000
-A102 WCRS 1,700.557
-A103 WASW 1,360.392
-A104 WASWP 1,403.039
-A105 WUR 1,700.915
-A106 WNS 1,637.684
-
-A201 WUSL9.0 146.960
-A202 WUSH 420.000
-A203 WUR 420.679
-A204 WUR 420.233
-A205 WUSH 420.000
-A206 WUSL9.0 419.860
-A207 WUR 158.126
-
-A301 WUSH 864.386
-A302 WUSH 1,695.227
-A303 WUSH 1,671.185
-A304 WUSH 1,690.285
-A305 WNS 1,697.176
-A306 WUR 1,701.166
-
-A401 WCRS 170.000
-A402 WUSH 410.000
-A403 WUSH 0.000
-A404 WNS 419.287
-A405 WUSH 0.000
-A406 WUSH 0.000
-A407 WNS 170.000
-
-A501 WUSH 1,557.437
-A502 WNS 1,703.834
-A503 WUSH 1,645.290
-A504 WCRS 956.294
-A505 WASWP 1,696.740
-A506 WUR 1,700.906
-`.trim();
+    document.getElementById("paste").value = `재고구분\tSILO/TANK번호\t제품코드\t제품명\t재고단위\t재고량
+반제품 Bulk 탱크\tETC_2\t101100000391\t소맥피_350KG\t대\t320,000.
+반제품 Bulk 탱크\tFBL_L12\t101200000050\t중력2급_BULK\tKG\t42,000.
+포장 Bulk 탱크\tFPP_3P8\t101200000075\t박력2급_BULK\tKG\t36,000.
+포장 Bulk 탱크\tFPP_T6\t101200000097\t오티밀가루2호_BULK\tKG\t75,000.`;
   });
-
-  reset();
 </script>
 </body>
 </html>
