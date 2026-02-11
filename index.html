@@ -1,159 +1,76 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>탱크 재고 현황</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>탱크 재고 현황 (복붙 자동)</title>
   <style>
     :root{
-      --line:#111;
-      --zero:#ffd6de;
-      --bg:#fff;
-
-      --circle: 74px;
-      --circle-bw: 2px;
-
       --red:#d60000;
-      --blue:#0073ff;
+      --blue:#006dff;
       --purple:#7b3fe4;
       --green:#00a651;
       --black:#111;
-
+      --zero:#ffd6de;
+      --line:#111;
       --font: system-ui, -apple-system, Segoe UI, Roboto, "Apple SD Gothic Neo","Noto Sans KR", Arial, sans-serif;
     }
-
-    body{ font-family:var(--font); margin:18px; color:#111; background:#fff; }
-    h1{ margin:10px 0 12px; font-size:26px; }
-    .hint{ font-size:13px; color:#444; line-height:1.5; margin-bottom:10px; }
-
+    body{ font-family:var(--font); margin:16px; color:#111; background:#fff; }
+    h1{ margin:0 0 10px; font-size:22px; }
+    .hint{ font-size:12px; color:#444; line-height:1.45; margin:0 0 10px; }
     textarea{
-      width:100%;
-      min-height:170px;
-      padding:12px;
-      border:1px solid #ccc;
-      border-radius:10px;
-      font-size:14px;
-      box-sizing:border-box;
-      white-space:pre-wrap;
-      outline:none;
+      width:100%; min-height:170px; padding:10px;
+      border:1px solid #cfcfcf; border-radius:10px; font-size:13px;
+      box-sizing:border-box; outline:none; white-space:pre;
     }
-
-    .bar{ display:flex; gap:10px; margin:10px 0 14px; flex-wrap:wrap; }
+    .bar{ display:flex; gap:8px; margin:10px 0 12px; flex-wrap:wrap; }
     button{
-      border:1px solid #222; background:#111; color:#fff;
-      padding:10px 14px; border-radius:10px; font-weight:900; cursor:pointer;
+      border:1px solid #111; background:#111; color:#fff;
+      padding:9px 12px; border-radius:10px; font-weight:900; cursor:pointer;
     }
     button.secondary{ background:#fff; color:#111; }
 
     .layout{
       display:grid;
-      grid-template-columns: 1.45fr 0.55fr;
-      gap:16px;
+      grid-template-columns: 1.6fr 0.7fr;
+      gap:12px;
       align-items:start;
     }
     @media (max-width: 1100px){
       .layout{ grid-template-columns: 1fr; }
     }
 
-    /* ===== MAP ===== */
-    .map-wrap{
+    .panel{
       border:2px solid var(--line);
       border-radius:12px;
-      padding:12px;
       background:#fff;
+      padding:10px;
       overflow:auto;
     }
-    .map{
-      position:relative;
-      width: 1200px;
-      height: 650px;
-      border:2px solid var(--line);
-      background:#fff;
-    }
-    .label{
-      position:absolute;
-      font-weight:900;
-      font-size:30px;
-      color:#111;
-      opacity:.95;
-    }
-    .small-note{
-      position:absolute;
-      font-weight:900;
-      font-size:18px;
-    }
 
-    .tank{
-      position:absolute;
-      width: var(--circle);
-      height: var(--circle);
-      border: var(--circle-bw) solid var(--line);
-      border-radius:999px;
-      background:#fff;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      text-align:center;
-      line-height:1.05;
-      transform: translate(-50%, -50%);
-      box-sizing:border-box;
-      padding-top:2px;
-    }
-    .tank.zero{ background: var(--zero); }
+    /* SVG는 원본 규격 유지 + 화면에 맞게 스케일 */
+    .svg-wrap{ min-width: 980px; }
+    svg{ width:100%; height:auto; display:block; }
 
-    .tank .name{ font-weight:900; font-size:18px; }
-    .tank .qty{ font-weight:900; font-size:15px; margin-top:4px; }
-    .tank .pct{ font-weight:900; font-size:12px; margin-top:2px; opacity:.95; }
-
-    .tank.red   { border-color: var(--red); color: var(--red); }
-    .tank.blue  { border-color: var(--blue); color: var(--blue); }
-    .tank.purple{ border-color: var(--purple); color: var(--purple); }
-    .tank.green { border-color: var(--green); color: var(--green); }
-    .tank.black { border-color: var(--black); color: var(--black); }
-
-    /* B / Br bin(사각형) */
-    .bin{
-      position:absolute;
-      border:2px solid var(--line);
-      background:#fff;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      text-align:center;
-      font-weight:900;
-      line-height:1.05;
-      box-sizing:border-box;
-      padding:6px 4px;
-    }
-    .bin.zero{ background: var(--zero); }
-    .bin .pct{ font-size:11px; font-weight:900; margin-top:2px; opacity:.95; }
-
-    /* ===== TABLE ===== */
-    .side{
-      border:2px solid var(--line);
-      border-radius:12px;
-      padding:12px;
-      background:#fff;
-    }
-    .side h2{ margin:4px 0 10px; font-size:18px; }
-    table{ width:100%; border-collapse:collapse; font-size:13px; }
-    th, td{ border:1px solid #ddd; padding:6px 8px; vertical-align:top; }
+    /* 오른쪽 표 */
+    .side h2{ margin:0 0 10px; font-size:16px; }
+    table{ width:100%; border-collapse:collapse; font-size:12px; }
+    th,td{ border:1px solid #ddd; padding:6px 7px; vertical-align:top; }
     th{ background:#f5f5f5; text-align:left; }
-    .muted{ color:#666; font-size:12px; margin-top:10px; line-height:1.4; }
+    .muted{ color:#666; font-size:12px; margin-top:8px; line-height:1.4; }
   </style>
 </head>
-<body>
 
+<body>
   <h1>탱크 재고 현황 (복붙 자동)</h1>
   <div class="hint">
-    1) 엑셀 표(그리고 아래 매핑표가 같이 붙어도 상관없음)를 그대로 붙여넣기<br/>
+    1) 엑셀 표를 그대로 복사해서 아래에 붙여넣기<br/>
     2) <b>현황표 업데이트</b> 클릭<br/>
-    - 수량은 <b>KG → T</b> 변환(1,000kg=1T, 뒤 000 삭제 효과)<br/>
-    - 원 안에는 <b>재고량(T)</b> + <b>용량 대비 %</b>가 표시됩니다.<br/>
-    - <b>말분(ETC_3)</b>은 무시합니다. / <b>Br1~Br12</b>는 이름만 표시합니다.
+    - 표 헤더 매핑: <b>Tank=B열(SILO/TANK번호)</b>, <b>재고량(T)=F열÷1000</b>, <b>제품명=D열</b><br/>
+    - <b>ETC_3(말분)</b>은 무시 / <b>Br1~Br12</b>는 이름만 표시<br/>
   </div>
 
-  <textarea id="paste" placeholder="여기에 엑셀에서 복사한 내용을 그대로 붙여넣으세요."></textarea>
+  <textarea id="paste" placeholder="여기에 엑셀 표를 그대로 붙여넣으세요 (탭/공백 섞여도 OK)"></textarea>
   <div class="bar">
     <button id="btnMap">현황표 업데이트</button>
     <button class="secondary" id="btnClear">초기화</button>
@@ -162,218 +79,211 @@
 
   <div class="layout">
     <!-- MAP -->
-    <div class="map-wrap">
-      <div class="map" id="map">
+    <div class="panel svg-wrap">
+      <svg viewBox="0 0 1000 430" aria-label="Tank Map">
+        <!-- 외곽 -->
+        <rect x="5" y="5" width="990" height="420" fill="#fff" stroke="var(--line)" stroke-width="2"/>
 
-        <div class="label" style="left:420px; top:170px;">Milling Area (New)</div>
-        <div class="label" style="left:840px; top:170px;">Milling Area (Old)</div>
-
-        <div class="small-note" style="left:20px; top:10px; color:var(--red);">
+        <!-- 상단 안내문 -->
+        <text x="150" y="25" fill="var(--red)" font-size="14" font-weight="900" text-anchor="middle">
           Packaging Bin : 40M/T x 24Q'ty = 960M/T
-        </div>
-        <div class="small-note" style="left:20px; top:36px; color:var(--red);">
+        </text>
+        <text x="150" y="45" fill="var(--red)" font-size="14" font-weight="900" text-anchor="middle">
           70M/T x 6Q'ty = 420M/T
-        </div>
-        <div class="small-note" style="left:20px; top:62px; color:var(--blue);">
+        </text>
+        <text x="170" y="65" fill="var(--blue)" font-size="14" font-weight="900" text-anchor="middle">
           Bulk Loding Bin : 70M/T x 6Q'ty = 420M/T
-        </div>
+        </text>
 
-        <div class="small-note" style="left:410px; top:290px; color:var(--purple);">
+        <!-- 구역 텍스트 -->
+        <text x="390" y="150" fill="#111" font-size="34" font-weight="500" text-anchor="middle">Milling Area (New)</text>
+        <text x="730" y="150" fill="#111" font-size="34" font-weight="500" text-anchor="middle">Milling Area (Old)</text>
+
+        <text x="500" y="260" fill="var(--purple)" font-size="14" font-weight="900" text-anchor="middle">
           Semi-finished Bin : 30M/T x 6Q'ty = 180M/T
-        </div>
-        <div class="small-note" style="left:560px; top:340px; color:var(--green);">
+        </text>
+
+        <text x="625" y="292" fill="var(--green)" font-size="14" font-weight="900" text-anchor="middle">
           Premix Bin : 30M/T x 4Q'ty = 120M/T
-        </div>
+        </text>
 
-        <div class="small-note" style="left:735px; top:290px; color:var(--black);">
+        <text x="800" y="260" fill="#111" font-size="14" font-weight="900" text-anchor="middle">
           Bran byproduct Bin : 30M/T x 8Q'ty = 240M/T
-        </div>
+        </text>
 
-        <div class="small-note" style="left:420px; top:600px; color:var(--blue);">
+        <text x="600" y="410" fill="var(--blue)" font-size="14" font-weight="900" text-anchor="middle">
           Bulk Loding Bin : 40M/T x 12Q'ty + 80M/T x 8Q'ty = 1600M/T
-        </div>
+        </text>
 
-        <div class="small-note" style="left:22px; top:520px; writing-mode:vertical-rl; font-size:22px;">
-          OFFICE
-        </div>
+        <!-- OFFICE -->
+        <text x="25" y="370" fill="#111" font-size="18" font-weight="900" writing-mode="tb" glyph-orientation-vertical="0">OFFICE</text>
 
-        <!-- Bran (ETC_2) -->
-        <div class="tank black" data-tank="Bran" style="left:1160px; top:80px;">
-          <div>
-            <div class="name">Bran</div>
-            <div class="qty" data-qty>—</div>
-            <div class="pct" data-pct>—</div>
-          </div>
-        </div>
+        <!-- ===== 공통 스타일(원/텍스트) : class 대신 data로 제어 ===== -->
+        <defs>
+          <g id="tankCircle">
+            <circle r="22" fill="#fff" stroke="var(--line)" stroke-width="2"></circle>
+          </g>
+        </defs>
 
-        <!-- Green B1~B4 (30t) : 데이터는 FBL_B1~B4 -->
-        <div class="tank green" data-tank="B4" style="left:700px; top:320px;"><div><div class="name">B4</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank green" data-tank="B1" style="left:760px; top:320px;"><div><div class="name">B1</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank green" data-tank="B3" style="left:700px; top:380px;"><div><div class="name">B3</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank green" data-tank="B2" style="left:760px; top:380px;"><div><div class="name">B2</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
+        <!-- ===== Bran (ETC_2) ===== -->
+        <g data-tank="Bran" transform="translate(950,55)">
+          <use href="#tankCircle"></use>
+          <circle r="22" fill="transparent" stroke="var(--black)" stroke-width="2"></circle>
+          <text data-name y="-2" text-anchor="middle" font-size="13" font-weight="900" fill="#111">Bran</text>
+          <text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="#111">—</text>
+          <text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="#111">—</text>
+        </g>
 
-        <!-- Br1~Br4 (100t) : 이름만 -->
-        <div class="bin" data-bronly="Br4" style="left:1080px; top:325px; width:110px; height:55px;">Br4<br/><span style="color:#666;">(N/A)</span></div>
-        <div class="bin" data-bronly="Br3" style="left:1080px; top:385px; width:110px; height:55px;">Br3<br/><span style="color:#666;">(N/A)</span></div>
-        <div class="bin" data-bronly="Br2" style="left:1080px; top:445px; width:110px; height:55px;">Br2<br/><span style="color:#666;">(N/A)</span></div>
-        <div class="bin" data-bronly="Br1" style="left:1080px; top:505px; width:110px; height:55px;">Br1<br/><span style="color:#666;">(N/A)</span></div>
+        <!-- ===== RED : A / P ===== -->
+        <!-- 좌표는 원본 그림 기준으로 고정 (규격 불일치 방지) -->
+        <!-- row1 -->
+        <g data-tank="A6"  transform="translate(60,95)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">A6</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="A5"  transform="translate(110,95)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">A5</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="3P8" transform="translate(160,95)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">3P8</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="3P7" transform="translate(210,95)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">3P7</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="2P8" transform="translate(260,95)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">2P8</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="2P7" transform="translate(310,95)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">2P7</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="1P8" transform="translate(360,95)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">1P8</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="1P7" transform="translate(410,95)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">1P7</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
 
-        <!-- Br5~Br12 (30t) : 이름만 -->
-        <div class="bin" data-bronly="Br12" style="left:740px; top:340px; width:70px; height:70px;">Br12<br/><span style="color:#666;">(N/A)</span></div>
-        <div class="bin" data-bronly="Br11" style="left:810px; top:340px; width:70px; height:70px;">Br11<br/><span style="color:#666;">(N/A)</span></div>
-        <div class="bin" data-bronly="Br10" style="left:880px; top:340px; width:70px; height:70px;">Br10<br/><span style="color:#666;">(N/A)</span></div>
-        <div class="bin" data-bronly="Br9"  style="left:950px; top:340px; width:70px; height:70px;">Br9<br/><span style="color:#666;">(N/A)</span></div>
-        <div class="bin" data-bronly="Br8"  style="left:1020px; top:340px; width:70px; height:70px;">Br8<br/><span style="color:#666;">(N/A)</span></div>
-        <div class="bin" data-bronly="Br7"  style="left:1090px; top:340px; width:70px; height:70px;">Br7<br/><span style="color:#666;">(N/A)</span></div>
-        <div class="bin" data-bronly="Br6"  style="left:1160px; top:340px; width:70px; height:70px;">Br6<br/><span style="color:#666;">(N/A)</span></div>
-        <div class="bin" data-bronly="Br5"  style="left:1230px; top:340px; width:70px; height:70px;">Br5<br/><span style="color:#666;">(N/A)</span></div>
+        <!-- row2 -->
+        <g data-tank="A4"  transform="translate(60,145)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">A4</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="A3"  transform="translate(110,145)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">A3</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="3P6" transform="translate(160,145)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">3P6</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="3P5" transform="translate(210,145)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">3P5</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="2P6" transform="translate(260,145)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">2P6</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="2P5" transform="translate(310,145)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">2P5</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="1P6" transform="translate(360,145)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">1P6</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="1P5" transform="translate(410,145)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">1P5</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
 
-        <!-- ===== Red(포장) ===== -->
-        <!-- row1: A6 A5 3P8 3P7 2P8 2P7 1P8 1P7 -->
-        <div class="tank red" data-tank="A6"  style="left:60px;  top:120px;"><div><div class="name">A6</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="A5"  style="left:140px; top:120px;"><div><div class="name">A5</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="3P8" style="left:220px; top:120px;"><div><div class="name">3P8</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="3P7" style="left:300px; top:120px;"><div><div class="name">3P7</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="2P8" style="left:380px; top:120px;"><div><div class="name">2P8</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="2P7" style="left:460px; top:120px;"><div><div class="name">2P7</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="1P8" style="left:540px; top:120px;"><div><div class="name">1P8</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="1P7" style="left:620px; top:120px;"><div><div class="name">1P7</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
+        <!-- row3 -->
+        <g data-tank="A2"  transform="translate(60,195)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">A2</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="A1"  transform="translate(110,195)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">A1</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="3P4" transform="translate(160,195)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">3P4</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="3P3" transform="translate(210,195)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">3P3</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="2P4" transform="translate(260,195)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">2P4</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="2P3" transform="translate(310,195)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">2P3</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="1P4" transform="translate(360,195)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">1P4</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="1P3" transform="translate(410,195)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">1P3</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
 
-        <!-- row2: A4 A3 3P6 3P5 2P6 2P5 1P6 1P5 -->
-        <div class="tank red" data-tank="A4"  style="left:60px;  top:200px;"><div><div class="name">A4</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="A3"  style="left:140px; top:200px;"><div><div class="name">A3</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="3P6" style="left:220px; top:200px;"><div><div class="name">3P6</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="3P5" style="left:300px; top:200px;"><div><div class="name">3P5</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="2P6" style="left:380px; top:200px;"><div><div class="name">2P6</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="2P5" style="left:460px; top:200px;"><div><div class="name">2P5</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="1P6" style="left:540px; top:200px;"><div><div class="name">1P6</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="1P5" style="left:620px; top:200px;"><div><div class="name">1P5</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
+        <!-- row4(6개) -->
+        <g data-tank="3P2" transform="translate(185,245)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">3P2</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="3P1" transform="translate(235,245)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">3P1</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="2P2" transform="translate(285,245)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">2P2</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="2P1" transform="translate(335,245)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">2P1</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="1P2" transform="translate(385,245)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">1P2</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
+        <g data-tank="1P1" transform="translate(435,245)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--red)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">1P1</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--red)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--red)">—</text></g>
 
-        <!-- row3: A2 A1 3P4 3P3 2P4 2P3 1P4 1P3 -->
-        <div class="tank red" data-tank="A2"  style="left:60px;  top:280px;"><div><div class="name">A2</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="A1"  style="left:140px; top:280px;"><div><div class="name">A1</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="3P4" style="left:220px; top:280px;"><div><div class="name">3P4</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="3P3" style="left:300px; top:280px;"><div><div class="name">3P3</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="2P4" style="left:380px; top:280px;"><div><div class="name">2P4</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="2P3" style="left:460px; top:280px;"><div><div class="name">2P3</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="1P4" style="left:540px; top:280px;"><div><div class="name">1P4</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="1P3" style="left:620px; top:280px;"><div><div class="name">1P3</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
+        <!-- ===== BLUE : T1~T6 ===== -->
+        <g data-tank="T6" transform="translate(230,290)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">T6</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
+        <g data-tank="T5" transform="translate(280,290)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">T5</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
+        <g data-tank="T4" transform="translate(330,290)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">T4</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
+        <g data-tank="T3" transform="translate(380,290)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">T3</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
+        <g data-tank="T2" transform="translate(430,290)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">T2</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
+        <g data-tank="T1" transform="translate(480,290)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">T1</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
 
-        <!-- row4: 3P2 3P1 2P2 2P1 1P2 1P1 -->
-        <div class="tank red" data-tank="3P2" style="left:220px; top:360px;"><div><div class="name">3P2</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="3P1" style="left:300px; top:360px;"><div><div class="name">3P1</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="2P2" style="left:380px; top:360px;"><div><div class="name">2P2</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="2P1" style="left:460px; top:360px;"><div><div class="name">2P1</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="1P2" style="left:540px; top:360px;"><div><div class="name">1P2</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank red" data-tank="1P1" style="left:620px; top:360px;"><div><div class="name">1P1</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
+        <!-- ===== PURPLE : L1~L6 ===== -->
+        <g data-tank="L1" transform="translate(350,335)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--purple)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--purple)">L1</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--purple)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--purple)">—</text></g>
+        <g data-tank="L2" transform="translate(400,335)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--purple)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--purple)">L2</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--purple)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--purple)">—</text></g>
+        <g data-tank="L3" transform="translate(450,335)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--purple)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--purple)">L3</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--purple)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--purple)">—</text></g>
+        <g data-tank="L4" transform="translate(500,335)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--purple)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--purple)">L4</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--purple)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--purple)">—</text></g>
+        <g data-tank="L5" transform="translate(550,335)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--purple)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--purple)">L5</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--purple)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--purple)">—</text></g>
+        <g data-tank="L6" transform="translate(600,335)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--purple)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--purple)">L6</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--purple)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--purple)">—</text></g>
 
-        <!-- ===== Blue T1~T6 (70t) ===== -->
-        <div class="tank blue" data-tank="T6" style="left:260px; top:450px;"><div><div class="name">T6</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank blue" data-tank="T5" style="left:340px; top:450px;"><div><div class="name">T5</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank blue" data-tank="T4" style="left:420px; top:450px;"><div><div class="name">T4</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank blue" data-tank="T3" style="left:500px; top:450px;"><div><div class="name">T3</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank blue" data-tank="T2" style="left:580px; top:450px;"><div><div class="name">T2</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank blue" data-tank="T1" style="left:660px; top:450px;"><div><div class="name">T1</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
+        <!-- ===== GREEN : B1~B4 ===== -->
+        <g data-tank="B4" transform="translate(650,300)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--green)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--green)">B4</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--green)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--green)">—</text></g>
+        <g data-tank="B1" transform="translate(700,300)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--green)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--green)">B1</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--green)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--green)">—</text></g>
+        <g data-tank="B3" transform="translate(650,350)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--green)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--green)">B3</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--green)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--green)">—</text></g>
+        <g data-tank="B2" transform="translate(700,350)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--green)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--green)">B2</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--green)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--green)">—</text></g>
 
-        <!-- ===== Purple L1~L6 (30t) ===== -->
-        <div class="tank purple" data-tank="L1" style="left:520px; top:520px;"><div><div class="name">L1</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank purple" data-tank="L2" style="left:600px; top:520px;"><div><div class="name">L2</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank purple" data-tank="L3" style="left:680px; top:520px;"><div><div class="name">L3</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank purple" data-tank="L4" style="left:760px; top:520px;"><div><div class="name">L4</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank purple" data-tank="L5" style="left:840px; top:520px;"><div><div class="name">L5</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank purple" data-tank="L6" style="left:920px; top:520px;"><div><div class="name">L6</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
+        <!-- ===== Br5~Br12 : 사각형(이름만) ===== -->
+        <!-- (도면처럼 8개 가로) -->
+        <g>
+          <rect x="730" y="285" width="40" height="34" fill="#fff" stroke="var(--line)" stroke-width="2"/><text x="750" y="306" text-anchor="middle" font-size="12" font-weight="900">Br12</text>
+          <rect x="770" y="285" width="40" height="34" fill="#fff" stroke="var(--line)" stroke-width="2"/><text x="790" y="306" text-anchor="middle" font-size="12" font-weight="900">Br11</text>
+          <rect x="810" y="285" width="40" height="34" fill="#fff" stroke="var(--line)" stroke-width="2"/><text x="830" y="306" text-anchor="middle" font-size="12" font-weight="900">Br10</text>
+          <rect x="850" y="285" width="40" height="34" fill="#fff" stroke="var(--line)" stroke-width="2"/><text x="870" y="306" text-anchor="middle" font-size="12" font-weight="900">Br9</text>
+          <rect x="890" y="285" width="40" height="34" fill="#fff" stroke="var(--line)" stroke-width="2"/><text x="910" y="306" text-anchor="middle" font-size="12" font-weight="900">Br8</text>
+          <rect x="930" y="285" width="40" height="34" fill="#fff" stroke="var(--line)" stroke-width="2"/><text x="950" y="306" text-anchor="middle" font-size="12" font-weight="900">Br7</text>
+          <rect x="970" y="285" width="40" height="34" fill="#fff" stroke="var(--line)" stroke-width="2"/><text x="990" y="306" text-anchor="middle" font-size="12" font-weight="900">Br6</text>
+          <rect x="1010" y="285" width="40" height="34" fill="#fff" stroke="var(--line)" stroke-width="2"/><text x="1030" y="306" text-anchor="middle" font-size="12" font-weight="900">Br5</text>
+        </g>
 
-        <!-- ===== Blue bulk group (L7~L26 + L9~L14 포함) ===== -->
-        <!-- 상단 -->
-        <div class="tank blue" data-tank="L15" style="left:520px; top:610px;"><div><div class="name">L15</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank blue" data-tank="L16" style="left:600px; top:610px;"><div><div class="name">L16</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank blue" data-tank="L17" style="left:680px; top:610px;"><div><div class="name">L17</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank blue" data-tank="L18" style="left:760px; top:610px;"><div><div class="name">L18</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank blue" data-tank="L19" style="left:840px; top:610px;"><div><div class="name">L19</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank blue" data-tank="L20" style="left:920px; top:610px;"><div><div class="name">L20</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank blue" data-tank="L8"  style="left:1000px; top:610px;"><div><div class="name">L8</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank blue" data-tank="L7"  style="left:1080px; top:610px;"><div><div class="name">L7</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
+        <!-- ===== Br1~Br4 : 오른쪽 세로(이름만) ===== -->
+        <g>
+          <rect x="915" y="300" width="60" height="32" fill="#fff" stroke="var(--line)" stroke-width="2"/><text x="945" y="320" text-anchor="middle" font-size="12" font-weight="900">Br4</text>
+          <rect x="915" y="332" width="60" height="32" fill="#fff" stroke="var(--line)" stroke-width="2"/><text x="945" y="352" text-anchor="middle" font-size="12" font-weight="900">Br3</text>
+          <rect x="915" y="364" width="60" height="32" fill="#fff" stroke="var(--line)" stroke-width="2"/><text x="945" y="384" text-anchor="middle" font-size="12" font-weight="900">Br2</text>
+          <rect x="915" y="396" width="60" height="32" fill="#fff" stroke="var(--line)" stroke-width="2"/><text x="945" y="416" text-anchor="middle" font-size="12" font-weight="900">Br1</text>
+        </g>
 
-        <!-- 하단 -->
-        <div class="tank blue" data-tank="L21" style="left:520px; top:690px;"><div><div class="name">L21</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank blue" data-tank="L22" style="left:600px; top:690px;"><div><div class="name">L22</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank blue" data-tank="L23" style="left:680px; top:690px;"><div><div class="name">L23</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank blue" data-tank="L24" style="left:760px; top:690px;"><div><div class="name">L24</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank blue" data-tank="L25" style="left:840px; top:690px;"><div><div class="name">L25</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank blue" data-tank="L26" style="left:920px; top:690px;"><div><div class="name">L26</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
+        <!-- ===== BLUE : L15~L26 / L7~L14 ===== -->
+        <!-- 윗줄 -->
+        <g data-tank="L15" transform="translate(360,360)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">L15</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
+        <g data-tank="L16" transform="translate(410,360)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">L16</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
+        <g data-tank="L17" transform="translate(460,360)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">L17</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
+        <g data-tank="L18" transform="translate(510,360)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">L18</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
+        <g data-tank="L19" transform="translate(560,360)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">L19</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
+        <g data-tank="L20" transform="translate(610,360)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">L20</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
+        <g data-tank="L8"  transform="translate(660,360)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">L8</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
+        <g data-tank="L7"  transform="translate(710,360)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">L7</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
 
-        <!-- 오른쪽(80t) L9~L14 -->
-        <div class="tank blue" data-tank="L9"  style="left:1160px; top:690px;"><div><div class="name">L9</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank blue" data-tank="L10" style="left:1080px; top:690px;"><div><div class="name">L10</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank blue" data-tank="L11" style="left:1160px; top:760px;"><div><div class="name">L11</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank blue" data-tank="L12" style="left:1080px; top:760px;"><div><div class="name">L12</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank blue" data-tank="L13" style="left:1160px; top:830px;"><div><div class="name">L13</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
-        <div class="tank blue" data-tank="L14" style="left:1080px; top:830px;"><div><div class="name">L14</div><div class="qty" data-qty>—</div><div class="pct" data-pct>—</div></div></div>
+        <!-- 아랫줄 -->
+        <g data-tank="L21" transform="translate(360,410)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">L21</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
+        <g data-tank="L22" transform="translate(410,410)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">L22</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
+        <g data-tank="L23" transform="translate(460,410)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">L23</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
+        <g data-tank="L24" transform="translate(510,410)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">L24</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
+        <g data-tank="L25" transform="translate(560,410)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">L25</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
+        <g data-tank="L26" transform="translate(610,410)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">L26</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
 
-      </div>
+        <!-- L9~L14 (오른쪽 2열) -->
+        <g data-tank="L10" transform="translate(700,410)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">L10</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
+        <g data-tank="L9"  transform="translate(750,410)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">L9</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
+
+        <g data-tank="L12" transform="translate(700,460)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">L12</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
+        <g data-tank="L11" transform="translate(750,460)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">L11</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
+
+        <g data-tank="L14" transform="translate(700,510)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">L14</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
+        <g data-tank="L13" transform="translate(750,510)"><use href="#tankCircle"/><circle r="22" fill="transparent" stroke="var(--blue)" stroke-width="2"/><text y="-2" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">L13</text><text data-qty y="14" text-anchor="middle" font-size="12" font-weight="900" fill="var(--blue)">—</text><text data-pct y="28" text-anchor="middle" font-size="10" font-weight="900" fill="var(--blue)">—</text></g>
+
+      </svg>
     </div>
 
     <!-- SIDE TABLE -->
-    <div class="side">
+    <div class="panel side">
       <h2>탱크별 상세 (제품명 포함)</h2>
       <table>
         <thead>
           <tr>
             <th>Tank</th>
-            <th>재고(T)</th>
-            <th>용량대비</th>
+            <th>재고량(T)</th>
             <th>제품명</th>
           </tr>
         </thead>
         <tbody id="tbody">
-          <tr><td colspan="4" style="color:#666;">붙여넣기 후 업데이트를 누르면 채워집니다.</td></tr>
+          <tr><td colspan="3" style="color:#666;">붙여넣기 후 업데이트를 누르면 채워집니다.</td></tr>
         </tbody>
       </table>
       <div class="muted">
-        - 표는 입력 데이터 중 <b>매핑 가능한 탱크</b>만 표시합니다.<br/>
-        - <b>말분(ETC_3)</b>은 제외합니다.<br/>
-        - <b>Br1~Br12</b>는 엑셀에 값이 없어서 표에서 제외합니다.
+        - <b>Tank</b> = 엑셀 <b>B열(SILO/TANK번호)</b> → 도면 탱크명으로 매핑<br/>
+        - <b>재고량(T)</b> = 엑셀 <b>F열</b>을 <b>÷1000</b><br/>
+        - <b>제품명</b> = 엑셀 <b>D열</b><br/>
+        - <b>ETC_3(말분)</b>은 제외 / <b>Br1~Br12</b>는 데이터가 없어 표에 미표시
       </div>
     </div>
   </div>
 
 <script>
-  // ====== 용량(T) 설정 ======
-  // 도면 텍스트 기준: A(70), P(40), T1~T6(70), L1~L6(30), B1~B4(30), L15~L18(60), L19~L20(40), L7~L14(80), Bran(400)
-  function capacityT(name){
-    if (name === "Bran") return 400;
-
-    if (/^A[1-6]$/.test(name)) return 70;
-    if (/^[123]P[1-8]$/.test(name)) return 40;
-
-    if (/^T[1-6]$/.test(name)) return 70;
-
-    if (/^L[1-6]$/.test(name)) return 30;
-
-    if (/^B[1-4]$/.test(name)) return 30;
-
-    // Bulk group
-    if (/^L(15|16|17|18)$/.test(name)) return 60;
-    if (/^L(19|20|25|26)$/.test(name)) return 40;  // 도면상 L25~L26도 40t로 표시됨
-    if (/^L(7|8|9|10|11|12|13|14)$/.test(name)) return 80;
-    if (/^L(21|22|23|24)$/.test(name)) return 60;
-
-    // 못 찾으면 null
-    return null;
-  }
-
-  // ====== 매핑: 엑셀 B열 -> 탱크 이름 ======
-  const TANK_MAP = new Map(Object.entries({
+  // ====== 탱크ID(B열) → 도면 탱크명 ======
+  const MAP = new Map(Object.entries({
     "ETC_2":"Bran",
-    "ETC_3":"말분", // 무시할 것
+    "ETC_3":"말분",
 
     "FBL_B1":"B1","FBL_B2":"B2","FBL_B3":"B3","FBL_B4":"B4",
     "FBL_L1":"L1","FBL_L2":"L2","FBL_L3":"L3","FBL_L4":"L4","FBL_L5":"L5","FBL_L6":"L6",
-    "FBL_L7":"L7","FBL_L8":"L8","FBL_L9":"L9",
-    "FBL_L10":"L10","FBL_L11":"L11","FBL_L12":"L12","FBL_L13":"L13",
+    "FBL_L7":"L7","FBL_L8":"L8","FBL_L9":"L9","FBL_L10":"L10","FBL_L11":"L11","FBL_L12":"L12","FBL_L13":"L13",
     "FBL_L15":"L15","FBL_L16":"L16","FBL_L17":"L17","FBL_L18":"L18","FBL_L19":"L19",
-    "FBL_L20":"L20","FBL_L21":"L21","FBL_L22":"L22","FBL_L23":"L23","FBL_L24":"L24",
-    "FBL_L25":"L25","FBL_L26":"L26",
+    "FBL_L20":"L20","FBL_L21":"L21","FBL_L22":"L22","FBL_L23":"L23","FBL_L24":"L24","FBL_L25":"L25","FBL_L26":"L26",
 
     "FPP_1P1":"1P1","FPP_1P2":"1P2","FPP_1P3":"1P3","FPP_1P4":"1P4",
     "FPP_1P5":"1P5","FPP_1P6":"1P6","FPP_1P7":"1P7","FPP_1P8":"1P8",
@@ -385,133 +295,162 @@
     "FPP_T1":"T1","FPP_T2":"T2","FPP_T3":"T3","FPP_T4":"T4","FPP_T5":"T5","FPP_T6":"T6",
   }));
 
-  // ====== 유틸 ======
-  function toNumber(s){
-    const n = Number(String(s ?? "").replaceAll(",","").replaceAll(" ","").replaceAll("\t",""));
-    return Number.isFinite(n) ? n : null;
-  }
-  function kgToT(kg){ return kg / 1000; }
+  // ====== 도면 용량(T) ======
+  function capT(name){
+    if (name === "Bran") return 400;
+    if (/^A[1-6]$/.test(name)) return 70;
+    if (/^[123]P[1-8]$/.test(name)) return 40;
+    if (/^T[1-6]$/.test(name)) return 70;
+    if (/^L[1-6]$/.test(name)) return 30;
+    if (/^B[1-4]$/.test(name)) return 30;
 
+    if (/^L(15|16|17|18)$/.test(name)) return 60;
+    if (/^L(19|20|25|26)$/.test(name)) return 40;
+    if (/^L(21|22|23|24)$/.test(name)) return 60;
+    if (/^L(7|8|9|10|11|12|13|14)$/.test(name)) return 80;
+
+    return null;
+  }
+
+  // ====== 유틸 ======
+  function numFromToken(s){
+    const v = Number(String(s).replaceAll(",","").replaceAll(" ","").replaceAll("\t","").replace(/[^0-9.]/g,""));
+    return Number.isFinite(v) ? v : null;
+  }
+  function kgToT(kg){ return kg/1000; }
   function fmtT(t){
     if (t === null) return "—";
     const isInt = Math.abs(t - Math.round(t)) < 1e-9;
-    return isInt ? `${Math.round(t).toLocaleString("en-US")}T`
-                 : `${t.toLocaleString("en-US",{maximumFractionDigits:1})}T`;
+    return isInt ? `${Math.round(t).toLocaleString("en-US")}t`
+                 : `${t.toLocaleString("en-US",{maximumFractionDigits:1})}t`;
   }
-
   function fmtPct(t, cap){
     if (t === null || cap === null || cap === 0) return "—";
-    const pct = (t / cap) * 100;
-    return `${pct.toFixed(0)}%`;
+    return `${Math.round((t/cap)*100)}%`;
   }
 
-  function isZeroT(t){ return t !== null && Math.abs(t) < 1e-9; }
+  // ====== 핵심: 어떤 붙여넣기 형태든 "B열 탱크ID"를 찾아서 파싱 ======
+  // - 탭이 있으면 탭 기준 우선
+  // - 탭이 없으면 공백 다중 분리
+  // - 라인에서 FBL_ / FPP_ / ETC_2 / ETC_3 를 찾고
+  // - 마지막 숫자 토큰을 재고량으로 인식
+  // - 제품명은 "제품코드(숫자)" 다음부터 "재고단위(KG/대)" 직전까지 합치기
+  const tankIdRe = /\b(ETC_2|ETC_3|FBL_[A-Z0-9]+|FPP_[A-Z0-9]+)\b/;
 
-  // ====== 파싱: 표 + 매핑표가 같이 들어와도 표만 추출 ======
-  function parseRows(text){
-    const rows = [];
-    const lines = text.split(/\r?\n/).map(v => v.trim()).filter(Boolean);
+  function parse(text){
+    const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+    const rows = []; // {tankRaw, tankName, kg, productName}
 
-    for (const line of lines){
-      // 매핑표(ETC_2 Bran 형태) 배제: 컬럼이 2개면 스킵
-      const parts = line.split(/\s+/);
-      if (parts.length <= 2) continue;
-
-      // 헤더 스킵
+    for(const line of lines){
+      // 헤더/매핑표(2열) 제거
       if (line.includes("재고구분") && line.includes("SILO/TANK")) continue;
 
-      // 표는 최소 6개 컬럼
-      if (parts.length < 6) continue;
+      // 탱크ID가 없는 줄은 스킵 (매핑표/잡텍스트)
+      const m = line.match(tankIdRe);
+      if(!m) continue;
 
-      const tankRaw = parts[1]; // SILO/TANK번호
-      if (!tankRaw) continue;
+      const tankRaw = m[1];
+      if (tankRaw === "ETC_3") continue; // 말분 무시
 
-      // 말분 무시
-      if (tankRaw === "ETC_3") continue;
+      const cols = line.includes("\t") ? line.split("\t").map(s=>s.trim()).filter(Boolean)
+                                       : line.split(/\s+/).map(s=>s.trim()).filter(Boolean);
 
-      const productName = parts.slice(3, parts.length-2).join(" ");
-      const qtyRaw = parts[parts.length-1];
+      // 재고량(F열) = 마지막 숫자
+      let qty = null;
+      for(let i=cols.length-1; i>=0; i--){
+        const n = numFromToken(cols[i]);
+        if(n !== null){ qty = n; break; }
+      }
+      if(qty === null) continue;
 
-      const kg = toNumber(qtyRaw);
-      if (kg === null) continue;
+      // 제품명(D열) 추정: 제품코드(숫자 9~12자리) 다음부터 "KG/대" 전까지
+      let idxCode = -1;
+      for(let i=0; i<cols.length; i++){
+        if (/^\d{9,12}$/.test(cols[i])) { idxCode = i; break; }
+      }
+      let idxUnit = -1;
+      for(let i=0; i<cols.length; i++){
+        if (cols[i] === "KG" || cols[i] === "대") { idxUnit = i; break; }
+      }
 
-      rows.push({ tankRaw, productName, kg });
+      let productName = "";
+      if(idxCode !== -1 && idxUnit !== -1 && idxUnit > idxCode+1){
+        productName = cols.slice(idxCode+1, idxUnit).join(" ");
+      } else {
+        // fallback: 탱크ID 뒤에서 숫자/단위 앞까지 최대한
+        productName = "";
+      }
+
+      const tankName = MAP.get(tankRaw);
+      if(!tankName || tankName === "말분") continue;
+
+      rows.push({ tankRaw, tankName, kg: qty, productName });
     }
     return rows;
   }
 
   function resetUI(){
-    document.querySelectorAll("[data-qty]").forEach(el=> el.textContent="—");
-    document.querySelectorAll("[data-pct]").forEach(el=> el.textContent="—");
-    document.querySelectorAll(".zero").forEach(el=> el.classList.remove("zero"));
-
+    document.querySelectorAll("[data-tank]").forEach(g=>{
+      g.querySelector("[data-qty]").textContent = "—";
+      g.querySelector("[data-pct]").textContent = "—";
+      g.querySelector("circle").setAttribute("fill","#fff");
+    });
     const tbody = document.getElementById("tbody");
-    tbody.innerHTML = `<tr><td colspan="4" style="color:#666;">붙여넣기 후 업데이트를 누르면 채워집니다.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" style="color:#666;">붙여넣기 후 업데이트를 누르면 채워집니다.</td></tr>`;
   }
 
-  function updateUI(rows){
+  function update(text){
+    const rows = parse(text);
+
     // 탱크별 합산
     const agg = new Map(); // tankName -> {kgSum, products:Set}
-    for (const r of rows){
-      const tankName = TANK_MAP.get(r.tankRaw);
-      if (!tankName) continue;
-      if (tankName === "말분") continue;
-
-      const prev = agg.get(tankName) || {kgSum:0, products:new Set()};
+    for(const r of rows){
+      const prev = agg.get(r.tankName) || {kgSum:0, products:new Set()};
       prev.kgSum += r.kg;
-      prev.products.add(r.productName);
-      agg.set(tankName, prev);
+      if(r.productName) prev.products.add(r.productName);
+      agg.set(r.tankName, prev);
     }
 
-    // 도면 탱크 원 업데이트
-    document.querySelectorAll("[data-tank]").forEach(el=>{
-      const name = el.getAttribute("data-tank");
-      const data = agg.get(name);
-      const t = data ? kgToT(data.kgSum) : null;
-      const cap = capacityT(name);
-      const qtyEl = el.querySelector("[data-qty]");
-      const pctEl = el.querySelector("[data-pct]");
+    // SVG 탱크 업데이트 (도면에 있는 탱크만)
+    document.querySelectorAll("[data-tank]").forEach(g=>{
+      const name = g.getAttribute("data-tank");
+      const d = agg.get(name);
+      const t = d ? kgToT(d.kgSum) : null;
+      const cap = capT(name);
 
-      qtyEl.textContent = fmtT(t);
-      pctEl.textContent = cap ? `(${fmtPct(t, cap)})` : "—";
-      el.classList.toggle("zero", isZeroT(t));
+      g.querySelector("[data-qty]").textContent = fmtT(t);
+      g.querySelector("[data-pct]").textContent = cap ? `(${fmtPct(t,cap)})` : "—";
+
+      // 0이면 배경 강조
+      const isZero = (t !== null && Math.abs(t) < 1e-9);
+      g.querySelector("circle").setAttribute("fill", isZero ? "var(--zero)" : "#fff");
     });
 
-    // 우측 표
+    // 오른쪽 표 채우기
     const tbody = document.getElementById("tbody");
     tbody.innerHTML = "";
 
     const keys = Array.from(agg.keys()).sort((a,b)=>a.localeCompare(b,"en",{numeric:true}));
     if(keys.length === 0){
-      tbody.innerHTML = `<tr><td colspan="4" style="color:#666;">매핑 가능한 탱크 데이터가 없습니다.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="3" style="color:#666;">매핑 가능한 탱크 데이터가 없습니다.</td></tr>`;
       return;
     }
 
-    for (const k of keys){
-      const d = agg.get(k);
+    for(const tankName of keys){
+      const d = agg.get(tankName);
       const t = kgToT(d.kgSum);
-      const cap = capacityT(k);
-      const pct = fmtPct(t, cap);
-      const products = Array.from(d.products).join("<br/>");
-
+      const products = Array.from(d.products).join("<br/>") || "";
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td><b>${k}</b></td>
+        <td><b>${tankName}</b></td>
         <td>${fmtT(t)}</td>
-        <td>${cap ? `${pct} (/${cap}T)` : "—"}</td>
         <td>${products}</td>
       `;
       tbody.appendChild(tr);
     }
   }
 
-  // 버튼
-  document.getElementById("btnMap").addEventListener("click", ()=>{
-    const text = document.getElementById("paste").value || "";
-    const rows = parseRows(text);
-    updateUI(rows);
-  });
-
+  document.getElementById("btnMap").addEventListener("click", ()=> update(document.getElementById("paste").value || ""));
   document.getElementById("btnClear").addEventListener("click", ()=>{
     document.getElementById("paste").value = "";
     resetUI();
@@ -522,10 +461,10 @@
 `재고구분\tSILO/TANK번호\t제품코드\t제품명\t재고단위\t재고량
 반제품 Bulk 탱크\tETC_2\t101100000391\t소맥피_350KG\t대\t320,000.
 반제품 Bulk 탱크\tFBL_B2\t101200000054\t코끼리_빵용_BULK\tKG\t25,000.
+반제품 Bulk 탱크\tFBL_L19\t101200000043\t소맥분8호_BULK\tKG\t36,000.
 포장 Bulk 탱크\tFPP_3P8\t101200000075\t박력2급_BULK\tKG\t36,000.
 포장 Bulk 탱크\tFPP_T6\t101200000097\t오티밀가루2호_BULK\tKG\t75,000.
-ETC_2\tBran
-FBL_B2\tB2`;
+포장 Bulk 탱크\tFPP_A6\t101200000053\t사료전용분_BULK\tKG\t40,000.`;
   });
 
   resetUI();
