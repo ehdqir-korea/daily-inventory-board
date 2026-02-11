@@ -6,17 +6,30 @@
   <title>일일재고현황표</title>
   <style>
     :root{
-        --grid-h: 360px;        /* 사각형 전체 높이(현재 320px → 360 권장) */
-        --circle: 130px;        /* 원 지름(현재 120 → 130 권장) */
-        --circle-bw: 2px;       /* 원 테두리 굵기 */
-        --circle-y-pad: 6px;    /* 맨 위/아래 원을 살짝 안쪽으로(잘림 방지) */
-        --rect-bw: 2px;         /* 바깥 테두리 */
-        --cell-bw: 1px;         /* 내부 칸 선 */
+      --line:#111;
+      --blue:#1f5cff;
+      --orange:#cc6a00;
+      --green:#7aa63a;
+      --zero:#ffd6de;
+
+      /* ===== 모양 튜닝(필요시 이 3개만 조절) ===== */
+      --cellH: 120px;      /* 사각형 1칸 높이(도면 느낌) */
+      --circleD: 120px;    /* 원 지름 */
+      --padTop: 18px;      /* 도면 위 여백(원 잘림 방지) */
     }
+
     body{
       font-family: system-ui, -apple-system, Segoe UI, Roboto, "Apple SD Gothic Neo","Noto Sans KR", Arial, sans-serif;
-      margin: 22px;
+      margin: 20px;
       color:#111;
+    }
+
+    .bar{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-bottom:10px;
     }
     textarea{
       width:100%;
@@ -26,75 +39,134 @@
       border:1px solid #ccc;
       border-radius:10px;
       outline:none;
+      box-sizing:border-box;
+      white-space:pre-wrap;
     }
-    .actions{ display:flex; gap:10px; margin-top:10px; flex-wrap:wrap; }
     button{
-      border:1px solid #222; background:#111; color:#fff;
-      padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:800;
+      border:1px solid #222;
+      background:#111;
+      color:#fff;
+      padding:10px 14px;
+      border-radius:10px;
+      cursor:pointer;
+      font-weight:900;
     }
-    button.secondary{ background:#fff; color:#111; }
-    .legend{ display:flex; gap:12px; flex-wrap:wrap; margin:12px 0 8px; font-size:13px; color:#333; }
-    .pill{ border:1px solid #ccc; padding:4px 8px; border-radius:999px; background:#fafafa; }
-    .title{
-      text-align:center; font-size:44px; font-weight:900; letter-spacing:14px;
-      margin: 18px 0 18px;
+    button.secondary{
+      background:#fff;
+      color:#111;
+    }
+    .legend{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin:10px 0 8px;
+      font-size:13px;
+      color:#333;
+    }
+    .pill{
+      border:1px solid #ccc;
+      padding:4px 8px;
+      border-radius:999px;
+      background:#fafafa;
     }
 
-    /* ===== 도면 영역 ===== */
-    .wrap{ display:flex; justify-content:center; margin-top:12px; }
+    .title{
+      text-align:center;
+      font-size:44px;
+      font-weight:900;
+      letter-spacing:14px;
+      margin:18px 0 14px;
+    }
+
+    /* ===== 도면(고정 구조) ===== */
+    .wrap{
+      display:flex;
+      justify-content:center;
+      margin-top:6px;
+    }
     .board{
-      position:relative;
       width: 980px;
       max-width: 100%;
       border:2px solid var(--line);
-      padding: 22px;
+      padding: 18px 18px 22px;
       box-sizing:border-box;
-      background: var(--bg);
+      background:#fff;
     }
 
-    /* 사각형 7x2 (14개) */
-    .rect-grid{
+    .stage{
       position:relative;
-      margin: 10px auto;
+      padding-top: var(--padTop);
+    }
+
+    /* 7칸 x 2줄 */
+    .grid{
+      position:relative;
       width: 100%;
-      height: var(--grid-h);
-      border: var(--rect-bw) solid var(--line);
+      height: calc(var(--cellH) * 2);
+      border:2px solid var(--line);
+      box-sizing:border-box;
       display:grid;
       grid-template-columns: repeat(7, 1fr);
       grid-template-rows: repeat(2, 1fr);
-      box-sizing:border-box;
-      overflow: visible; /* 원이 라인 위에 걸치도록 */
+      overflow: visible;
     }
-    .rect{
-      border: var(--cell-bw) solid var(--line);
+    .cell{
+      border:1px solid var(--line);
       display:flex;
       align-items:center;
       justify-content:center;
-      text-align:center;
       background:#fff;
       position:relative;
       z-index:1;
     }
-    .rect .code{ font-weight:900; font-size:22px; line-height:1; color:var(--blue); }
-    .rect .code.orange{ color:var(--orange); }
-    .rect .qty{ font-weight:900; font-size:22px; line-height:1; margin-top:4px; }
-    .rect .loc{ font-weight:900; font-size:20px; line-height:1; margin-top:6px; color:var(--green); }
-    .rect .box{ transform: translateY(2px); }
-    .rect.zero{ background: var(--zero); }
 
-    /* 원 6x3 (18개): 7칸 격자의 '내부' 세로선 6개(1~6) + 가로선 3개(0~2) */
-    .circles-layer{
+    /* 사각형 안 텍스트(겹침 방지: line-height 고정) */
+    .box{
+      text-align:center;
+      line-height:1.05;
+      transform: translateY(2px);
+    }
+    .t-code{
+      font-weight:900;
+      font-size:20px;
+      color:var(--blue);
+      letter-spacing:0.5px;
+    }
+    .t-code.orange{ color:var(--orange); }
+    .t-qty{
+      font-weight:900;
+      font-size:20px;
+      margin-top:4px;
+      color:#000;
+    }
+    .t-loc{
+      font-weight:900;
+      font-size:18px;
+      margin-top:6px;
+      color:var(--green);
+    }
+    .cell.zero{ background:var(--zero); }
+
+    /* ===== 원 6x3 (교차점 중앙) =====
+       교차점 = 세로선 1~6 / 가로선 0,1,2
+       x = (1..6)/7
+       y = (0..2)/2
+    */
+    .circles{
       position:absolute;
-      left:0; top:0;
-      width:100%; height:100%;
+      left:0;
+      top:0;
+      width:100%;
+      height: calc(var(--cellH) * 2 + var(--padTop));
       pointer-events:none;
       z-index:3;
       overflow: visible;
     }
     .circle{
       position:absolute;
-      width: var(--circle); height: var(--circle);
-      border: var(--circle-bw) solid var(--line);
+      width: var(--circleD);
+      height: var(--circleD);
+      border:2px solid var(--line);
       border-radius:999px;
       background:#fff;
       transform: translate(-50%, -50%);
@@ -102,300 +174,100 @@
       flex-direction:column;
       align-items:center;
       justify-content:center;
+      text-align:center;
       gap:6px;
       box-sizing:border-box;
-      text-align:center;
-      padding-top:4px;
+      line-height:1.05;
     }
-    .circle.zero{ background: var(--zero); }
-    .circle .code{ font-weight:900; font-size:26px; line-height:1; color:var(--blue); }
-    .circle .code.orange{ color:var(--orange); }
-    .circle .qty{ font-weight:900; font-size:24px; line-height:1; }
-    .circle .loc{ font-weight:900; font-size:22px; line-height:1; color:var(--green); }
+    .circle.zero{ background:var(--zero); }
+    .c-code{
+      font-weight:900;
+      font-size:24px;
+      color:var(--blue);
+      letter-spacing:0.5px;
+    }
+    .c-code.orange{ color:var(--orange); }
+    .c-qty{
+      font-weight:900;
+      font-size:22px;
+      color:#000;
+    }
+    .c-loc{
+      font-weight:900;
+      font-size:20px;
+      color:var(--green);
+    }
 
-    .note{ font-size:13px; color:#444; margin-top:10px; line-height:1.5; }
-    .mini{ font-size:12px; color:#666; }
+    .note{
+      margin-top:12px;
+      font-size:13px;
+      color:#444;
+      line-height:1.55;
+    }
+    .note b{ font-weight:900; }
   </style>
 </head>
 <body>
 
-  <div class="mini">
-    ✅ 엑셀에서 복사한 내용을 아래에 붙여넣고 <b>자동 매핑</b>을 누르세요. (순서가 아니라 <b>A코드</b>로 매핑됩니다)
+  <div class="note">
+    <b>사용법</b><br/>
+    1) 엑셀에서 표를 복사(Ctrl+C) → 아래 칸에 붙여넣기(Ctrl+V)<br/>
+    2) <b>현황표 업데이트</b> 클릭<br/>
+    ※ 이 페이지는 붙여넣은 텍스트에서 <b>“코드 → 수량 → A###”</b> 패턴을 찾아 <b>A코드 기준</b>으로 자동 배치합니다.
   </div>
-  <textarea id="paste" placeholder="여기에 엑셀에서 복사한 내용을 붙여넣기 (Ctrl+V)"></textarea>
-  <div class="actions">
-    <button id="btnMap">자동 매핑</button>
+
+  <textarea id="paste" placeholder="여기에 엑셀에서 복사한 내용을 그대로 붙여넣으세요."></textarea>
+
+  <div class="bar">
+    <button id="btnMap">현황표 업데이트</button>
     <button class="secondary" id="btnClear">초기화</button>
-    <button class="secondary" id="btnDemo">데모 채우기</button>
+    <button class="secondary" id="btnDemo">데모</button>
   </div>
+
   <div class="legend">
-    <span class="pill"><b style="color:var(--orange)">WCRS/WUR/WNS</b>는 주황색</span>
-    <span class="pill"><b style="background:var(--zero); padding:2px 6px; border-radius:6px;">수량 0</b> 배경 강조</span>
-    <span class="pill">수량은 자동 <b>콤마</b></span>
+    <span class="pill"><b style="color:var(--orange)">WCRS/WUR/WNS</b> → 주황색</span>
+    <span class="pill"><b style="background:var(--zero); padding:2px 6px; border-radius:6px;">수량 0</b> → 배경 강조</span>
+    <span class="pill">수량 자동 <b>콤마</b></span>
   </div>
 
   <div class="title">일 일 재 고 현 황 표</div>
 
   <div class="wrap">
     <div class="board">
-      <div class="rect-grid" id="rectGrid">
-        <!-- circles overlay -->
-        <div class="circles-layer" id="circlesLayer"></div>
+      <div class="stage">
+        <div class="grid" id="grid">
+          <div class="circles" id="circles"></div>
+          <!-- 14 cells appended by JS -->
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="note">
-    <b>팁</b>:
-    <span class="mini">표를 통째로 붙여넣어도 됩니다. 페이지가 텍스트에서 <b>코드 → 수량 → A###</b>를 찾아서 A코드 기준으로 배치합니다.</span>
-  </div>
-
 <script>
-  const ORANGE_CODES = new Set(["WCRS","WUR","WNS"]);
+  const ORANGE = new Set(["WCRS","WUR","WNS"]);
   const fmt = new Intl.NumberFormat("en-US");
 
-  // ====== 도면 로케이션 정의 ======
-  // 원(18): A101~A106, A301~A306, A501~A506
+  // 원 위치(A1/A3/A5)
   const CIRCLE_LOCS = [
     "A101","A102","A103","A104","A105","A106",
     "A301","A302","A303","A304","A305","A306",
     "A501","A502","A503","A504","A505","A506",
   ];
 
-  // 사각형(14): 윗줄 A201~A207, 아랫줄 A401~A407
+  // 사각형 위치(A2/A4)
   const RECT_TOP = ["A201","A202","A203","A204","A205","A206","A207"];
   const RECT_BOT = ["A401","A402","A403","A404","A405","A406","A407"];
 
-  // ====== 사각형 14개 생성 ======
-  const rectGrid = document.getElementById("rectGrid");
-  const rectCells = []; // index 0~13
+  const grid = document.getElementById("grid");
+  const circlesLayer = document.getElementById("circles");
 
-  function makeRectCell() {
+  // ===== 사각형 14개 생성 =====
+  const rectCells = [];
+  function makeCell(){
     const cell = document.createElement("div");
-    cell.className = "rect";
+    cell.className = "cell";
     const box = document.createElement("div");
     box.className = "box";
 
-    const codeEl = document.createElement("div");
-    codeEl.className = "code";
-    const qtyEl = document.createElement("div");
-    qtyEl.className = "qty";
-    const locEl = document.createElement("div");
-    locEl.className = "loc";
-
-    box.appendChild(codeEl);
-    box.appendChild(qtyEl);
-    box.appendChild(locEl);
-    cell.appendChild(box);
-
-    return { cell, codeEl, qtyEl, locEl };
-  }
-
-  // grid 안에 circlesLayer가 이미 들어있으니, 사각형은 뒤에 14개 추가
-  for (let i=0;i<14;i++){
-    const it = makeRectCell();
-    rectGrid.appendChild(it.cell);
-    rectCells.push(it);
-  }
-
-  // ====== 원 18개 생성 (교차점 정확 배치) ======
-  // 가로: 7칸의 내부 세로선 6개 => x = (1~6)/7
-  // 세로: 2줄의 가로선 3개 => y = (0~2)/2
-  const circlesLayer = document.getElementById("circlesLayer");
-  const circles = [];
-
-  function makeCircle(){
-    const el = document.createElement("div");
-    el.className = "circle";
-
-    const codeEl = document.createElement("div");
-    codeEl.className = "code";
-    const qtyEl = document.createElement("div");
-    qtyEl.className = "qty";
-    const locEl = document.createElement("div");
-    locEl.className = "loc";
-
-    el.appendChild(codeEl);
-    el.appendChild(qtyEl);
-    el.appendChild(locEl);
-    circlesLayer.appendChild(el);
-
-    return { el, codeEl, qtyEl, locEl };
-  }
-
-  for (let r=0; r<3; r++){
-    for (let c=0; c<6; c++){
-      const it = makeCircle();
-
-      const xPct = ((c+1)/7)*100;     // 1/7 ~ 6/7
-      const yPct = (r/2)*100; // 0, 50, 100
-      it.el.style.left = xPct + "%";
-      it.el.style.top = `calc(${yPct}% + ${(r===0?1:(r===2?-1:0))} * var(--circle-y-pad))`;
-
-      circles.push(it);
-    }
-  }
-
-  // ====== 렌더링 유틸 ======
-  function setStyleCommon(codeEl, containerEl, code, qty){
-    const cd = String(code ?? "—").trim();
-    codeEl.textContent = cd;
-    codeEl.classList.toggle("orange", ORANGE_CODES.has(cd));
-
-    const n = Number(String(qty ?? "").replaceAll(",","").trim());
-    const isNum = Number.isFinite(n);
-
-    containerEl.classList.toggle("zero", isNum && n === 0);
-    return { isNum, n };
-  }
-
-  function setCircle(i, loc, data){
-    const it = circles[i];
-    if(!it) return;
-
-    const code = data?.code ?? "—";
-    const qty  = data?.qty  ?? "—";
-
-    const { isNum, n } = setStyleCommon(it.codeEl, it.el, code, qty);
-    it.qtyEl.textContent = isNum ? fmt.format(n) : (qty ?? "—");
-    it.locEl.textContent = loc ?? "—";
-  }
-
-  function setRect(i, loc, data){
-    const it = rectCells[i];
-    if(!it) return;
-
-    const code = data?.code ?? "—";
-    const qty  = data?.qty  ?? "—";
-
-    const { isNum, n } = setStyleCommon(it.codeEl, it.cell, code, qty);
-    it.qtyEl.textContent = isNum ? fmt.format(n) : (qty ?? "—");
-    it.locEl.textContent = loc ?? "—";
-  }
-
-  function resetAll(){
-    // circles
-    for (let i=0;i<CIRCLE_LOCS.length;i++){
-      setCircle(i, CIRCLE_LOCS[i], null);
-      circles[i].el.classList.remove("zero");
-      circles[i].codeEl.classList.remove("orange");
-    }
-    // rects
-    for (let i=0;i<14;i++){
-      const loc = (i<7) ? RECT_TOP[i] : RECT_BOT[i-7];
-      setRect(i, loc, null);
-      rectCells[i].cell.classList.remove("zero");
-      rectCells[i].codeEl.classList.remove("orange");
-    }
-  }
-
-  // ====== 파싱: 텍스트에서 code -> qty -> A### 찾고, A코드 기준으로 dict 생성 ======
-  function parseToMap(text){
-    // CODE: 영문+숫자/점 (WUSL9.0)
-    const tokenRe = /([A-Z]{2,10}[A-Z0-9.]*?)|(\d{1,3}(?:,\d{3})*|\d+)|\b(A\d{3})\b/g;
-    const tokens = [];
-    let m;
-    while((m = tokenRe.exec(text)) !== null){
-      tokens.push(m[0]);
-    }
-
-    const map = new Map(); // loc -> {code, qty}
-
-    let i=0;
-    while(i < tokens.length){
-      // code
-      while(i < tokens.length && !/^[A-Z]{2,10}[A-Z0-9.]*$/.test(tokens[i])) i++;
-      if(i>=tokens.length) break;
-      const code = tokens[i++];
-
-      // qty
-      while(i < tokens.length && !/^\d{1,3}(?:,\d{3})*$|^\d+$/.test(tokens[i])) i++;
-      if(i>=tokens.length) break;
-      const qty = tokens[i++];
-
-      // loc
-      while(i < tokens.length && !/^A\d{3}$/.test(tokens[i])) i++;
-      if(i>=tokens.length) break;
-      const loc = tokens[i++];
-
-      map.set(loc, {code, qty});
-    }
-    return map;
-  }
-
-  function renderFromMap(map){
-    // circles (A1/A3/A5)
-    CIRCLE_LOCS.forEach((loc, idx) => setCircle(idx, loc, map.get(loc)));
-
-    // rects (A2/A4)
-    RECT_TOP.forEach((loc, c) => setRect(c, loc, map.get(loc)));
-    RECT_BOT.forEach((loc, c) => setRect(7+c, loc, map.get(loc)));
-  }
-
-  // ====== 버튼 ======
-  document.getElementById("btnMap").addEventListener("click", () => {
-    const text = document.getElementById("paste").value || "";
-    const map = parseToMap(text);
-
-    resetAll();
-    renderFromMap(map);
-
-    // 필수 위치 누락 안내(원하는 경우만 최소 안내)
-    const must = [...CIRCLE_LOCS, ...RECT_TOP, ...RECT_BOT];
-    const missing = must.filter(loc => !map.has(loc));
-    if(missing.length){
-      alert(`누락된 A코드(${missing.length}개):\n${missing.join(", ")}`);
-    }
-  });
-
-  document.getElementById("btnClear").addEventListener("click", () => {
-    document.getElementById("paste").value = "";
-    resetAll();
-  });
-
-  document.getElementById("btnDemo").addEventListener("click", () => {
-    const demo = `
-WASW 1508 A101
-WCRS 1671 A102
-WASW 1754 A103
-WASWP 1496 A104
-WUR 1494 A105
-WNS 1686 A106
-
-WNS 152 A201
-WUSH 420 A202
-WASW 398 A203
-WCRS 420 A204
-WASW 401 A205
-WCRS 243 A206
-WNS 170 A207
-
-WUSH 1367 A301
-WUR 1516 A302
-WASW 1615 A303
-WASW 0 A304
-WASW 1653 A305
-WUR 1671 A306
-
-WNS 170 A401
-WASWP 305 A402
-WCRS 410 A403
-WCRS 421 A404
-WUSL9.0 408 A405
-WASW 409 A406
-WUSH 100 A407
-
-WUSH 1600 A501
-WCRS 1693 A502
-WASW 1645 A503
-WASW 1606 A504
-WASW 1700 A505
-WUR 1700 A506
-`.trim();
-    document.getElementById("paste").value = demo;
-  });
-
-  resetAll();
-</script>
-</body>
-</html>
+    const code = document.createElement("div");
+    code.className = "t-
