@@ -270,4 +270,196 @@
     box.className = "box";
 
     const code = document.createElement("div");
-    code.className = "t-
+    code.className = "t-code";
+    const qty = document.createElement("div");
+    qty.className = "t-qty";
+    const loc = document.createElement("div");
+    loc.className = "t-loc";
+
+    box.appendChild(code);
+    box.appendChild(qty);
+    box.appendChild(loc);
+    cell.appendChild(box);
+
+    return { cell, code, qty, loc };
+  }
+
+  for(let i=0;i<14;i++){
+    const it = makeCell();
+    grid.appendChild(it.cell);
+    rectCells.push(it);
+  }
+
+  // ===== 원 18개 생성 + 교차점 배치 =====
+  const circles = [];
+  function makeCircle(){
+    const el = document.createElement("div");
+    el.className = "circle";
+
+    const code = document.createElement("div");
+    code.className = "c-code";
+    const qty = document.createElement("div");
+    qty.className = "c-qty";
+    const loc = document.createElement("div");
+    loc.className = "c-loc";
+
+    el.appendChild(code);
+    el.appendChild(qty);
+    el.appendChild(loc);
+    circlesLayer.appendChild(el);
+
+    return { el, code, qty, loc };
+  }
+
+  // x: (1..6)/7, y: (0..2)/2  (padTop 포함)
+  for(let r=0; r<3; r++){
+    for(let c=0; c<6; c++){
+      const it = makeCircle();
+
+      const xPct = ((c+1)/7)*100;      // 14.285.. ~ 85.714..
+      const yPct = (r/2)*100;          // 0, 50, 100
+
+      it.el.style.left = xPct + "%";
+      it.el.style.top  = `calc(${yPct}% + var(--padTop))`;
+
+      circles.push(it);
+    }
+  }
+
+  // ===== 렌더링 =====
+  function applyStyle(codeEl, container, code, qty){
+    const cd = String(code ?? "—").trim();
+    codeEl.textContent = cd;
+    codeEl.classList.toggle("orange", ORANGE.has(cd));
+
+    const n = Number(String(qty ?? "").replaceAll(",","").trim());
+    const isNum = Number.isFinite(n);
+    container.classList.toggle("zero", isNum && n === 0);
+    return { isNum, n };
+  }
+
+  function setRect(i, loc, data){
+    const it = rectCells[i];
+    const code = data?.code ?? "—";
+    const qty  = data?.qty  ?? "—";
+    const {isNum, n} = applyStyle(it.code, it.cell, code, qty);
+    it.qty.textContent = isNum ? fmt.format(n) : qty;
+    it.loc.textContent = loc;
+  }
+
+  function setCircle(i, loc, data){
+    const it = circles[i];
+    const code = data?.code ?? "—";
+    const qty  = data?.qty  ?? "—";
+    const {isNum, n} = applyStyle(it.code, it.el, code, qty);
+    it.qty.textContent = isNum ? fmt.format(n) : qty;
+    it.loc.textContent = loc;
+  }
+
+  function reset(){
+    // rect
+    RECT_TOP.forEach((loc, idx)=> setRect(idx, loc, null));
+    RECT_BOT.forEach((loc, idx)=> setRect(7+idx, loc, null));
+    // circle
+    CIRCLE_LOCS.forEach((loc, idx)=> setCircle(idx, loc, null));
+  }
+
+  // ===== 파싱: "코드 → 수량 → A###" 반복을 찾아 A코드별 map 생성 =====
+  function parseMap(text){
+    const tokenRe = /([A-Z]{2,12}[A-Z0-9.]*)|(\d{1,3}(?:,\d{3})*|\d+)|\b(A\d{3})\b/g;
+    const tokens = [];
+    let m;
+    while((m = tokenRe.exec(text)) !== null){
+      tokens.push(m[0]);
+    }
+
+    const map = new Map(); // A### -> {code, qty}
+    let i=0;
+    while(i < tokens.length){
+      while(i < tokens.length && !/^[A-Z]{2,12}[A-Z0-9.]*$/.test(tokens[i])) i++;
+      if(i>=tokens.length) break;
+      const code = tokens[i++];
+
+      while(i < tokens.length && !/^\d{1,3}(?:,\d{3})*$|^\d+$/.test(tokens[i])) i++;
+      if(i>=tokens.length) break;
+      const qty = tokens[i++];
+
+      while(i < tokens.length && !/^A\d{3}$/.test(tokens[i])) i++;
+      if(i>=tokens.length) break;
+      const loc = tokens[i++];
+
+      map.set(loc, {code, qty});
+    }
+    return map;
+  }
+
+  function render(map){
+    RECT_TOP.forEach((loc, idx)=> setRect(idx, loc, map.get(loc)));
+    RECT_BOT.forEach((loc, idx)=> setRect(7+idx, loc, map.get(loc)));
+    CIRCLE_LOCS.forEach((loc, idx)=> setCircle(idx, loc, map.get(loc)));
+  }
+
+  // ===== 버튼 =====
+  document.getElementById("btnMap").addEventListener("click", ()=>{
+    const text = document.getElementById("paste").value || "";
+    const map = parseMap(text);
+    reset();
+    render(map);
+
+    const must = [...RECT_TOP, ...RECT_BOT, ...CIRCLE_LOCS];
+    const missing = must.filter(k => !map.has(k));
+    if(missing.length){
+      alert(`누락된 A코드(${missing.length}개):\n${missing.join(", ")}`);
+    }
+  });
+
+  document.getElementById("btnClear").addEventListener("click", ()=>{
+    document.getElementById("paste").value = "";
+    reset();
+  });
+
+  document.getElementById("btnDemo").addEventListener("click", ()=>{
+    document.getElementById("paste").value = `
+WASW 1508 A101
+WCRS 1671 A102
+WASW 1754 A103
+WASWP 1496 A104
+WUR 1494 A105
+WNS 1686 A106
+
+WNS 152 A201
+WUSH 420 A202
+WASW 398 A203
+WCRS 420 A204
+WASW 401 A205
+WCRS 243 A206
+WNS 170 A207
+
+WUSH 1367 A301
+WUR 1516 A302
+WASW 1615 A303
+WASW 0 A304
+WASW 1653 A305
+WUR 1671 A306
+
+WNS 170 A401
+WASWP 305 A402
+WCRS 410 A403
+WCRS 421 A404
+WUSL9.0 408 A405
+WASW 409 A406
+WUSH 100 A407
+
+WUSH 1600 A501
+WCRS 1693 A502
+WASW 1645 A503
+WASW 1606 A504
+WASW 1700 A505
+WUR 1700 A506
+`.trim();
+  });
+
+  reset();
+</script>
+</body>
+</html>
