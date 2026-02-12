@@ -2,602 +2,640 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>탱크 재고 현황 (복붙 자동)</title>
   <style>
     :root{
+      --w:1422px;   /* ✅ 요청: 가로 1422 */
+      --h:725px;    /* ✅ 요청: 세로 725 */
       --line:#111;
+      --bg:#fff;
+      --zero:#fff5b1;   /* ✅ 0일 때: 옅은 노랑 */
+      --hi:#ffd3d3;     /* ✅ 85% 이상: 옅은 빨강 */
       --red:#d60000;
-      --blue:#0066ff;
-      --purple:#7b3ff2;
-      --green:#00a651;
-
-      --zeroFill: rgba(255, 235, 130, 0.55);  /* 0일 때: 옅은 노랑 */
-      --highFill: rgba(255, 140, 140, 0.45);  /* 85%↑: 옅은 빨강 */
-
-      --font: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", Arial, sans-serif;
+      --blue:#0b59ff;
+      --purple:#6b35d4;
+      --green:#00a24a;
+      --gray:#333;
     }
-
-    body{ margin:0; font-family:var(--font); background:#fff; color:#111; }
-    .wrap{ padding:14px; display:flex; gap:14px; align-items:flex-start; }
-    .left{ flex: 1 1 auto; min-width: 840px; }
-    .right{ width: 420px; flex: 0 0 420px; }
-
-    h1{ margin:0 0 8px; font-size:18px; }
-
-    .panel{
-      border:1px solid #ddd; border-radius:10px; padding:12px; background:#fff;
-      margin-bottom:12px;
-    }
-
-    textarea{
-      width:100%; height:160px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      font-size:12px; line-height:1.3; padding:10px; border-radius:10px; border:1px solid #ccc;
-      white-space:pre; overflow:auto;
-    }
-
-    .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-    button{
-      border:1px solid #111; background:#111; color:#fff; padding:10px 12px; border-radius:10px; cursor:pointer;
-      font-weight:700;
-    }
-    button.secondary{ background:#fff; color:#111; }
-    button:active{ transform: translateY(1px); }
-
-    .hint{ font-size:12px; color:#444; line-height:1.4; margin-top:8px; }
-    .pill{ display:inline-block; padding:4px 10px; border-radius:999px; border:1px solid #ddd; font-size:12px; background:#fafafa; }
-    .pill b{ margin-right:6px; }
-
-    table{ width:100%; border-collapse:collapse; font-size:12px; }
-    th, td{ border:1px solid #ddd; padding:6px 8px; vertical-align:top; }
-    th{ background:#f6f6f6; text-align:left; }
-    .muted{ color:#777; }
-
-    .svgBox{
-      border:1px solid #ddd; border-radius:10px; overflow:auto; background:#fff;
-    }
+    body{font-family:system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", Arial, sans-serif; background:#f7f7f7; margin:0; padding:16px;}
+    .wrap{max-width: calc(var(--w) + 520px); margin:0 auto; display:grid; grid-template-columns: 1fr 520px; gap:14px;}
+    .card{background:#fff; border:1px solid #ddd; border-radius:10px; padding:12px;}
+    h1{margin:0 0 10px; font-size:18px;}
+    .row{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px;}
+    button{border:1px solid #bbb; background:#fff; padding:8px 10px; border-radius:10px; cursor:pointer; font-weight:700;}
+    button.primary{background:#111; color:#fff; border-color:#111;}
+    .pill{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; border:1px solid #ddd; background:#fafafa; font-size:12px;}
+    textarea{width:100%; height:190px; border:1px solid #ccc; border-radius:10px; padding:10px; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; line-height:1.35;}
+    .small{font-size:12px; color:#444; line-height:1.5;}
+    .grid{display:grid; grid-template-columns: 1fr; gap:10px;}
+    table{width:100%; border-collapse:collapse; font-size:12px;}
+    th,td{border:1px solid #ddd; padding:6px 8px; text-align:left; vertical-align:top;}
+    th{background:#fafafa;}
+    .muted{color:#777;}
+    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;}
+    .svgbox{overflow:auto; border:1px solid #ddd; border-radius:10px; background:#fff;}
+    .hint{font-size:12px; color:#333;}
+    .rightTitle{display:flex; justify-content:space-between; align-items:center; margin:0 0 8px;}
+    .danger{color:#b00000; font-weight:800;}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="left">
-      <div class="panel">
-        <h1>탱크 재고 현황 (복붙 자동)</h1>
+    <div class="card">
+      <h1>탱크 재고 현황 (복붙 자동)</h1>
 
-        <div class="row">
-          <span class="pill"><b>0</b> 옅은 노랑</span>
-          <span class="pill"><b>85%↑</b> 옅은 빨강</span>
-          <span class="pill"><b>KG→T</b> 1,000으로 나눔</span>
-          <span class="pill"><b>말분</b> 무시</span>
-          <span class="pill"><b>Br1~Br12</b> 이름만</span>
-        </div>
-
-        <div class="row" style="margin-top:10px;">
-          <label style="font-size:12px;"><b>날짜</b> :
-            <input id="date" type="date" />
-          </label>
-          <button id="btnApply">현황표 업데이트</button>
-          <button id="btnSave" class="secondary">이 날짜로 저장</button>
-          <button id="btnLoad" class="secondary">이 날짜 불러오기</button>
-          <button id="btnReset" class="secondary">초기화</button>
-          <button id="btnDemo" class="secondary">데모</button>
-        </div>
-
-        <div class="hint">
-          1) 엑셀에서 표(6열) 그대로 복사 → 아래에 붙여넣기<br/>
-          2) <b>현황표 업데이트</b><br/>
-          3) 날짜별로 남기려면 <b>이 날짜로 저장</b> / 과거 조회는 <b>이 날짜 불러오기</b>
-        </div>
-
-        <div style="margin-top:10px;">
-          <textarea id="paste" placeholder="엑셀에서 복사한 6열 데이터를 그대로 붙여넣으세요 (헤더 포함 가능)"></textarea>
-        </div>
+      <div class="row">
+        <button class="primary" id="btnApply">현황표 업데이트</button>
+        <button id="btnSave">오늘 날짜로 저장</button>
+        <button id="btnClear">초기화</button>
+        <span class="pill">✅ <b>SVG 캔버스 고정</b>: 1422×725</span>
+        <span class="pill">✅ <b>0</b> → 노랑 / <b>85%↑</b> → 빨강</span>
       </div>
 
-      <div class="svgBox">
-        <!-- ✅ SVG 캔버스 크기 고정: 1322 x 745 -->
-        <svg id="map" width="1322" height="745" viewBox="0 0 1322 745" xmlns="http://www.w3.org/2000/svg">
-          <!-- 배경 -->
-          <rect x="0" y="0" width="1322" height="745" fill="white"/>
+      <div class="row">
+        <span class="pill">조회 날짜</span>
+        <input type="date" id="datePick" />
+        <button id="btnLoad">불러오기</button>
+        <span class="pill muted">저장은 PC 브라우저 <b>localStorage</b>(간이 DB)로 됩니다</span>
+      </div>
 
-          <!-- 상단 3줄 텍스트 -->
-          <g id="headerText" font-family="system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR, Arial" font-weight="700" font-size="18">
-            <text id="txtPack" fill="#d60000">Packaging Bin : 40M/T x 24Q'ty = 960M/T</text>
-            <text id="txt70"   fill="#d60000">70M/T x 6Q'ty = 420M/T</text>
-            <text id="txtBulk" fill="#0066ff">Bulk Loding Bin : 70M/T x 6Q'ty = 420M/T</text>
-          </g>
+      <div class="grid">
+        <div>
+          <div class="hint"><b>Raw 데이터 붙여넣기</b> (엑셀에서 표 범위 복사 → 여기 클릭 → Ctrl+V)</div>
+          <textarea id="raw" placeholder="예) TANK NO.  입출고  측정량  단위  제품명 ...&#10;L  9   -   71    ...  고급전용분BULK"></textarea>
+          <div class="small">
+            - ✅ 새 포맷: <b>TANK NO.</b>(B열) / <b>측정량</b>(D열) / <b>제품명</b>(F열) 사용<br/>
+            - ✅ 탱크번호는 <b>변환 없이 그대로</b> 씁니다(예: FBL_L9 → 변환 X).<br/>
+            - ✅ 도면에 <b>없는 탱크</b>는 자동 무시합니다.<br/>
+            - ✅ <b>Br1~Br12</b>는 엑셀 데이터가 없어도 <b>이름만 표시</b>합니다.
+          </div>
+        </div>
 
-          <!-- 상단 텍스트 둘러싼 선 + 구분선 + 좌측 외곽 -->
-          <g id="guides" stroke="#111" stroke-width="2" fill="none">
-            <rect id="headerBox" rx="0" ry="0"/>
-            <line id="headerBottom"/>
-            <path id="leftOutline"/>
-            <rect id="packAreaBox"/>
-          </g>
+        <div class="svgbox">
+          <!-- ✅ SVG 캔버스 크기 고정 -->
+          <svg id="board" width="1422" height="725" viewBox="0 0 1422 725" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+            <!-- 바깥 테두리 -->
+            <rect x="10" y="10" width="1402" height="705" fill="#fff" stroke="var(--line)" stroke-width="2"/>
 
-          <!-- Milling Area 텍스트 -->
-          <g font-family="system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR, Arial" font-size="44" fill="#111" opacity="0.95">
-            <text x="500" y="155">(New)</text>
-            <text x="680" y="155">Milling Area (Old)</text>
-          </g>
+            <!-- 상단 3줄 텍스트 영역(요청 정렬 반영) -->
+            <!-- 기준값: Packaging 시작 x = 60 -->
+            <!-- 1줄 Packaging -->
+            <text id="t_pack1" x="60" y="40" font-size="16" font-weight="800" fill="var(--red)">Packaging Bin : 45M/T x 24Q'ty = 1080M/T</text>
+            <!-- 2줄 (':' 뒤에 맞춰 시작) -->
+            <text id="t_pack2" x="240" y="62" font-size="16" font-weight="800" fill="var(--red)">80M/T x 6Q'ty = 450M/T</text>
+            <!-- 3줄 Bulk Loading (1줄 시작과 동일) -->
+            <text id="t_bulkTop" x="60" y="84" font-size="16" font-weight="800" fill="var(--blue)">Bulk Loding Bin : 80M/T x 6Q'ty = 420M/T</text>
 
-          <!-- 탱크 그룹 -->
-          <g id="tankBran"></g>
-          <g id="tanks_red"></g>
-          <g id="tanks_blue"></g>
-          <g id="tanks_purple"></g>
-          <g id="tanks_green"></g>
-          <g id="tanks_brboxes"></g>
-        </svg>
+            <!-- 상단 텍스트 영역 구분선(요청: 선으로 구분) -->
+            <line x1="40" y1="100" x2="520" y2="100" stroke="var(--line)" stroke-width="2"/>
+
+            <!-- 왼쪽 큰 박스(빨강/파랑 탱크 구역) -->
+            <rect x="40" y="100" width="480" height="420" fill="none" stroke="var(--line)" stroke-width="2"/>
+            <!-- 왼쪽 아래 OFFICE 박스(요청: 왼쪽 선을 내려 OFFICE 둘러싸기 느낌) -->
+            <path d="M40 100 L40 640 L95 640 L95 520 L40 520" fill="none" stroke="var(--line)" stroke-width="2"/>
+            <text x="70" y="620" font-size="18" font-weight="800" transform="rotate(90 70 620)">OFFICE</text>
+
+            <!-- 가운데/오른쪽 영역 라인(대략 도면 맞춤) -->
+            <line x1="520" y1="10" x2="520" y2="520" stroke="var(--line)" stroke-width="2"/>
+            <line x1="950" y1="10" x2="950" y2="520" stroke="var(--line)" stroke-width="2"/>
+            <line x1="1050" y1="10" x2="1050" y2="520" stroke="var(--line)" stroke-width="2"/>
+
+            <text x="610" y="170" font-size="34" fill="var(--gray)">(New)</text>
+            <text x="780" y="170" font-size="40" fill="var(--gray)">Milling Area (Old)</text>
+
+            <!-- Bran 원(우상단) -->
+            <g id="tank_Bran"></g>
+
+            <!-- 오른쪽 Br1~Br4 세로 박스 -->
+            <g id="stackBr"></g>
+
+            <!-- Br5~Br12 가로 박스 -->
+            <g id="rowBr"></g>
+
+            <!-- Semi-finished 안내 -->
+            <text x="680" y="360" font-size="16" font-weight="800" fill="var(--purple)">Semi-finished Bin : 25M/T x 6Q'ty</text>
+            <text x="835" y="382" font-size="16" font-weight="800" fill="var(--purple)">= 150M/T</text>
+
+            <!-- Bran byproduct 안내 -->
+            <text x="940" y="360" font-size="16" font-weight="800" fill="var(--gray)">Bran byproduct Bin : 30M/T x 8Q'ty = 240M/T</text>
+
+            <!-- Premix 안내 -->
+            <text x="820" y="420" font-size="16" font-weight="900" fill="var(--green)">Premix Bin : 35M/T x 4Q'ty</text>
+            <text x="885" y="442" font-size="16" font-weight="900" fill="var(--green)">= 140M/T</text>
+
+            <!-- 하단 Bulk Loading 안내 -->
+            <text x="420" y="650" font-size="18" font-weight="900" fill="var(--blue)">Bulk Loding Bin : 40M/T x 12Q'ty + 80M/T x 8Q'ty = 1600M/T</text>
+
+            <!-- 탱크 그룹 -->
+            <g id="tankGroup"></g>
+          </svg>
+        </div>
       </div>
     </div>
 
-    <div class="right">
-      <div class="panel">
-        <h1>탱크별 상세 (제품명 포함)</h1>
-        <div class="hint muted">
-          헤더: <b>Tank / 재고량(T) / 제품명</b><br/>
-          - Tank: 엑셀 <b>B열</b>(SILO/TANK번호)<br/>
-          - 재고량: 엑셀 <b>F열</b>(재고량, KG→T)<br/>
-          - 제품명: 엑셀 <b>D열</b>(제품명)
-        </div>
-        <div style="margin-top:10px; max-height:600px; overflow:auto;">
-          <table>
-            <thead>
-              <tr>
-                <th style="width:110px;">Tank</th>
-                <th style="width:90px;">재고량(T)</th>
-                <th>제품명</th>
-              </tr>
-            </thead>
-            <tbody id="detailBody">
-              <tr><td colspan="3" class="muted">데이터가 없습니다.</td></tr>
-            </tbody>
-          </table>
-        </div>
+    <div class="card">
+      <div class="rightTitle">
+        <h1 style="margin:0;">탱크별 상세 (제품명 포함)</h1>
+        <span class="pill"><b class="danger">85%↑</b> 표시됨</span>
       </div>
-
-      <div class="panel">
-        <h1>용량/부하율 계산</h1>
-        <div class="hint">
-          - <b>%</b> = (현재재고T / 탱크용량T) × 100<br/>
-          - 용량은 도면 기준으로 기본 세팅(원하면 테이블로 분리 가능)
-        </div>
-        <div class="hint muted">
-          ✅ 현재 버전은 GitHub Pages(서버 없음)라 날짜별 저장은 <b>브라우저 LocalStorage</b>에 저장됩니다.<br/>
-          (여러 사람이 같은 이력을 공유하려면 Supabase/Firebase로 확장 필요)
-        </div>
+      <div class="small muted">
+        - 표 헤더: <b>Tank</b> / <b>재고량(T)</b> / <b>제품명</b><br/>
+        - “말분(ETC_3)”은 <b>무시</b>합니다.
+      </div>
+      <div style="height:560px; overflow:auto; border:1px solid #ddd; border-radius:10px; margin-top:10px;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:90px;">Tank</th>
+              <th style="width:90px;">재고량(T)</th>
+              <th>제품명</th>
+            </tr>
+          </thead>
+          <tbody id="tbl"></tbody>
+        </table>
       </div>
     </div>
   </div>
 
 <script>
-/** =========================================================
- *  0) 핵심 파라미터
- * ========================================================= */
-const HEADER_SHIFT_PX = 180; // ✅ Packaging Bin 문구를 오른쪽으로 이동한 픽셀(요청했던 값)
+/* =========================
+   1) ✅ 도면에 존재하는 탱크 + 위치/색/용량(사진 기준)
+   - 용량(capT): “○○t”에 해당
+   - type: red/blue/purple/green/gray
+========================= */
 
-/** B열(SILO/TANK번호) -> 도면표기 */
-const MAP = {
-  "ETC_2":"Bran",
-  "ETC_3":"말분", // ✅ 무시
-  "FBL_B1":"B1","FBL_B2":"B2","FBL_B3":"B3","FBL_B4":"B4",
-  "FBL_L1":"L1","FBL_L2":"L2","FBL_L3":"L3","FBL_L4":"L4","FBL_L5":"L5","FBL_L6":"L6",
-  "FBL_L7":"L7","FBL_L8":"L8","FBL_L9":"L9","FBL_L10":"L10","FBL_L11":"L11","FBL_L12":"L12","FBL_L13":"L13",
-  "FBL_L15":"L15","FBL_L16":"L16","FBL_L17":"L17","FBL_L18":"L18","FBL_L19":"L19","FBL_L20":"L20",
-  "FBL_L21":"L21","FBL_L22":"L22","FBL_L23":"L23","FBL_L24":"L24","FBL_L25":"L25","FBL_L26":"L26",
-  "FPP_1P1":"1P1","FPP_1P2":"1P2","FPP_1P3":"1P3","FPP_1P4":"1P4","FPP_1P5":"1P5","FPP_1P6":"1P6","FPP_1P7":"1P7","FPP_1P8":"1P8",
-  "FPP_2P1":"2P1","FPP_2P2":"2P2","FPP_2P3":"2P3","FPP_2P4":"2P4","FPP_2P5":"2P5","FPP_2P6":"2P6","FPP_2P7":"2P7","FPP_2P8":"2P8",
-  "FPP_3P1":"3P1","FPP_3P2":"3P2","FPP_3P3":"3P3","FPP_3P4":"3P4","FPP_3P5":"3P5","FPP_3P6":"3P6","FPP_3P7":"3P7","FPP_3P8":"3P8",
-  "FPP_A1":"A1","FPP_A2":"A2","FPP_A3":"A3","FPP_A4":"A4","FPP_A5":"A5","FPP_A6":"A6",
-  "FPP_T1":"T1","FPP_T2":"T2","FPP_T3":"T3","FPP_T4":"T4","FPP_T5":"T5","FPP_T6":"T6",
+const CANVAS = { w: 1422, h: 725 };
+const HI_PCT = 85;
+
+const COLORS = {
+  red: getCss('--red'),
+  blue: getCss('--blue'),
+  purple: getCss('--purple'),
+  green: getCss('--green'),
+  gray: getCss('--gray'),
+  line: getCss('--line'),
+  zero: getCss('--zero'),
+  hi: getCss('--hi'),
 };
 
-/** 탱크 용량(T) */
-const CAP = (() => {
-  const cap = {};
-  ["A1","A2","A3","A4","A5","A6"].forEach(k=>cap[k]=70);
-  for(let i=1;i<=8;i++){ cap[`1P${i}`]=40; cap[`2P${i}`]=40; cap[`3P${i}`]=40; }
-  for(let i=1;i<=6;i++) cap[`T${i}`]=70;
-  for(let i=1;i<=6;i++) cap[`L${i}`]=30;
-  for(let i=1;i<=4;i++) cap[`B${i}`]=30;
+function getCss(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
 
-  for(let i=5;i<=12;i++) cap[`Br${i}`]=30;
-  for(let i=1;i<=4;i++) cap[`Br${i}`]=100;
+// 탱크 표시용 공통 크기(겹침 방지)
+const R = 22;              // 원 반지름
+const FS1 = 13;            // 탱크명
+const FS2 = 14;            // 수량
+const FS3 = 11;            // (xx%) 표시
 
-  cap["Bran"]=400;
+// ✅ 도면 좌표(절대 배치) — 현재 이미지(1422x725) 기준으로 맞춘 값
+// (좌측 패키징/벌크 구역)
+const TANKS = [
+  // --- Red (Packaging) : A & P ---
+  // 1행
+  C("A6",  70, 132, "red", 80),
+  C("A5", 120, 132, "red", 80),
+  C("P3-8",170, 132, "red", 45),
+  C("P3-7",220, 132, "red", 45),
+  C("P2-8",270, 132, "red", 45),
+  C("P2-7",320, 132, "red", 45),
+  C("P1-8",370, 132, "red", 45),
+  C("P1-7",420, 132, "red", 45),
 
-  for(let i=7;i<=14;i++) cap[`L${i}`]=80;
-  for(let i=15;i<=18;i++) cap[`L${i}`]=60;
-  for(let i=19;i<=20;i++) cap[`L${i}`]=40;
-  for(let i=21;i<=26;i++) cap[`L${i}`]=60;
-  return cap;
-})();
+  // 2행
+  C("A4",  70, 186, "red", 80),
+  C("A3", 120, 186, "red", 80),
+  C("P3-6",170, 186, "red", 45),
+  C("P3-5",220, 186, "red", 45),
+  C("P2-6",270, 186, "red", 45),
+  C("P2-5",320, 186, "red", 45),
+  C("P1-6",370, 186, "red", 45),
+  C("P1-5",420, 186, "red", 45),
 
-/** =========================================================
- *  1) SVG 레이아웃(좌표 고정)
- * ========================================================= */
-const svg = document.getElementById("map");
-const gRed = document.getElementById("tanks_red");
-const gBlue = document.getElementById("tanks_blue");
-const gPurple = document.getElementById("tanks_purple");
-const gGreen = document.getElementById("tanks_green");
-const gBrBoxes = document.getElementById("tanks_brboxes");
-const gBran = document.getElementById("tankBran");
+  // 3행
+  C("A2",  70, 240, "red", 80),
+  C("A1", 120, 240, "red", 80),
+  C("P3-4",170, 240, "red", 45),
+  C("P3-3",220, 240, "red", 45),
+  C("P2-4",270, 240, "red", 45),
+  C("P2-3",320, 240, "red", 45),
+  C("P1-4",370, 240, "red", 45),
+  C("P1-3",420, 240, "red", 45),
 
-const R = 26;
-const GAP_X = 10;
-const GAP_Y = 10;
-const STEP_X = R*2 + GAP_X;
-const STEP_Y = R*2 + GAP_Y;
+  // 4행(오프셋)
+  C("P3-2",195, 300, "red", 45),
+  C("P3-1",245, 300, "red", 45),
+  C("P2-2",295, 300, "red", 45),
+  C("P2-1",345, 300, "red", 45),
+  C("P1-2",395, 300, "red", 45),
+  C("P1-1",445, 300, "red", 45),
 
-const TOP_Y = 70;
-const LEFT_X = 70;
+  // --- Blue (T) ---
+  C("T6",  210, 355, "blue", 80),
+  C("T5",  260, 355, "blue", 80),
+  C("T4",  310, 355, "blue", 80),
+  C("T3",  360, 355, "blue", 80),
+  C("T2",  410, 355, "blue", 80),
+  C("T1",  460, 355, "blue", 80),
 
-function svgEl(tag, attrs={}){
-  const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
-  for(const [k,v] of Object.entries(attrs)) el.setAttribute(k, v);
-  return el;
+  // --- Purple (L1~L6) ---
+  C("L1",  650, 390, "purple", 25),
+  C("L2",  705, 390, "purple", 25),
+  C("L3",  760, 390, "purple", 25),
+  C("L4",  815, 390, "purple", 25),
+  C("L5",  870, 390, "purple", 25),
+  C("L6",  925, 390, "purple", 25),
+
+  // --- Green (B1~B4) ---
+  C("B4",  915, 350, "green", 35),
+  C("B1",  960, 350, "green", 35),
+  C("B3",  915, 395, "green", 35),
+  C("B2",  960, 395, "green", 35),
+
+  // --- Blue (L7~L26) : 아래 별도 구역 ---
+  // 상단 2줄(좌->우)
+  C("L15", 720, 500, "blue", 60),
+  C("L16", 770, 500, "blue", 60),
+  C("L17", 820, 500, "blue", 60),
+  C("L18", 870, 500, "blue", 60),
+  C("L19", 920, 500, "blue", 40),
+  C("L20", 970, 500, "blue", 40),
+  C("L8",  1020,500, "blue", 80),
+  C("L7",  1070,500, "blue", 80),
+
+  C("L21", 720, 560, "blue", 60),
+  C("L22", 770, 560, "blue", 60),
+  C("L23", 820, 560, "blue", 60),
+  C("L24", 870, 560, "blue", 60),
+  C("L25", 920, 560, "blue", 40),
+  C("L26", 970, 560, "blue", 40),
+  C("L10", 1050,560, "blue", 80),
+  C("L9",  1100,560, "blue", 80),
+
+  // 아래 2x2
+  C("L12", 1035, 610, "blue", 80),
+  C("L11", 1085, 610, "blue", 80),
+  C("L14", 1035, 660, "blue", 80),
+  C("L13", 1085, 660, "blue", 80),
+];
+
+// Bran (원) — 도면 우상단
+const BRAN = { name:"Bran", cx: 1360, cy: 80, type:"gray", capT: 400 };
+
+// Br 박스(가로: Br12~Br5)
+const BR_ROW = [
+  {name:"Br12", x: 1020, y: 390, w: 50, h: 45, capT: 30},
+  {name:"Br11", x: 1070, y: 390, w: 50, h: 45, capT: 30},
+  {name:"Br10", x: 1120, y: 390, w: 50, h: 45, capT: 30},
+  {name:"Br9",  x: 1170, y: 390, w: 50, h: 45, capT: 30},
+  {name:"Br8",  x: 1220, y: 390, w: 50, h: 45, capT: 40},
+  {name:"Br7",  x: 1270, y: 390, w: 50, h: 45, capT: 40},
+  {name:"Br6",  x: 1320, y: 390, w: 50, h: 45, capT: 40},
+  {name:"Br5",  x: 1370, y: 390, w: 50, h: 45, capT: 40},
+];
+
+// Br 스택(세로: Br4~Br1)
+const BR_STACK = [
+  {name:"Br4", x: 1320, y: 435, w: 90, h: 62, capT: 100},
+  {name:"Br3", x: 1320, y: 497, w: 90, h: 62, capT: 100},
+  {name:"Br2", x: 1320, y: 559, w: 90, h: 62, capT: 100},
+  {name:"Br1", x: 1320, y: 621, w: 90, h: 62, capT: 100},
+];
+
+function C(name, cx, cy, type, capT){ return {name, cx, cy, type, capT}; }
+
+/* =========================
+   2) ✅ Raw 데이터 파서 (신규/구형 둘 다 수용)
+   - 신규: TANK NO / 측정량 / 제품명
+   - 구형(혹시 남아있으면): SILO/TANK번호 / 재고량 / 제품명
+========================= */
+
+function normalizeTankName(s){
+  if(!s) return "";
+  // "L  9" -> "L9", "A 1" -> "A1", "T 6" -> "T6", "B 2" -> "B2"
+  s = String(s).trim().replace(/\s+/g,' ');
+  // P1-1 형태는 그대로 유지
+  if(/^P\d-\d$/i.test(s)) return s.toUpperCase();
+  // "L 10" 같은 케이스: 문자+공백+숫자 => 붙이기
+  s = s.replace(/^([A-Za-z])\s+(\d+)$/,'$1$2');
+  return s.toUpperCase();
 }
 
-function drawCircleTank(group, name, x, y, stroke, fill="white"){
-  const g = svgEl("g");
-  const c = svgEl("circle", { cx:x, cy:y, r:R, stroke, "stroke-width":2.5, fill });
-
-  const tName = svgEl("text", {
-    x, y: y-6, "text-anchor":"middle", "font-size":16, "font-weight":800,
-    fill: stroke, "font-family":"system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR, Arial"
-  });
-  tName.textContent = name;
-
-  const tVal = svgEl("text", {
-    x, y: y+13, "text-anchor":"middle", "font-size":15, "font-weight":800,
-    fill:"#111", "font-family":"system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR, Arial"
-  });
-  tVal.textContent = "—";
-
-  const tPct = svgEl("text", {
-    x, y: y+30, "text-anchor":"middle", "font-size":11, "font-weight":800,
-    fill:"#111", opacity:"0.75",
-    "font-family":"system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR, Arial"
-  });
-  tPct.textContent = "";
-
-  g.appendChild(c); g.appendChild(tName); g.appendChild(tVal); g.appendChild(tPct);
-  group.appendChild(g);
-
-  return { g, circle:c, tVal, tPct };
+function parseNumberT(s){
+  if(s==null) return null;
+  // "71", "71.000", "71,000." 등 -> 71
+  let t = String(s).trim();
+  if(!t) return null;
+  t = t.replace(/,/g,'').replace(/\.$/,'');
+  const v = Number(t);
+  return Number.isFinite(v) ? v : null;
 }
 
-function drawBoxTank(group, name, x, y, w, h){
-  const g = svgEl("g");
-  const r = svgEl("rect", { x, y, width:w, height:h, fill:"white", stroke:"#111", "stroke-width":2 });
-  const t = svgEl("text", { x:x+w/2, y:y+h/2+5, "text-anchor":"middle", "font-size":14, "font-weight":800, fill:"#111" });
-  t.textContent = name;
-  g.appendChild(r); g.appendChild(t);
-  group.appendChild(g);
-  return { g, rect:r, text:t };
-}
+function parseRaw(raw){
+  const text = (raw||"").trim();
+  if(!text) return { rows:[], mode:"none" };
 
-const tankNodes = new Map();
+  const lines = text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  const header = lines[0];
 
-function layoutHeader(){
-  const pack = document.getElementById("txtPack");
-  const txt70 = document.getElementById("txt70");
-  const bulk = document.getElementById("txtBulk");
+  const isNew = /TANK\s*NO\.?/i.test(header);
+  const isOld = /SILO\/TANK번호/i.test(header) || /재고구분/i.test(header);
 
-  const x0 = 40;
-  const y0 = 28;
-
-  const packX = x0 + HEADER_SHIFT_PX;
-  pack.setAttribute("x", packX);
-  pack.setAttribute("y", y0);
-
-  bulk.setAttribute("x", packX);
-  bulk.setAttribute("y", y0 + 42);
-
-  const xAfterColon = packX + 230; // 미세조정 필요하면 225~245 사이 조절
-  txt70.setAttribute("x", xAfterColon);
-  txt70.setAttribute("y", y0 + 21);
-
-  const headerBox = document.getElementById("headerBox");
-  const headerBottom = document.getElementById("headerBottom");
-
-  const boxX = 18, boxY = 10, boxW = 1286, boxH = 70; // 1322폭에 맞춤
-  headerBox.setAttribute("x", boxX);
-  headerBox.setAttribute("y", boxY);
-  headerBox.setAttribute("width", boxW);
-  headerBox.setAttribute("height", boxH);
-
-  headerBottom.setAttribute("x1", boxX);
-  headerBottom.setAttribute("y1", boxY + boxH);
-  headerBottom.setAttribute("x2", boxX + boxW);
-  headerBottom.setAttribute("y2", boxY + boxH);
-
-  const leftOutline = document.getElementById("leftOutline");
-  // 왼쪽 외곽을 아래(OFFICE)까지 내려주는 느낌
-  leftOutline.setAttribute("d", `M ${boxX} ${boxY} L ${boxX} 730 L 120 730 L 120 640 L ${boxX} 640`);
-
-  const packAreaBox = document.getElementById("packAreaBox");
-  const w = (STEP_X * 8) + 40;
-  const h = (STEP_Y * 5) + 40;
-  packAreaBox.setAttribute("x", boxX);
-  packAreaBox.setAttribute("y", boxY + boxH);
-  packAreaBox.setAttribute("width", w);
-  packAreaBox.setAttribute("height", h);
-}
-
-function buildLayout(){
-  gRed.innerHTML = ""; gBlue.innerHTML = ""; gPurple.innerHTML = ""; gGreen.innerHTML = ""; gBrBoxes.innerHTML = ""; gBran.innerHTML = "";
-  tankNodes.clear();
-
-  const strokeRed = "#d60000";
-  const A_top = TOP_Y + 40;
-  const baseX = LEFT_X;
-
-  const row1 = ["A6","A5","3P8","3P7","2P8","2P7","1P8","1P7"];
-  const row2 = ["A4","A3","3P6","3P5","2P6","2P5","1P6","1P5"];
-  const row3 = ["A2","A1","3P4","3P3","2P4","2P3","1P4","1P3"];
-  const row4 = ["","", "3P2","3P1","2P2","2P1","1P2","1P1"];
-
-  [row1,row2,row3,row4].forEach((row, ri)=>{
-    row.forEach((nm, ci)=>{
-      if(!nm) return;
-      const x = baseX + ci*STEP_X;
-      const y = A_top + ri*STEP_Y;
-      const node = drawCircleTank(gRed, nm, x, y, strokeRed);
-      tankNodes.set(nm, node);
-    });
-  });
-
-  const strokeBlue = "#0066ff";
-  const tRow = ["T6","T5","T4","T3","T2","T1"];
-  tRow.forEach((nm, i)=>{
-    const x = baseX + (2+i)*STEP_X;
-    const y = A_top + 4*STEP_Y;
-    const node = drawCircleTank(gBlue, nm, x, y, strokeBlue);
-    tankNodes.set(nm, node);
-  });
-
-  const strokePurple = "#7b3ff2";
-  const lTopX = 500 + HEADER_SHIFT_PX;
-  const lTopY = A_top + 4*STEP_Y + 25;
-  ["L1","L2","L3","L4","L5","L6"].forEach((nm,i)=>{
-    const x = lTopX + i*STEP_X;
-    const y = lTopY;
-    const node = drawCircleTank(gPurple, nm, x, y, strokePurple);
-    tankNodes.set(nm, node);
-  });
-
-  const strokeGreen = "#00a651";
-  const bBaseX = lTopX + 6*STEP_X + 10;
-  const bBaseY = lTopY;
-  const green = [
-    {nm:"B4", dx:0, dy:-STEP_Y/2},
-    {nm:"B1", dx:STEP_X, dy:-STEP_Y/2},
-    {nm:"B3", dx:0, dy:STEP_Y/2},
-    {nm:"B2", dx:STEP_X, dy:STEP_Y/2},
-  ];
-  green.forEach(o=>{
-    const node = drawCircleTank(gGreen, o.nm, bBaseX + o.dx, bBaseY + o.dy, strokeGreen);
-    tankNodes.set(o.nm, node);
-  });
-
-  // Br 박스
-  const brY = lTopY - 18;
-  const brX0 = bBaseX + 2*STEP_X + 20;
-  const bw = 60, bh = 38;
-  const brRow = ["Br12","Br11","Br10","Br9","Br8","Br7","Br6","Br5"];
-  brRow.forEach((nm,i)=> drawBoxTank(gBrBoxes, nm, brX0 + i*(bw+4), brY, bw, bh));
-  const brVx = brX0 + brRow.length*(bw+4) + 18;
-  ["Br4","Br3","Br2","Br1"].forEach((nm,i)=> drawBoxTank(gBrBoxes, nm, brVx, brY + i*(bh+4), 70, bh+6));
-
-  // L7~L26 블록
-  const lBlockX = 580;
-  const lBlockY = 500;
-  const topRow = ["L15","L16","L17","L18","L19","L20","L8","L7"];
-  const midRow = ["L21","L22","L23","L24","L25","L26","L10","L9"];
-  topRow.forEach((nm,i)=>{
-    const node = drawCircleTank(gBlue, nm, lBlockX + i*STEP_X, lBlockY, strokeBlue);
-    tankNodes.set(nm,node);
-  });
-  midRow.forEach((nm,i)=>{
-    const node = drawCircleTank(gBlue, nm, lBlockX + i*STEP_X, lBlockY + STEP_Y, strokeBlue);
-    tankNodes.set(nm,node);
-  });
-  [
-    {nm:"L12", x:lBlockX + 6*STEP_X, y:lBlockY + 2*STEP_Y},
-    {nm:"L11", x:lBlockX + 7*STEP_X, y:lBlockY + 2*STEP_Y},
-    {nm:"L14", x:lBlockX + 6*STEP_X, y:lBlockY + 3*STEP_Y},
-    {nm:"L13", x:lBlockX + 7*STEP_X, y:lBlockY + 3*STEP_Y},
-  ].forEach(o=>{
-    const node = drawCircleTank(gBlue, o.nm, o.x, o.y, strokeBlue);
-    tankNodes.set(o.nm,node);
-  });
-
-  // ✅ Bran(ETC_2) - 캔버스(1322) 안쪽으로 고정
-  const branNode = drawCircleTank(gBran, "Bran", 1282, 70, "#111");
-  tankNodes.set("Bran", branNode);
-
-  layoutHeader();
-}
-
-/** =========================================================
- *  2) 데이터 파싱/표시
- * ========================================================= */
-function parseNumberToT(raw){
-  if(raw == null) return null;
-  let s = String(raw).trim();
-  if(!s) return null;
-  s = s.replace(/,/g,"").replace(/\.$/,"");
-  const n = Number(s);
-  if(Number.isNaN(n)) return null;
-  return n / 1000; // KG -> T
-}
-
-function fmtT(t){
-  if(t == null) return "—";
-  const r = Math.round(t);
-  if(Math.abs(t - r) < 0.05) return `${r}t`;
-  return `${t.toFixed(1)}t`;
-}
-
-function calcPct(name, t){
-  const cap = CAP[name];
-  if(!cap || t == null) return null;
-  return (t / cap) * 100;
-}
-
-function applyStyles(name, node, t){
-  node.circle.setAttribute("fill", "white");
-  const pct = calcPct(name, t);
-
-  // 0 강조
-  if(t === 0){
-    node.circle.setAttribute("fill", getComputedStyle(document.documentElement).getPropertyValue("--zeroFill"));
-  }
-  // 85% 이상 강조(우선)
-  if(pct != null && pct >= 85){
-    node.circle.setAttribute("fill", getComputedStyle(document.documentElement).getPropertyValue("--highFill"));
-  }
-
-  node.tPct.textContent = (pct != null) ? `(${Math.round(pct)}%)` : "";
-}
-
-function escapeHtml(s){
-  return String(s ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-}
-
-function renderDetail(rows){
-  const tb = document.getElementById("detailBody");
-  if(!rows.length){
-    tb.innerHTML = `<tr><td colspan="3" class="muted">데이터가 없습니다.</td></tr>`;
-    return;
-  }
-  tb.innerHTML = rows.map(r=>{
-    const t = (r.t == null) ? "—" : (Math.round(r.t*10)/10).toString();
-    return `<tr>
-      <td><b>${escapeHtml(r.tank)}</b></td>
-      <td>${escapeHtml(t)}</td>
-      <td>${escapeHtml(r.product || "")}</td>
-    </tr>`;
-  }).join("");
-}
-
-function resetAll(){
-  for(const [name,node] of tankNodes.entries()){
-    node.tVal.textContent = "—";
-    node.tPct.textContent = "";
-    node.circle.setAttribute("fill","white");
-  }
-  renderDetail([]);
-}
-
-function parseAndUpdate(text){
-  const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
   const rows = [];
 
-  for(const line of lines){
-    if(line.includes("재고구분") && line.includes("SILO/TANK번호")) continue;
+  for(let i=1;i<lines.length;i++){
+    const line = lines[i];
+    // 탭/다중공백 혼합을 최대한 처리
+    const parts = line.split(/\t+/).length>1 ? line.split(/\t+/) : line.split(/\s{2,}/);
+    if(parts.length < 3) continue;
 
-    let parts = line.split(/\t+/);
-    if(parts.length < 6){
-      const p2 = line.split(/\s{2,}|\s+\t|\t+\s+/).filter(Boolean);
-      if(p2.length < 6) continue;
-      parts = p2;
+    if(isNew){
+      // 신규: [TANK NO., 입출고, 측정량, 단위, 제품명, ...]
+      const tank = normalizeTankName(parts[0]);
+      if(tank === "ETC_3" || tank === "말분") continue; // 요청: 말분 무시(안전장치)
+      const qty = parseNumberT(parts[2]); // D열 측정량
+      const product = (parts[4] ?? "").trim(); // F열 제품명(표에 따라 4번 인덱스)
+      if(!tank) continue;
+      rows.push({tank, qtyT: qty ?? 0, product});
+    }else if(isOld){
+      // 구형: [재고구분, SILO/TANK번호, 제품코드, 제품명, 재고단위, 재고량]
+      const tank = normalizeTankName(parts[1]);
+      const product = (parts[3] ?? "").trim();
+      const qtyKG = parseNumberT(parts[5]); // "71000." 같은 값(kg)
+      const qtyT = (qtyKG ?? 0) / 1000;
+      rows.push({tank, qtyT, product});
+    }else{
+      // 헤더 판별이 안되면: "탱크 수량 제품명" 순으로라도 파싱
+      const tank = normalizeTankName(parts[0]);
+      const qty = parseNumberT(parts[1]);
+      const product = parts.slice(2).join(' ').trim();
+      rows.push({tank, qtyT: qty ?? 0, product});
     }
-
-    const silo = parts[1];          // B열
-    const productName = parts[3];   // D열
-    const qtyRaw = parts[5];        // F열
-
-    if(silo === "ETC_3") continue;  // ✅ 말분 무시
-
-    const tankName = MAP[silo] || silo;
-    const t = parseNumberToT(qtyRaw);
-
-    rows.push({ tank: silo, tankMapped: tankName, product: productName, t });
   }
-
-  for(const r of rows){
-    const name = r.tankMapped;
-    const node = tankNodes.get(name);
-    if(node){
-      node.tVal.textContent = fmtT(r.t);
-      applyStyles(name, node, r.t);
-    }
-  }
-
-  renderDetail(rows.map(r=>({tank:r.tank, t:r.t, product:r.product})));
-  return rows;
+  return { rows, mode: isNew ? "new" : (isOld ? "old" : "guess") };
 }
 
-/** =========================================================
- *  3) 날짜별 저장/조회(LocalStorage)
- * ========================================================= */
-function keyFor(dateStr){ return `tank_snapshot_${dateStr}`; }
-function saveSnapshot(dateStr, text){ localStorage.setItem(keyFor(dateStr), text); }
-function loadSnapshot(dateStr){ return localStorage.getItem(keyFor(dateStr)); }
+/* =========================
+   3) ✅ “간이 DB” : 날짜별 저장/불러오기(localStorage)
+========================= */
+const LS_KEY = "tank_board_snapshots_v1";
 
-/** =========================================================
- *  4) 이벤트
- * ========================================================= */
-buildLayout();
-resetAll();
+function loadDB(){
+  try{ return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); }catch(e){ return {}; }
+}
+function saveDB(db){
+  localStorage.setItem(LS_KEY, JSON.stringify(db));
+}
 
-(function initDate(){
-  const el = document.getElementById("date");
+function todayISO(){
   const d = new Date();
   const yyyy = d.getFullYear();
-  const mm = String(d.getMonth()+1).padStart(2,"0");
-  const dd = String(d.getDate()).padStart(2,"0");
-  el.value = `${yyyy}-${mm}-${dd}`;
-})();
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${yyyy}-${mm}-${dd}`;
+}
 
-document.getElementById("btnApply").addEventListener("click", ()=>{
-  resetAll();
-  parseAndUpdate(document.getElementById("paste").value);
+/* =========================
+   4) ✅ SVG 렌더
+========================= */
+
+const tankIndex = new Map(TANKS.map(t=>[t.name.toUpperCase(), t]));
+const svg = document.getElementById('board');
+const g = document.getElementById('tankGroup');
+
+function clearSVG(node){
+  while(node.firstChild) node.removeChild(node.firstChild);
+}
+
+function pct(q, cap){
+  if(!cap || cap<=0) return 0;
+  return Math.round((q/cap)*100);
+}
+
+function formatT(v){
+  // 소수 0~2자리(필요시)
+  if(!Number.isFinite(v)) return "-";
+  const s = (Math.round(v*100)/100).toString();
+  return s;
+}
+
+function circleTank(tank, qtyT, product){
+  const p = pct(qtyT, tank.capT);
+  const isZero = (qtyT === 0);
+  const isHi = (p >= HI_PCT);
+
+  const fill = isZero ? COLORS.zero : (isHi ? COLORS.hi : "#fff");
+
+  const grp = el('g');
+  // 원
+  grp.appendChild(el('circle', {
+    cx: tank.cx, cy: tank.cy, r: R,
+    fill, stroke: COLORS[tank.type] || COLORS.gray, 'stroke-width': 2
+  }));
+
+  // 탱크명
+  grp.appendChild(el('text', {
+    x: tank.cx, y: tank.cy - 6,
+    'text-anchor':'middle',
+    'font-size': FS1, 'font-weight': 900,
+    fill: COLORS[tank.type] || COLORS.gray
+  }, tank.name));
+
+  // 수량(t)
+  grp.appendChild(el('text', {
+    x: tank.cx, y: tank.cy + 11,
+    'text-anchor':'middle',
+    'font-size': FS2, 'font-weight': 900,
+    fill: COLORS[tank.type] || COLORS.gray
+  }, `${formatT(qtyT)}t`));
+
+  // % (괄호)
+  grp.appendChild(el('text', {
+    x: tank.cx, y: tank.cy + 25,
+    'text-anchor':'middle',
+    'font-size': FS3, 'font-weight': 800,
+    fill: '#444'
+  }, `(${p}%)`));
+
+  return grp;
+}
+
+function rectTank(box, qtyT, product){
+  const p = pct(qtyT, box.capT);
+  const isZero = (qtyT === 0);
+  const isHi = (p >= HI_PCT);
+  const fill = isZero ? COLORS.zero : (isHi ? COLORS.hi : "#fff");
+
+  const grp = el('g');
+  grp.appendChild(el('rect', {
+    x:box.x, y:box.y, width:box.w, height:box.h,
+    fill, stroke: COLORS.line, 'stroke-width':2
+  }));
+  grp.appendChild(el('text', {
+    x: box.x + box.w/2, y: box.y + 18,
+    'text-anchor':'middle',
+    'font-size': 13, 'font-weight': 900, fill:'#111'
+  }, box.name));
+  grp.appendChild(el('text', {
+    x: box.x + box.w/2, y: box.y + 36,
+    'text-anchor':'middle',
+    'font-size': 12, 'font-weight': 900, fill:'#111'
+  }, `${formatT(qtyT)}t`));
+  return grp;
+}
+
+function branCircle(qtyT){
+  const p = pct(qtyT, BRAN.capT);
+  const isZero = (qtyT === 0);
+  const isHi = (p >= HI_PCT);
+  const fill = isZero ? COLORS.zero : (isHi ? COLORS.hi : "#fff");
+
+  const host = document.getElementById('tank_Bran');
+  clearSVG(host);
+  const grp = el('g');
+  grp.appendChild(el('circle', {cx:BRAN.cx, cy:BRAN.cy, r:32, fill, stroke:COLORS.line, 'stroke-width':2}));
+  grp.appendChild(el('text', {x:BRAN.cx, y:BRAN.cy-6, 'text-anchor':'middle', 'font-size':16, 'font-weight':900, fill:'#111'}, "Bran"));
+  grp.appendChild(el('text', {x:BRAN.cx, y:BRAN.cy+14, 'text-anchor':'middle', 'font-size':18, 'font-weight':900, fill:'#111'}, `${formatT(qtyT)}t`));
+  grp.appendChild(el('text', {x:BRAN.cx, y:BRAN.cy+32, 'text-anchor':'middle', 'font-size':12, 'font-weight':800, fill:'#444'}, `(${p}%)`));
+  host.appendChild(grp);
+}
+
+function renderBrBoxes(dataMap){
+  // row
+  const rowHost = document.getElementById('rowBr');
+  clearSVG(rowHost);
+  for(const b of BR_ROW){
+    // Br 데이터는 없으므로 이름만(요청)
+    rowHost.appendChild(el('rect',{x:b.x,y:b.y,width:b.w,height:b.h,fill:"#fff",stroke:COLORS.line,'stroke-width':2}));
+    rowHost.appendChild(el('text',{x:b.x+b.w/2,y:b.y+24,'text-anchor':'middle','font-size':13,'font-weight':900,fill:'#111'}, b.name));
+    rowHost.appendChild(el('text',{x:b.x+b.w/2,y:b.y+40,'text-anchor':'middle','font-size':11,'font-weight':800,fill:'#111'}, `${b.capT}t`));
+  }
+  // stack
+  const stHost = document.getElementById('stackBr');
+  clearSVG(stHost);
+  for(const b of BR_STACK){
+    stHost.appendChild(el('rect',{x:b.x,y:b.y,width:b.w,height:b.h,fill:"#fff",stroke:COLORS.line,'stroke-width':2}));
+    stHost.appendChild(el('text',{x:b.x+b.w/2,y:b.y+26,'text-anchor':'middle','font-size':14,'font-weight':900,fill:'#111'}, b.name));
+    stHost.appendChild(el('text',{x:b.x+b.w/2,y:b.y+46,'text-anchor':'middle','font-size':12,'font-weight':800,fill:'#111'}, `${b.capT}t`));
+  }
+}
+
+function renderAll(rows){
+  // 데이터 맵(탱크명 -> {qtyT, product})
+  const data = new Map();
+  for(const r of rows){
+    const key = normalizeTankName(r.tank);
+    if(!key) continue;
+    // 도면에 없는 탱크는 무시(요청)
+    if(!tankIndex.has(key) && key !== "BRAN") continue;
+    data.set(key, {qtyT: Number.isFinite(r.qtyT) ? r.qtyT : 0, product: r.product || ""});
+  }
+
+  // SVG 탱크 렌더
+  clearSVG(g);
+  for(const tank of TANKS){
+    const d = data.get(tank.name.toUpperCase()) || {qtyT:0, product:""};
+    g.appendChild(circleTank(tank, d.qtyT, d.product));
+  }
+
+  // Bran (ETC_2 or "Bran" 어느 쪽이든 수용)
+  const branQty = (data.get("ETC_2")?.qtyT) ?? (data.get("BRAN")?.qtyT) ?? 0;
+  branCircle(branQty);
+
+  // Br 박스(이름만)
+  renderBrBoxes(data);
+
+  // 오른쪽 표 렌더
+  const tbody = document.getElementById('tbl');
+  tbody.innerHTML = "";
+
+  // 표는 “도면에 있는 탱크만” + (Br 제외 가능)
+  const ordered = [
+    ...["A6","A5","A4","A3","A2","A1"],
+    ...["P3-8","P3-7","P3-6","P3-5","P3-4","P3-3","P3-2","P3-1"],
+    ...["P2-8","P2-7","P2-6","P2-5","P2-4","P2-3","P2-2","P2-1"],
+    ...["P1-8","P1-7","P1-6","P1-5","P1-4","P1-3","P1-2","P1-1"],
+    ...["T6","T5","T4","T3","T2","T1"],
+    ...["L1","L2","L3","L4","L5","L6"],
+    ...["B4","B1","B3","B2"],
+    ...["L7","L8","L9","L10","L11","L12","L13","L14","L15","L16","L17","L18","L19","L20","L21","L22","L23","L24","L25","L26"],
+    "ETC_2"
+  ];
+
+  for(const name of ordered){
+    if(name === "ETC_2"){
+      const qty = branQty;
+      addRow("Bran", qty, "(소맥피/Bran)");
+      continue;
+    }
+    const d = data.get(name) || {qtyT:0, product:""};
+    addRow(name, d.qtyT, d.product);
+  }
+
+  function addRow(tank, qtyT, product){
+    const tr = document.createElement('tr');
+    const td1 = document.createElement('td'); td1.textContent = tank; td1.className="mono";
+    const td2 = document.createElement('td'); td2.textContent = formatT(qtyT); td2.className="mono";
+    const td3 = document.createElement('td'); td3.textContent = product || ""; td3.className="";
+    tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
+    tbody.appendChild(tr);
+  }
+}
+
+function el(tag, attrs={}, text=null){
+  const n = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for(const [k,v] of Object.entries(attrs)) n.setAttribute(k, v);
+  if(text!=null) n.textContent = text;
+  return n;
+}
+
+/* =========================
+   5) 버튼 동작
+========================= */
+
+const rawEl = document.getElementById('raw');
+const dateEl = document.getElementById('datePick');
+
+dateEl.value = todayISO();
+
+document.getElementById('btnApply').addEventListener('click', ()=>{
+  const parsed = parseRaw(rawEl.value);
+  renderAll(parsed.rows);
 });
 
-document.getElementById("btnSave").addEventListener("click", ()=>{
-  const ds = document.getElementById("date").value;
-  if(!ds){ alert("날짜를 선택하세요"); return; }
-  const txt = document.getElementById("paste").value.trim();
-  if(!txt){ alert("붙여넣기 데이터가 비어있습니다"); return; }
-  saveSnapshot(ds, txt);
-  alert(`저장 완료: ${ds}`);
+document.getElementById('btnSave').addEventListener('click', ()=>{
+  const d = dateEl.value || todayISO();
+  const db = loadDB();
+  db[d] = rawEl.value || "";
+  saveDB(db);
+  alert(`저장 완료: ${d}`);
 });
 
-document.getElementById("btnLoad").addEventListener("click", ()=>{
-  const ds = document.getElementById("date").value;
-  if(!ds){ alert("날짜를 선택하세요"); return; }
-  const txt = loadSnapshot(ds);
-  if(!txt){ alert(`저장된 데이터가 없습니다: ${ds}`); return; }
-  document.getElementById("paste").value = txt;
-  resetAll();
-  parseAndUpdate(txt);
+document.getElementById('btnLoad').addEventListener('click', ()=>{
+  const d = dateEl.value || todayISO();
+  const db = loadDB();
+  const v = db[d];
+  if(!v){ alert(`저장된 데이터가 없습니다: ${d}`); return; }
+  rawEl.value = v;
+  const parsed = parseRaw(v);
+  renderAll(parsed.rows);
 });
 
-document.getElementById("btnReset").addEventListener("click", ()=>{
-  if(!confirm("화면 표시를 초기화할까요?")) return;
-  resetAll();
+document.getElementById('btnClear').addEventListener('click', ()=>{
+  rawEl.value = "";
+  renderAll([]);
 });
 
-document.getElementById("btnDemo").addEventListener("click", ()=>{
-  const demo = `재고구분\tSILO/TANK번호\t제품코드\t제품명\t재고단위\t재고량
-포장 Bulk 탱크\tFPP_A6\t101200000053\t사료전용분_BULK\tKG\t40000.
-포장 Bulk 탱크\tFPP_T6\t101200000097\t오티밀가루2호_BULK\tKG\t75000.
-반제품 Bulk 탱크\tETC_2\t101100000391\t소맥피_350KG\t대\t320000.
-반제품 Bulk 탱크\tFBL_L15\t101200000040\t소맥분3호_BULK\tKG\t27000.
-반제품 Bulk 탱크\tFBL_L16\t101200000040\t소맥분3호_BULK\tKG\t51000.
-반제품 Bulk 탱크\tETC_3\t101100000392\t말분_400KG\t대\t0.
-반제품 Bulk 탱크\tFBL_L7\t101200000021\t곰표밀가루_BULK\tKG\t0.
-`;
-  document.getElementById("paste").value = demo;
-  resetAll();
-  parseAndUpdate(demo);
-});
+// 첫 화면: 빈 렌더
+renderAll([]);
+
+/* =========================
+   6) ✅ “픽셀 이동” 정보(요청사항용 메모)
+   - 현재 코드 기준:
+     Packaging 1줄 시작 x = 60
+     2줄 시작 x = 240 (':' 뒤 정렬)
+     Bulk Loding 시작 x = 60
+   - 만약 이전 코드에서 Packaging이 x=30이었다면, 현재는 +30px 이동한 셈
+========================= */
 </script>
-
 </body>
 </html>
