@@ -1,189 +1,567 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<title>탱크 재고 현황</title>
-<style>
-body{font-family:Arial;margin:0;background:#f4f4f4}
-.controls{padding:15px;background:white}
-textarea{width:100%;height:160px}
-button{padding:8px 14px;margin-right:10px;margin-top:5px}
-svg{background:white;border:2px solid #333}
-
-/* 탱크 스타일 */
-.tank circle{
-  stroke-width:2;
-  fill:white;
-}
-.zero circle{fill:#fff9c4;}        /* 0일때 연노랑 */
-.over85 circle{fill:#ffd6d6;}      /* 85%이상 연빨강 */
-.tank text{font-size:12px;text-anchor:middle;dominant-baseline:middle;font-weight:bold}
-.capacity{font-size:10px;fill:#666}
-.percent{font-size:10px;fill:#000}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>탱크 재고 현황 (복붙 자동 + 미세조정)</title>
+  <style>
+    :root{
+      --w:1422px;
+      --h:725px;
+      --line:#111;
+      --bg:#fff;
+      --zero:#fff5b1;
+      --hi:#ffd3d3;
+      --red:#d60000;
+      --blue:#0b59ff;
+      --purple:#6b35d4;
+      --green:#00a24a;
+      --gray:#333;
+    }
+    body{font-family:system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", Arial, sans-serif; background:#f7f7f7; margin:0; padding:16px;}
+    .wrap{max-width: calc(var(--w) + 540px); margin:0 auto; display:grid; grid-template-columns: 1fr 540px; gap:14px;}
+    .card{background:#fff; border:1px solid #ddd; border-radius:10px; padding:12px;}
+    h1{margin:0 0 10px; font-size:18px;}
+    .row{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px;}
+    button{border:1px solid #bbb; background:#fff; padding:8px 10px; border-radius:10px; cursor:pointer; font-weight:800;}
+    button.primary{background:#111; color:#fff; border-color:#111;}
+    button.warn{background:#b00000; color:#fff; border-color:#b00000;}
+    .pill{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; border:1px solid #ddd; background:#fafafa; font-size:12px;}
+    textarea{width:100%; height:180px; border:1px solid #ccc; border-radius:10px; padding:10px; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; line-height:1.35;}
+    .small{font-size:12px; color:#444; line-height:1.5;}
+    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;}
+    .svgbox{overflow:auto; border:1px solid #ddd; border-radius:10px; background:#fff;}
+    table{width:100%; border-collapse:collapse; font-size:12px;}
+    th,td{border:1px solid #ddd; padding:6px 8px; text-align:left; vertical-align:top;}
+    th{background:#fafafa;}
+    .muted{color:#777;}
+    .danger{color:#b00000; font-weight:900;}
+    .tip{background:#fffdf2; border:1px solid #ffe08a; padding:10px; border-radius:10px; font-size:12px; line-height:1.5;}
+    .kbd{border:1px solid #ddd; border-bottom-width:2px; background:#fafafa; padding:1px 6px; border-radius:6px; font-family:ui-monospace, Menlo, Consolas, monospace;}
+  </style>
 </head>
 <body>
+  <div class="wrap">
+    <div class="card">
+      <h1>탱크 재고 현황 (복붙 자동 + 미세조정)</h1>
 
-<div class="controls">
-  <h3>Raw Data 입력 (새 형식)</h3>
-  <textarea id="rawData"></textarea><br>
-  <button onclick="saveData()">저장</button>
-  <input type="date" id="datePicker">
-  <button onclick="loadByDate()">날짜조회</button>
-</div>
+      <div class="row">
+        <button class="primary" id="btnApply">현황표 업데이트</button>
+        <button id="btnSave">오늘 날짜로 저장</button>
+        <button id="btnClear">초기화</button>
+        <span class="pill">✅ <b>SVG 고정</b>: 1422×725</span>
+        <span class="pill">0 → 노랑 / 85%↑ → 빨강</span>
+      </div>
 
-<svg id="canvas" width="1422" height="725"></svg>
+      <div class="row">
+        <button id="btnEdit">🛠️ 미세조정 모드: OFF</button>
+        <button id="btnSnap">스냅: ON</button>
+        <button id="btnExport">좌표 내보내기(클립보드)</button>
+        <button class="warn" id="btnResetLayout">좌표 초기화</button>
+        <span class="pill muted">드래그로 위치 이동 → 자동 저장</span>
+      </div>
+
+      <div class="row">
+        <span class="pill">조회 날짜</span>
+        <input type="date" id="datePick" />
+        <button id="btnLoad">불러오기</button>
+        <span class="pill muted">저장: PC 브라우저 localStorage(간이 DB)</span>
+      </div>
+
+      <div class="tip">
+        <b>미세조정 사용법</b><br/>
+        1) <span class="kbd">미세조정 모드 ON</span> → 원/박스를 <b>마우스로 드래그</b><br/>
+        2) <span class="kbd">스냅 ON</span>이면 5px 단위로 “착” 붙어서 정렬이 쉬움(OFF도 가능)<br/>
+        3) 끝나면 <span class="kbd">좌표 내보내기</span>로 좌표를 복사해두면 안전(백업)<br/>
+        ※ 드래그로 움직이면 <b>자동 저장</b>되므로 새로고침해도 유지됨
+      </div>
+
+      <div style="margin-top:10px;">
+        <div class="small"><b>Raw 데이터 붙여넣기</b> (엑셀 범위 복사 → 여기 클릭 → Ctrl+V)</div>
+        <textarea id="raw" placeholder="TANK NO.  입출고  측정량  단위  제품명 ...&#10;L  9   -   71    ...  고급전용분BULK"></textarea>
+        <div class="small muted">
+          - 신규 포맷: <b>TANK NO.</b>(B열) / <b>측정량</b>(D열) / <b>제품명</b>(F열)<br/>
+          - 도면에 없는 탱크는 무시 / Br1~Br12는 이름만 표시 / 말분 무시
+        </div>
+      </div>
+
+      <div class="svgbox" style="margin-top:10px;">
+        <svg id="board" width="1422" height="725" viewBox="0 0 1422 725" xmlns="http://www.w3.org/2000/svg" style="display:block; user-select:none;">
+          <rect x="10" y="10" width="1402" height="705" fill="#fff" stroke="var(--line)" stroke-width="2"/>
+
+          <!-- 상단 3줄 텍스트 -->
+          <text id="t_pack1" x="60" y="40" font-size="16" font-weight="800" fill="var(--red)">Packaging Bin : 45M/T x 24Q'ty = 1080M/T</text>
+          <text id="t_pack2" x="240" y="62" font-size="16" font-weight="800" fill="var(--red)">80M/T x 6Q'ty = 450M/T</text>
+          <text id="t_bulkTop" x="60" y="84" font-size="16" font-weight="800" fill="var(--blue)">Bulk Loding Bin : 80M/T x 6Q'ty = 420M/T</text>
+          <line x1="40" y1="100" x2="520" y2="100" stroke="var(--line)" stroke-width="2"/>
+
+          <!-- 기준 박스/라인 -->
+          <rect x="40" y="100" width="480" height="420" fill="none" stroke="var(--line)" stroke-width="2"/>
+          <path d="M40 100 L40 640 L95 640 L95 520 L40 520" fill="none" stroke="var(--line)" stroke-width="2"/>
+          <text x="70" y="620" font-size="18" font-weight="800" transform="rotate(90 70 620)">OFFICE</text>
+
+          <line x1="520" y1="10" x2="520" y2="520" stroke="var(--line)" stroke-width="2"/>
+          <line x1="950" y1="10" x2="950" y2="520" stroke="var(--line)" stroke-width="2"/>
+          <line x1="1050" y1="10" x2="1050" y2="520" stroke="var(--line)" stroke-width="2"/>
+
+          <text x="610" y="170" font-size="34" fill="var(--gray)">(New)</text>
+          <text x="780" y="170" font-size="40" fill="var(--gray)">Milling Area (Old)</text>
+
+          <text x="680" y="360" font-size="16" font-weight="800" fill="var(--purple)">Semi-finished Bin : 25M/T x 6Q'ty</text>
+          <text x="835" y="382" font-size="16" font-weight="800" fill="var(--purple)">= 150M/T</text>
+
+          <text x="940" y="360" font-size="16" font-weight="800" fill="var(--gray)">Bran byproduct Bin : 30M/T x 8Q'ty = 240M/T</text>
+
+          <text x="820" y="420" font-size="16" font-weight="900" fill="var(--green)">Premix Bin : 35M/T x 4Q'ty</text>
+          <text x="885" y="442" font-size="16" font-weight="900" fill="var(--green)">= 140M/T</text>
+
+          <text x="420" y="650" font-size="18" font-weight="900" fill="var(--blue)">Bulk Loding Bin : 40M/T x 12Q'ty + 80M/T x 8Q'ty = 1600M/T</text>
+
+          <!-- 드래그 안내 표시 -->
+          <g id="editOverlay" opacity="0">
+            <rect x="18" y="18" width="400" height="34" fill="#111" opacity="0.72" rx="8"/>
+            <text x="30" y="41" fill="#fff" font-size="13" font-weight="800">미세조정 모드 ON : 탱크를 드래그해서 위치 조정</text>
+          </g>
+
+          <g id="tank_Bran"></g>
+          <g id="rowBr"></g>
+          <g id="stackBr"></g>
+          <g id="tankGroup"></g>
+        </svg>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin:0 0 8px;">
+        <h1 style="margin:0;">탱크별 상세 (제품명 포함)</h1>
+        <span class="pill"><b class="danger">85%↑</b> 강조</span>
+      </div>
+      <div class="small muted">
+        - 헤더: Tank / 재고량(T) / 제품명
+      </div>
+      <div style="height:612px; overflow:auto; border:1px solid #ddd; border-radius:10px; margin-top:10px;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:90px;">Tank</th>
+              <th style="width:90px;">재고량(T)</th>
+              <th>제품명</th>
+            </tr>
+          </thead>
+          <tbody id="tbl"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
 <script>
+/* =========================
+   기본 설정
+========================= */
+const HI_PCT = 85;
+const LS_KEY = "tank_board_snapshots_v2";
+const LS_LAYOUT = "tank_board_layout_v2";
 
-/* ==========================
-   1. 탱크 배치 정의
-========================== */
+function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+const COLORS = { red: css('--red'), blue: css('--blue'), purple: css('--purple'), green: css('--green'), gray: css('--gray'), line: css('--line'), zero: css('--zero'), hi: css('--hi') };
 
-const tankLayout = {
-"A6":{x:90,y:120,cap:80},"A5":{x:150,y:120,cap:80},"3P8":{x:210,y:120,cap:45},"3P7":{x:270,y:120,cap:45},"2P8":{x:330,y:120,cap:45},"2P7":{x:390,y:120,cap:45},"1P8":{x:450,y:120,cap:45},"1P7":{x:510,y:120,cap:45},
+const svg = document.getElementById('board');
+const g = document.getElementById('tankGroup');
 
-"A4":{x:90,y:170,cap:80},"A3":{x:150,y:170,cap:80},"3P6":{x:210,y:170,cap:45},"3P5":{x:270,y:170,cap:45},"2P6":{x:330,y:170,cap:45},"2P5":{x:390,y:170,cap:45},"1P6":{x:450,y:170,cap:45},"1P5":{x:510,y:170,cap:45},
+let editMode = false;
+let snapOn = true;
+const SNAP = 5;
 
-"A2":{x:90,y:220,cap:80},"A1":{x:150,y:220,cap:80},"3P4":{x:210,y:220,cap:45},"3P3":{x:270,y:220,cap:45},"2P4":{x:330,y:220,cap:45},"2P3":{x:390,y:220,cap:45},"1P4":{x:450,y:220,cap:45},"1P3":{x:510,y:220,cap:45},
+/* =========================
+   도면 탱크 정의(좌표는 "초기값", 이후 드래그로 저장됨)
+========================= */
+const R = 22, FS1 = 13, FS2 = 14, FS3 = 11;
 
-"3P2":{x:210,y:270,cap:45},"3P1":{x:270,y:270,cap:45},"2P2":{x:330,y:270,cap:45},"2P1":{x:390,y:270,cap:45},"1P2":{x:450,y:270,cap:45},"1P1":{x:510,y:270,cap:45},
+function C(name, cx, cy, type, capT){ return {kind:"circle", name, cx, cy, type, capT}; }
+function B(name, x, y, w, h, capT){ return {kind:"box", name, x, y, w, h, capT}; }
 
-"T6":{x:210,y:320,cap:80},"T5":{x:270,y:320,cap:80},"T4":{x:330,y:320,cap:80},"T3":{x:390,y:320,cap:80},"T2":{x:450,y:320,cap:80},"T1":{x:510,y:320,cap:80},
+const DEFAULT_LAYOUT = {
+  circles: [
+    // Packaging + A/P
+    C("A6",  70, 132, "red", 80), C("A5", 120, 132, "red", 80), C("P3-8",170,132,"red",45), C("P3-7",220,132,"red",45), C("P2-8",270,132,"red",45), C("P2-7",320,132,"red",45), C("P1-8",370,132,"red",45), C("P1-7",420,132,"red",45),
+    C("A4",  70, 186, "red", 80), C("A3", 120, 186, "red", 80), C("P3-6",170,186,"red",45), C("P3-5",220,186,"red",45), C("P2-6",270,186,"red",45), C("P2-5",320,186,"red",45), C("P1-6",370,186,"red",45), C("P1-5",420,186,"red",45),
+    C("A2",  70, 240, "red", 80), C("A1", 120, 240, "red", 80), C("P3-4",170,240,"red",45), C("P3-3",220,240,"red",45), C("P2-4",270,240,"red",45), C("P2-3",320,240,"red",45), C("P1-4",370,240,"red",45), C("P1-3",420,240,"red",45),
+    C("P3-2",195,300,"red",45), C("P3-1",245,300,"red",45), C("P2-2",295,300,"red",45), C("P2-1",345,300,"red",45), C("P1-2",395,300,"red",45), C("P1-1",445,300,"red",45),
 
-"L1":{x:550,y:350,cap:25},"L2":{x:610,y:350,cap:25},"L3":{x:670,y:350,cap:25},"L4":{x:730,y:350,cap:25},"L5":{x:790,y:350,cap:25},"L6":{x:850,y:350,cap:25},
+    // T
+    C("T6",210,355,"blue",80), C("T5",260,355,"blue",80), C("T4",310,355,"blue",80), C("T3",360,355,"blue",80), C("T2",410,355,"blue",80), C("T1",460,355,"blue",80),
 
-"L15":{x:650,y:430,cap:60},"L16":{x:710,y:430,cap:60},"L17":{x:770,y:430,cap:60},"L18":{x:830,y:430,cap:40},"L19":{x:890,y:430,cap:40},"L20":{x:950,y:430,cap:40},
+    // L1~L6
+    C("L1",650,390,"purple",25), C("L2",705,390,"purple",25), C("L3",760,390,"purple",25), C("L4",815,390,"purple",25), C("L5",870,390,"purple",25), C("L6",925,390,"purple",25),
 
-"L21":{x:650,y:480,cap:60},"L22":{x:710,y:480,cap:60},"L23":{x:770,y:480,cap:60},"L24":{x:830,y:480,cap:60},"L25":{x:890,y:480,cap:40},"L26":{x:950,y:480,cap:40},
+    // B1~B4 (green)
+    C("B4",915,350,"green",35), C("B1",960,350,"green",35), C("B3",915,395,"green",35), C("B2",960,395,"green",35),
 
-"L10":{x:1010,y:480,cap:80},"L9":{x:1070,y:480,cap:80},
-"L12":{x:1010,y:530,cap:80},"L11":{x:1070,y:530,cap:80},
-"L14":{x:1010,y:580,cap:80},"L13":{x:1070,y:580,cap:80}
+    // L7~L26
+    C("L15",720,500,"blue",60), C("L16",770,500,"blue",60), C("L17",820,500,"blue",60), C("L18",870,500,"blue",60), C("L19",920,500,"blue",40), C("L20",970,500,"blue",40), C("L8",1020,500,"blue",80), C("L7",1070,500,"blue",80),
+    C("L21",720,560,"blue",60), C("L22",770,560,"blue",60), C("L23",820,560,"blue",60), C("L24",870,560,"blue",60), C("L25",920,560,"blue",40), C("L26",970,560,"blue",40), C("L10",1050,560,"blue",80), C("L9",1100,560,"blue",80),
+    C("L12",1035,610,"blue",80), C("L11",1085,610,"blue",80), C("L14",1035,660,"blue",80), C("L13",1085,660,"blue",80),
+  ],
+  bran: {name:"Bran", cx:1360, cy:80, capT:400},
+  brRow: [
+    B("Br12",1020,390,50,45,30), B("Br11",1070,390,50,45,30), B("Br10",1120,390,50,45,30), B("Br9",1170,390,50,45,30),
+    B("Br8",1220,390,50,45,40),  B("Br7",1270,390,50,45,40),  B("Br6",1320,390,50,45,40),  B("Br5",1370,390,50,45,40),
+  ],
+  brStack: [
+    B("Br4",1320,435,90,62,100), B("Br3",1320,497,90,62,100), B("Br2",1320,559,90,62,100), B("Br1",1320,621,90,62,100),
+  ]
 };
 
-/* ==========================
-   2. SVG 생성
-========================== */
-
-const svg=document.getElementById("canvas");
-
-/* 상단 문구 */
-svg.innerHTML += `
-<text x="40" y="30" fill="red" font-weight="bold">Packaging Bin : </text>
-<text x="175" y="30" fill="red" font-weight="bold">45M/T x 24Q'ty = 1080M/T</text>
-<text x="175" y="55" fill="red" font-weight="bold">80M/T x 6Q'ty = 450M/T</text>
-<text x="40" y="80" fill="blue" font-weight="bold">Bulk Loding Bin : 80M/T x 6Q'ty = 420M/T</text>
-`;
-
-/* 탱크 생성 */
-for(const name in tankLayout){
-  const t=tankLayout[name];
-  const g=document.createElementNS("http://www.w3.org/2000/svg","g");
-  g.setAttribute("class","tank");
-  g.setAttribute("id","tank_"+name);
-
-  const c=document.createElementNS("http://www.w3.org/2000/svg","circle");
-  c.setAttribute("cx",t.x);
-  c.setAttribute("cy",t.y);
-  c.setAttribute("r",23);
-
-  const label=document.createElementNS("http://www.w3.org/2000/svg","text");
-  label.setAttribute("x",t.x);
-  label.setAttribute("y",t.y-8);
-  label.textContent=name;
-
-  const qty=document.createElementNS("http://www.w3.org/2000/svg","text");
-  qty.setAttribute("x",t.x);
-  qty.setAttribute("y",t.y+6);
-  qty.setAttribute("id","qty_"+name);
-
-  const pct=document.createElementNS("http://www.w3.org/2000/svg","text");
-  pct.setAttribute("x",t.x);
-  pct.setAttribute("y",t.y+18);
-  pct.setAttribute("id","pct_"+name);
-  pct.setAttribute("class","percent");
-
-  g.appendChild(c);
-  g.appendChild(label);
-  g.appendChild(qty);
-  g.appendChild(pct);
-  svg.appendChild(g);
+function loadLayout(){
+  try{
+    const v = JSON.parse(localStorage.getItem(LS_LAYOUT) || "null");
+    if(!v) return structuredClone(DEFAULT_LAYOUT);
+    return v;
+  }catch(e){
+    return structuredClone(DEFAULT_LAYOUT);
+  }
 }
+function saveLayout(layout){
+  localStorage.setItem(LS_LAYOUT, JSON.stringify(layout));
+}
+let LAYOUT = loadLayout();
 
-/* ==========================
-   3. 데이터 파싱 (새 Raw 형식)
-========================== */
-
+/* =========================
+   Raw 파서 (신규/구형)
+========================= */
+function normalizeTankName(s){
+  if(!s) return "";
+  s = String(s).trim().replace(/\s+/g,' ');
+  if(/^P\d-\d$/i.test(s)) return s.toUpperCase();
+  s = s.replace(/^([A-Za-z])\s+(\d+)$/,'$1$2');
+  return s.toUpperCase();
+}
+function parseNumberT(s){
+  if(s==null) return null;
+  let t = String(s).trim();
+  if(!t) return null;
+  t = t.replace(/,/g,'').replace(/\.$/,'');
+  const v = Number(t);
+  return Number.isFinite(v) ? v : null;
+}
 function parseRaw(raw){
-  const lines=raw.trim().split("\n");
-  const data={};
+  const text = (raw||"").trim();
+  if(!text) return [];
+  const lines = text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  const header = lines[0] || "";
+  const isNew = /TANK\s*NO\.?/i.test(header);
+  const isOld = /SILO\/TANK번호/i.test(header) || /재고구분/i.test(header);
+  const out = [];
+  for(let i=1;i<lines.length;i++){
+    const line = lines[i];
+    const parts = line.split(/\t+/).length>1 ? line.split(/\t+/) : line.split(/\s{2,}/);
+    if(parts.length < 2) continue;
 
-  lines.forEach(line=>{
-    const cols=line.split("\t");
-    if(cols.length<3) return;
-
-    let tank=cols[0].replace(/\s/g,"");
-    let amount=parseFloat(cols[2])||0;
-    let product=cols[4]||"";
-
-    if(!tankLayout[tank]) return; // 이미지에 없는 탱크 무시
-
-    data[tank]={qty:amount,product:product};
-  });
-
-  return data;
+    if(isNew){
+      const tank = normalizeTankName(parts[0]);
+      if(!tank) continue;
+      // 말분 무시(요청)
+      if(tank === "ETC_3" || tank === "말분") continue;
+      const qtyT = parseNumberT(parts[2]) ?? 0;
+      const product = (parts[4] ?? "").trim();
+      out.push({tank, qtyT, product});
+    }else if(isOld){
+      const tank = normalizeTankName(parts[1]);
+      const product = (parts[3] ?? "").trim();
+      const qtyKG = parseNumberT(parts[5]) ?? 0;
+      out.push({tank, qtyT: qtyKG/1000, product});
+    }else{
+      const tank = normalizeTankName(parts[0]);
+      const qtyT = parseNumberT(parts[1]) ?? 0;
+      const product = parts.slice(2).join(' ').trim();
+      out.push({tank, qtyT, product});
+    }
+  }
+  return out;
 }
 
-/* ==========================
-   4. 화면 반영
-========================== */
+/* =========================
+   날짜별 저장(localStorage)
+========================= */
+function loadDB(){ try{ return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); }catch(e){ return {}; } }
+function saveDB(db){ localStorage.setItem(LS_KEY, JSON.stringify(db)); }
+function todayISO(){
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${yyyy}-${mm}-${dd}`;
+}
 
-function render(data){
-  for(const name in tankLayout){
-    const layout=tankLayout[name];
-    const g=document.getElementById("tank_"+name);
-    const qtyEl=document.getElementById("qty_"+name);
-    const pctEl=document.getElementById("pct_"+name);
+/* =========================
+   SVG 렌더
+========================= */
+function el(tag, attrs={}, text=null){
+  const n = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for(const [k,v] of Object.entries(attrs)) n.setAttribute(k, v);
+  if(text!=null) n.textContent = text;
+  return n;
+}
+function clearSVG(node){ while(node.firstChild) node.removeChild(node.firstChild); }
+function pct(q, cap){ if(!cap||cap<=0) return 0; return Math.round((q/cap)*100); }
+function fmt(v){ if(!Number.isFinite(v)) return "-"; return (Math.round(v*100)/100).toString(); }
 
-    let qty=0;
-    if(data[name]) qty=data[name].qty;
+function renderBran(qtyT){
+  const host = document.getElementById('tank_Bran');
+  clearSVG(host);
+  const b = LAYOUT.bran;
+  const p = pct(qtyT, b.capT);
+  const fill = qtyT===0 ? COLORS.zero : (p>=HI_PCT ? COLORS.hi : "#fff");
+  const grp = el('g', {"data-id":"BRAN","data-kind":"bran"});
+  grp.appendChild(el('circle',{cx:b.cx,cy:b.cy,r:32,fill,stroke:COLORS.line,'stroke-width':2}));
+  grp.appendChild(el('text',{x:b.cx,y:b.cy-6,'text-anchor':'middle','font-size':16,'font-weight':900,fill:'#111'},"Bran"));
+  grp.appendChild(el('text',{x:b.cx,y:b.cy+14,'text-anchor':'middle','font-size':18,'font-weight':900,fill:'#111'},`${fmt(qtyT)}t`));
+  grp.appendChild(el('text',{x:b.cx,y:b.cy+32,'text-anchor':'middle','font-size':12,'font-weight':800,fill:'#444'},`(${p}%)`));
+  host.appendChild(grp);
+  makeDraggable(grp, () => ({x: b.cx, y: b.cy}), (nx,ny) => { b.cx=nx; b.cy=ny; saveLayout(LAYOUT); });
+}
 
-    let percent=layout.cap?Math.round((qty/layout.cap)*100):0;
+function renderBrBoxes(){
+  const rowHost = document.getElementById('rowBr');
+  const stHost  = document.getElementById('stackBr');
+  clearSVG(rowHost); clearSVG(stHost);
 
-    qtyEl.textContent=qty+"t";
-    pctEl.textContent="("+percent+"%)";
+  for(const b of LAYOUT.brRow){
+    const grp = el('g', {"data-id":b.name,"data-kind":"boxRow"});
+    grp.appendChild(el('rect',{x:b.x,y:b.y,width:b.w,height:b.h,fill:"#fff",stroke:COLORS.line,'stroke-width':2}));
+    grp.appendChild(el('text',{x:b.x+b.w/2,y:b.y+24,'text-anchor':'middle','font-size':13,'font-weight':900,fill:'#111'}, b.name));
+    grp.appendChild(el('text',{x:b.x+b.w/2,y:b.y+40,'text-anchor':'middle','font-size':11,'font-weight':800,fill:'#111'}, `${b.capT}t`));
+    rowHost.appendChild(grp);
 
-    g.classList.remove("zero","over85");
-    if(qty===0) g.classList.add("zero");
-    if(percent>=85) g.classList.add("over85");
+    makeDraggable(grp,
+      () => ({x: b.x, y: b.y}),
+      (nx,ny) => { b.x=nx; b.y=ny; saveLayout(LAYOUT); }
+    );
+  }
+
+  for(const b of LAYOUT.brStack){
+    const grp = el('g', {"data-id":b.name,"data-kind":"boxStack"});
+    grp.appendChild(el('rect',{x:b.x,y:b.y,width:b.w,height:b.h,fill:"#fff",stroke:COLORS.line,'stroke-width':2}));
+    grp.appendChild(el('text',{x:b.x+b.w/2,y:b.y+26,'text-anchor':'middle','font-size':14,'font-weight':900,fill:'#111'}, b.name));
+    grp.appendChild(el('text',{x:b.x+b.w/2,y:b.y+46,'text-anchor':'middle','font-size':12,'font-weight':800,fill:'#111'}, `${b.capT}t`));
+    stHost.appendChild(grp);
+
+    makeDraggable(grp,
+      () => ({x: b.x, y: b.y}),
+      (nx,ny) => { b.x=nx; b.y=ny; saveLayout(LAYOUT); }
+    );
   }
 }
 
-/* ==========================
-   5. 저장/조회 (DB화)
-========================== */
-
-function saveData(){
-  const raw=document.getElementById("rawData").value;
-  const date=new Date().toISOString().slice(0,10);
-  const parsed=parseRaw(raw);
-
-  localStorage.setItem("tank_"+date,JSON.stringify(parsed));
-  alert("저장 완료 : "+date);
-  render(parsed);
+function circleTankNode(tank, qtyT){
+  const p = pct(qtyT, tank.capT);
+  const fill = qtyT===0 ? COLORS.zero : (p>=HI_PCT ? COLORS.hi : "#fff");
+  const grp = el('g', {"data-id":tank.name, "data-kind":"circle"});
+  grp.appendChild(el('circle',{cx:tank.cx,cy:tank.cy,r:R,fill,stroke:(COLORS[tank.type]||COLORS.gray),'stroke-width':2}));
+  grp.appendChild(el('text',{x:tank.cx,y:tank.cy-6,'text-anchor':'middle','font-size':FS1,'font-weight':900,fill:(COLORS[tank.type]||COLORS.gray)}, tank.name));
+  grp.appendChild(el('text',{x:tank.cx,y:tank.cy+11,'text-anchor':'middle','font-size':FS2,'font-weight':900,fill:(COLORS[tank.type]||COLORS.gray)}, `${fmt(qtyT)}t`));
+  grp.appendChild(el('text',{x:tank.cx,y:tank.cy+25,'text-anchor':'middle','font-size':FS3,'font-weight':800,fill:'#444'}, `(${p}%)`));
+  return grp;
 }
 
-function loadByDate(){
-  const date=document.getElementById("datePicker").value;
-  if(!date) return;
+function renderAll(rows){
+  // 도면에 있는 탱크만 반영(요청)
+  const allowed = new Set(LAYOUT.circles.map(t=>t.name.toUpperCase()));
+  const data = new Map();
+  for(const r of rows){
+    const k = normalizeTankName(r.tank);
+    if(!k) continue;
+    // 말분 무시
+    if(k==="ETC_3") continue;
 
-  const saved=localStorage.getItem("tank_"+date);
-  if(!saved){ alert("데이터 없음"); return; }
+    // Bran은 ETC_2 또는 BRAN으로 들어와도 처리
+    if(k==="ETC_2" || k==="BRAN"){
+      data.set("BRAN",{qtyT:Number.isFinite(r.qtyT)?r.qtyT:0, product:r.product||""});
+      continue;
+    }
 
-  render(JSON.parse(saved));
+    if(!allowed.has(k)) continue;
+    data.set(k,{qtyT:Number.isFinite(r.qtyT)?r.qtyT:0, product:r.product||""});
+  }
+
+  // 탱크
+  clearSVG(g);
+  for(const t of LAYOUT.circles){
+    const d = data.get(t.name.toUpperCase()) || {qtyT:0, product:""};
+    const node = circleTankNode(t, d.qtyT);
+    g.appendChild(node);
+
+    makeDraggable(node,
+      () => ({x: t.cx, y: t.cy}),
+      (nx,ny) => { t.cx=nx; t.cy=ny; saveLayout(LAYOUT); }
+    );
+  }
+
+  // Bran
+  const branQty = (data.get("BRAN")?.qtyT) ?? 0;
+  renderBran(branQty);
+
+  // Br boxes
+  renderBrBoxes();
+
+  // 오른쪽 표
+  const tbody = document.getElementById('tbl');
+  tbody.innerHTML = "";
+  // 표는 circles 순서대로 + Bran
+  const order = [
+    "A6","A5","P3-8","P3-7","P2-8","P2-7","P1-8","P1-7",
+    "A4","A3","P3-6","P3-5","P2-6","P2-5","P1-6","P1-5",
+    "A2","A1","P3-4","P3-3","P2-4","P2-3","P1-4","P1-3",
+    "P3-2","P3-1","P2-2","P2-1","P1-2","P1-1",
+    "T6","T5","T4","T3","T2","T1",
+    "L1","L2","L3","L4","L5","L6",
+    "B4","B1","B3","B2",
+    "L15","L16","L17","L18","L19","L20","L8","L7",
+    "L21","L22","L23","L24","L25","L26","L10","L9",
+    "L12","L11","L14","L13",
+    "BRAN"
+  ];
+
+  for(const name of order){
+    if(name==="BRAN"){
+      addRow("Bran", branQty, "(Bran)");
+      continue;
+    }
+    const d = data.get(name) || {qtyT:0, product:""};
+    addRow(name, d.qtyT, d.product);
+  }
+
+  function addRow(tank, qtyT, product){
+    const tr=document.createElement('tr');
+    const td1=document.createElement('td'); td1.textContent=tank; td1.className="mono";
+    const td2=document.createElement('td'); td2.textContent=fmt(qtyT); td2.className="mono";
+    const td3=document.createElement('td'); td3.textContent=product||"";
+    tr.append(td1,td2,td3);
+    tbody.appendChild(tr);
+  }
 }
 
+/* =========================
+   ✅ 드래그(미세조정) 구현
+   - editMode일 때만 동작
+   - snapOn이면 5px 스냅
+========================= */
+let drag = null;
+
+function svgPoint(evt){
+  const pt = svg.createSVGPoint();
+  pt.x = evt.clientX;
+  pt.y = evt.clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+
+function snap(v){ return snapOn ? Math.round(v / SNAP) * SNAP : v; }
+
+function makeDraggable(node, getPos, setPos){
+  node.style.cursor = "default";
+  node.addEventListener('mousedown', (e)=>{
+    if(!editMode) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const p = svgPoint(e);
+    const cur = getPos();
+    drag = { node, getPos, setPos, startMouse:p, startPos:{...cur} };
+    node.style.cursor = "grabbing";
+  });
+}
+
+window.addEventListener('mousemove', (e)=>{
+  if(!drag) return;
+  const p = svgPoint(e);
+  const dx = p.x - drag.startMouse.x;
+  const dy = p.y - drag.startMouse.y;
+  const nx = snap(drag.startPos.x + dx);
+  const ny = snap(drag.startPos.y + dy);
+  drag.setPos(nx,ny);
+  // 실시간 반영 위해 다시 렌더(좌표만 바뀌니 빠름)
+  // raw 데이터는 유지, 마지막 렌더 결과를 재사용하기 위해 globalRows 사용
+  renderAll(window.__lastRows || []);
+});
+
+window.addEventListener('mouseup', ()=>{
+  if(!drag) return;
+  drag.node.style.cursor = "grab";
+  drag = null;
+});
+
+/* =========================
+   버튼/동작
+========================= */
+const rawEl = document.getElementById('raw');
+const dateEl = document.getElementById('datePick');
+dateEl.value = todayISO();
+
+document.getElementById('btnApply').addEventListener('click', ()=>{
+  const rows = parseRaw(rawEl.value);
+  window.__lastRows = rows;
+  renderAll(rows);
+});
+
+document.getElementById('btnSave').addEventListener('click', ()=>{
+  const d = dateEl.value || todayISO();
+  const db = loadDB();
+  db[d] = rawEl.value || "";
+  saveDB(db);
+  alert(`저장 완료: ${d}`);
+});
+
+document.getElementById('btnLoad').addEventListener('click', ()=>{
+  const d = dateEl.value || todayISO();
+  const db = loadDB();
+  const v = db[d];
+  if(!v){ alert(`저장된 데이터가 없습니다: ${d}`); return; }
+  rawEl.value = v;
+  const rows = parseRaw(v);
+  window.__lastRows = rows;
+  renderAll(rows);
+});
+
+document.getElementById('btnClear').addEventListener('click', ()=>{
+  rawEl.value = "";
+  window.__lastRows = [];
+  renderAll([]);
+});
+
+document.getElementById('btnEdit').addEventListener('click', ()=>{
+  editMode = !editMode;
+  document.getElementById('btnEdit').textContent = `🛠️ 미세조정 모드: ${editMode ? "ON" : "OFF"}`;
+  document.getElementById('editOverlay').setAttribute('opacity', editMode ? "1" : "0");
+});
+
+document.getElementById('btnSnap').addEventListener('click', ()=>{
+  snapOn = !snapOn;
+  document.getElementById('btnSnap').textContent = `스냅: ${snapOn ? "ON" : "OFF"}`;
+});
+
+document.getElementById('btnExport').addEventListener('click', async ()=>{
+  const payload = JSON.stringify(LAYOUT, null, 2);
+  try{
+    await navigator.clipboard.writeText(payload);
+    alert("좌표 JSON을 클립보드에 복사했습니다. (메모장에 붙여넣어 백업 가능)");
+  }catch(e){
+    // fallback
+    prompt("복사가 막혔습니다. 아래 내용을 복사하세요:", payload);
+  }
+});
+
+document.getElementById('btnResetLayout').addEventListener('click', ()=>{
+  if(!confirm("정말 좌표를 초기값으로 되돌릴까요?")) return;
+  LAYOUT = structuredClone(DEFAULT_LAYOUT);
+  saveLayout(LAYOUT);
+  renderAll(window.__lastRows || []);
+});
+
+function loadDB(){ try{ return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); }catch(e){ return {}; } }
+function saveDB(db){ localStorage.setItem(LS_KEY, JSON.stringify(db)); }
+
+// 첫 렌더
+window.__lastRows = [];
+renderAll([]);
 </script>
 </body>
 </html>
