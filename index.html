@@ -1,641 +1,189 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>탱크 재고 현황 (복붙 자동)</title>
-  <style>
-    :root{
-      --w:1422px;   /* ✅ 요청: 가로 1422 */
-      --h:725px;    /* ✅ 요청: 세로 725 */
-      --line:#111;
-      --bg:#fff;
-      --zero:#fff5b1;   /* ✅ 0일 때: 옅은 노랑 */
-      --hi:#ffd3d3;     /* ✅ 85% 이상: 옅은 빨강 */
-      --red:#d60000;
-      --blue:#0b59ff;
-      --purple:#6b35d4;
-      --green:#00a24a;
-      --gray:#333;
-    }
-    body{font-family:system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", Arial, sans-serif; background:#f7f7f7; margin:0; padding:16px;}
-    .wrap{max-width: calc(var(--w) + 520px); margin:0 auto; display:grid; grid-template-columns: 1fr 520px; gap:14px;}
-    .card{background:#fff; border:1px solid #ddd; border-radius:10px; padding:12px;}
-    h1{margin:0 0 10px; font-size:18px;}
-    .row{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px;}
-    button{border:1px solid #bbb; background:#fff; padding:8px 10px; border-radius:10px; cursor:pointer; font-weight:700;}
-    button.primary{background:#111; color:#fff; border-color:#111;}
-    .pill{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; border:1px solid #ddd; background:#fafafa; font-size:12px;}
-    textarea{width:100%; height:190px; border:1px solid #ccc; border-radius:10px; padding:10px; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; line-height:1.35;}
-    .small{font-size:12px; color:#444; line-height:1.5;}
-    .grid{display:grid; grid-template-columns: 1fr; gap:10px;}
-    table{width:100%; border-collapse:collapse; font-size:12px;}
-    th,td{border:1px solid #ddd; padding:6px 8px; text-align:left; vertical-align:top;}
-    th{background:#fafafa;}
-    .muted{color:#777;}
-    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;}
-    .svgbox{overflow:auto; border:1px solid #ddd; border-radius:10px; background:#fff;}
-    .hint{font-size:12px; color:#333;}
-    .rightTitle{display:flex; justify-content:space-between; align-items:center; margin:0 0 8px;}
-    .danger{color:#b00000; font-weight:800;}
-  </style>
+<meta charset="UTF-8">
+<title>탱크 재고 현황</title>
+<style>
+body{font-family:Arial;margin:0;background:#f4f4f4}
+.controls{padding:15px;background:white}
+textarea{width:100%;height:160px}
+button{padding:8px 14px;margin-right:10px;margin-top:5px}
+svg{background:white;border:2px solid #333}
+
+/* 탱크 스타일 */
+.tank circle{
+  stroke-width:2;
+  fill:white;
+}
+.zero circle{fill:#fff9c4;}        /* 0일때 연노랑 */
+.over85 circle{fill:#ffd6d6;}      /* 85%이상 연빨강 */
+.tank text{font-size:12px;text-anchor:middle;dominant-baseline:middle;font-weight:bold}
+.capacity{font-size:10px;fill:#666}
+.percent{font-size:10px;fill:#000}
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <h1>탱크 재고 현황 (복붙 자동)</h1>
 
-      <div class="row">
-        <button class="primary" id="btnApply">현황표 업데이트</button>
-        <button id="btnSave">오늘 날짜로 저장</button>
-        <button id="btnClear">초기화</button>
-        <span class="pill">✅ <b>SVG 캔버스 고정</b>: 1422×725</span>
-        <span class="pill">✅ <b>0</b> → 노랑 / <b>85%↑</b> → 빨강</span>
-      </div>
+<div class="controls">
+  <h3>Raw Data 입력 (새 형식)</h3>
+  <textarea id="rawData"></textarea><br>
+  <button onclick="saveData()">저장</button>
+  <input type="date" id="datePicker">
+  <button onclick="loadByDate()">날짜조회</button>
+</div>
 
-      <div class="row">
-        <span class="pill">조회 날짜</span>
-        <input type="date" id="datePick" />
-        <button id="btnLoad">불러오기</button>
-        <span class="pill muted">저장은 PC 브라우저 <b>localStorage</b>(간이 DB)로 됩니다</span>
-      </div>
-
-      <div class="grid">
-        <div>
-          <div class="hint"><b>Raw 데이터 붙여넣기</b> (엑셀에서 표 범위 복사 → 여기 클릭 → Ctrl+V)</div>
-          <textarea id="raw" placeholder="예) TANK NO.  입출고  측정량  단위  제품명 ...&#10;L  9   -   71    ...  고급전용분BULK"></textarea>
-          <div class="small">
-            - ✅ 새 포맷: <b>TANK NO.</b>(B열) / <b>측정량</b>(D열) / <b>제품명</b>(F열) 사용<br/>
-            - ✅ 탱크번호는 <b>변환 없이 그대로</b> 씁니다(예: FBL_L9 → 변환 X).<br/>
-            - ✅ 도면에 <b>없는 탱크</b>는 자동 무시합니다.<br/>
-            - ✅ <b>Br1~Br12</b>는 엑셀 데이터가 없어도 <b>이름만 표시</b>합니다.
-          </div>
-        </div>
-
-        <div class="svgbox">
-          <!-- ✅ SVG 캔버스 크기 고정 -->
-          <svg id="board" width="1422" height="725" viewBox="0 0 1422 725" xmlns="http://www.w3.org/2000/svg" style="display:block;">
-            <!-- 바깥 테두리 -->
-            <rect x="10" y="10" width="1402" height="705" fill="#fff" stroke="var(--line)" stroke-width="2"/>
-
-            <!-- 상단 3줄 텍스트 영역(요청 정렬 반영) -->
-            <!-- 기준값: Packaging 시작 x = 60 -->
-            <!-- 1줄 Packaging -->
-            <text id="t_pack1" x="60" y="40" font-size="16" font-weight="800" fill="var(--red)">Packaging Bin : 45M/T x 24Q'ty = 1080M/T</text>
-            <!-- 2줄 (':' 뒤에 맞춰 시작) -->
-            <text id="t_pack2" x="240" y="62" font-size="16" font-weight="800" fill="var(--red)">80M/T x 6Q'ty = 450M/T</text>
-            <!-- 3줄 Bulk Loading (1줄 시작과 동일) -->
-            <text id="t_bulkTop" x="60" y="84" font-size="16" font-weight="800" fill="var(--blue)">Bulk Loding Bin : 80M/T x 6Q'ty = 420M/T</text>
-
-            <!-- 상단 텍스트 영역 구분선(요청: 선으로 구분) -->
-            <line x1="40" y1="100" x2="520" y2="100" stroke="var(--line)" stroke-width="2"/>
-
-            <!-- 왼쪽 큰 박스(빨강/파랑 탱크 구역) -->
-            <rect x="40" y="100" width="480" height="420" fill="none" stroke="var(--line)" stroke-width="2"/>
-            <!-- 왼쪽 아래 OFFICE 박스(요청: 왼쪽 선을 내려 OFFICE 둘러싸기 느낌) -->
-            <path d="M40 100 L40 640 L95 640 L95 520 L40 520" fill="none" stroke="var(--line)" stroke-width="2"/>
-            <text x="70" y="620" font-size="18" font-weight="800" transform="rotate(90 70 620)">OFFICE</text>
-
-            <!-- 가운데/오른쪽 영역 라인(대략 도면 맞춤) -->
-            <line x1="520" y1="10" x2="520" y2="520" stroke="var(--line)" stroke-width="2"/>
-            <line x1="950" y1="10" x2="950" y2="520" stroke="var(--line)" stroke-width="2"/>
-            <line x1="1050" y1="10" x2="1050" y2="520" stroke="var(--line)" stroke-width="2"/>
-
-            <text x="610" y="170" font-size="34" fill="var(--gray)">(New)</text>
-            <text x="780" y="170" font-size="40" fill="var(--gray)">Milling Area (Old)</text>
-
-            <!-- Bran 원(우상단) -->
-            <g id="tank_Bran"></g>
-
-            <!-- 오른쪽 Br1~Br4 세로 박스 -->
-            <g id="stackBr"></g>
-
-            <!-- Br5~Br12 가로 박스 -->
-            <g id="rowBr"></g>
-
-            <!-- Semi-finished 안내 -->
-            <text x="680" y="360" font-size="16" font-weight="800" fill="var(--purple)">Semi-finished Bin : 25M/T x 6Q'ty</text>
-            <text x="835" y="382" font-size="16" font-weight="800" fill="var(--purple)">= 150M/T</text>
-
-            <!-- Bran byproduct 안내 -->
-            <text x="940" y="360" font-size="16" font-weight="800" fill="var(--gray)">Bran byproduct Bin : 30M/T x 8Q'ty = 240M/T</text>
-
-            <!-- Premix 안내 -->
-            <text x="820" y="420" font-size="16" font-weight="900" fill="var(--green)">Premix Bin : 35M/T x 4Q'ty</text>
-            <text x="885" y="442" font-size="16" font-weight="900" fill="var(--green)">= 140M/T</text>
-
-            <!-- 하단 Bulk Loading 안내 -->
-            <text x="420" y="650" font-size="18" font-weight="900" fill="var(--blue)">Bulk Loding Bin : 40M/T x 12Q'ty + 80M/T x 8Q'ty = 1600M/T</text>
-
-            <!-- 탱크 그룹 -->
-            <g id="tankGroup"></g>
-          </svg>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="rightTitle">
-        <h1 style="margin:0;">탱크별 상세 (제품명 포함)</h1>
-        <span class="pill"><b class="danger">85%↑</b> 표시됨</span>
-      </div>
-      <div class="small muted">
-        - 표 헤더: <b>Tank</b> / <b>재고량(T)</b> / <b>제품명</b><br/>
-        - “말분(ETC_3)”은 <b>무시</b>합니다.
-      </div>
-      <div style="height:560px; overflow:auto; border:1px solid #ddd; border-radius:10px; margin-top:10px;">
-        <table>
-          <thead>
-            <tr>
-              <th style="width:90px;">Tank</th>
-              <th style="width:90px;">재고량(T)</th>
-              <th>제품명</th>
-            </tr>
-          </thead>
-          <tbody id="tbl"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+<svg id="canvas" width="1422" height="725"></svg>
 
 <script>
-/* =========================
-   1) ✅ 도면에 존재하는 탱크 + 위치/색/용량(사진 기준)
-   - 용량(capT): “○○t”에 해당
-   - type: red/blue/purple/green/gray
-========================= */
 
-const CANVAS = { w: 1422, h: 725 };
-const HI_PCT = 85;
+/* ==========================
+   1. 탱크 배치 정의
+========================== */
 
-const COLORS = {
-  red: getCss('--red'),
-  blue: getCss('--blue'),
-  purple: getCss('--purple'),
-  green: getCss('--green'),
-  gray: getCss('--gray'),
-  line: getCss('--line'),
-  zero: getCss('--zero'),
-  hi: getCss('--hi'),
+const tankLayout = {
+"A6":{x:90,y:120,cap:80},"A5":{x:150,y:120,cap:80},"3P8":{x:210,y:120,cap:45},"3P7":{x:270,y:120,cap:45},"2P8":{x:330,y:120,cap:45},"2P7":{x:390,y:120,cap:45},"1P8":{x:450,y:120,cap:45},"1P7":{x:510,y:120,cap:45},
+
+"A4":{x:90,y:170,cap:80},"A3":{x:150,y:170,cap:80},"3P6":{x:210,y:170,cap:45},"3P5":{x:270,y:170,cap:45},"2P6":{x:330,y:170,cap:45},"2P5":{x:390,y:170,cap:45},"1P6":{x:450,y:170,cap:45},"1P5":{x:510,y:170,cap:45},
+
+"A2":{x:90,y:220,cap:80},"A1":{x:150,y:220,cap:80},"3P4":{x:210,y:220,cap:45},"3P3":{x:270,y:220,cap:45},"2P4":{x:330,y:220,cap:45},"2P3":{x:390,y:220,cap:45},"1P4":{x:450,y:220,cap:45},"1P3":{x:510,y:220,cap:45},
+
+"3P2":{x:210,y:270,cap:45},"3P1":{x:270,y:270,cap:45},"2P2":{x:330,y:270,cap:45},"2P1":{x:390,y:270,cap:45},"1P2":{x:450,y:270,cap:45},"1P1":{x:510,y:270,cap:45},
+
+"T6":{x:210,y:320,cap:80},"T5":{x:270,y:320,cap:80},"T4":{x:330,y:320,cap:80},"T3":{x:390,y:320,cap:80},"T2":{x:450,y:320,cap:80},"T1":{x:510,y:320,cap:80},
+
+"L1":{x:650,y:350,cap:25},"L2":{x:710,y:350,cap:25},"L3":{x:770,y:350,cap:25},"L4":{x:830,y:350,cap:25},"L5":{x:890,y:350,cap:25},"L6":{x:950,y:350,cap:25},
+
+"L15":{x:650,y:430,cap:60},"L16":{x:710,y:430,cap:60},"L17":{x:770,y:430,cap:60},"L18":{x:830,y:430,cap:40},"L19":{x:890,y:430,cap:40},"L20":{x:950,y:430,cap:40},
+
+"L21":{x:650,y:480,cap:60},"L22":{x:710,y:480,cap:60},"L23":{x:770,y:480,cap:60},"L24":{x:830,y:480,cap:60},"L25":{x:890,y:480,cap:40},"L26":{x:950,y:480,cap:40},
+
+"L10":{x:1010,y:480,cap:80},"L9":{x:1070,y:480,cap:80},
+"L12":{x:1010,y:530,cap:80},"L11":{x:1070,y:530,cap:80},
+"L14":{x:1010,y:580,cap:80},"L13":{x:1070,y:580,cap:80}
 };
 
-function getCss(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+/* ==========================
+   2. SVG 생성
+========================== */
 
-// 탱크 표시용 공통 크기(겹침 방지)
-const R = 22;              // 원 반지름
-const FS1 = 13;            // 탱크명
-const FS2 = 14;            // 수량
-const FS3 = 11;            // (xx%) 표시
+const svg=document.getElementById("canvas");
 
-// ✅ 도면 좌표(절대 배치) — 현재 이미지(1422x725) 기준으로 맞춘 값
-// (좌측 패키징/벌크 구역)
-const TANKS = [
-  // --- Red (Packaging) : A & P ---
-  // 1행
-  C("A6",  70, 132, "red", 80),
-  C("A5", 120, 132, "red", 80),
-  C("P3-8",170, 132, "red", 45),
-  C("P3-7",220, 132, "red", 45),
-  C("P2-8",270, 132, "red", 45),
-  C("P2-7",320, 132, "red", 45),
-  C("P1-8",370, 132, "red", 45),
-  C("P1-7",420, 132, "red", 45),
+/* 상단 문구 */
+svg.innerHTML += `
+<text x="40" y="30" fill="red" font-weight="bold">Packaging Bin : </text>
+<text x="175" y="30" fill="red" font-weight="bold">45M/T x 24Q'ty = 1080M/T</text>
+<text x="175" y="55" fill="red" font-weight="bold">80M/T x 6Q'ty = 450M/T</text>
+<text x="40" y="80" fill="blue" font-weight="bold">Bulk Loding Bin : 80M/T x 6Q'ty = 420M/T</text>
+`;
 
-  // 2행
-  C("A4",  70, 186, "red", 80),
-  C("A3", 120, 186, "red", 80),
-  C("P3-6",170, 186, "red", 45),
-  C("P3-5",220, 186, "red", 45),
-  C("P2-6",270, 186, "red", 45),
-  C("P2-5",320, 186, "red", 45),
-  C("P1-6",370, 186, "red", 45),
-  C("P1-5",420, 186, "red", 45),
+/* 탱크 생성 */
+for(const name in tankLayout){
+  const t=tankLayout[name];
+  const g=document.createElementNS("http://www.w3.org/2000/svg","g");
+  g.setAttribute("class","tank");
+  g.setAttribute("id","tank_"+name);
 
-  // 3행
-  C("A2",  70, 240, "red", 80),
-  C("A1", 120, 240, "red", 80),
-  C("P3-4",170, 240, "red", 45),
-  C("P3-3",220, 240, "red", 45),
-  C("P2-4",270, 240, "red", 45),
-  C("P2-3",320, 240, "red", 45),
-  C("P1-4",370, 240, "red", 45),
-  C("P1-3",420, 240, "red", 45),
+  const c=document.createElementNS("http://www.w3.org/2000/svg","circle");
+  c.setAttribute("cx",t.x);
+  c.setAttribute("cy",t.y);
+  c.setAttribute("r",23);
 
-  // 4행(오프셋)
-  C("P3-2",195, 300, "red", 45),
-  C("P3-1",245, 300, "red", 45),
-  C("P2-2",295, 300, "red", 45),
-  C("P2-1",345, 300, "red", 45),
-  C("P1-2",395, 300, "red", 45),
-  C("P1-1",445, 300, "red", 45),
+  const label=document.createElementNS("http://www.w3.org/2000/svg","text");
+  label.setAttribute("x",t.x);
+  label.setAttribute("y",t.y-8);
+  label.textContent=name;
 
-  // --- Blue (T) ---
-  C("T6",  210, 355, "blue", 80),
-  C("T5",  260, 355, "blue", 80),
-  C("T4",  310, 355, "blue", 80),
-  C("T3",  360, 355, "blue", 80),
-  C("T2",  410, 355, "blue", 80),
-  C("T1",  460, 355, "blue", 80),
+  const qty=document.createElementNS("http://www.w3.org/2000/svg","text");
+  qty.setAttribute("x",t.x);
+  qty.setAttribute("y",t.y+6);
+  qty.setAttribute("id","qty_"+name);
 
-  // --- Purple (L1~L6) ---
-  C("L1",  650, 390, "purple", 25),
-  C("L2",  705, 390, "purple", 25),
-  C("L3",  760, 390, "purple", 25),
-  C("L4",  815, 390, "purple", 25),
-  C("L5",  870, 390, "purple", 25),
-  C("L6",  925, 390, "purple", 25),
+  const pct=document.createElementNS("http://www.w3.org/2000/svg","text");
+  pct.setAttribute("x",t.x);
+  pct.setAttribute("y",t.y+18);
+  pct.setAttribute("id","pct_"+name);
+  pct.setAttribute("class","percent");
 
-  // --- Green (B1~B4) ---
-  C("B4",  915, 350, "green", 35),
-  C("B1",  960, 350, "green", 35),
-  C("B3",  915, 395, "green", 35),
-  C("B2",  960, 395, "green", 35),
-
-  // --- Blue (L7~L26) : 아래 별도 구역 ---
-  // 상단 2줄(좌->우)
-  C("L15", 720, 500, "blue", 60),
-  C("L16", 770, 500, "blue", 60),
-  C("L17", 820, 500, "blue", 60),
-  C("L18", 870, 500, "blue", 60),
-  C("L19", 920, 500, "blue", 40),
-  C("L20", 970, 500, "blue", 40),
-  C("L8",  1020,500, "blue", 80),
-  C("L7",  1070,500, "blue", 80),
-
-  C("L21", 720, 560, "blue", 60),
-  C("L22", 770, 560, "blue", 60),
-  C("L23", 820, 560, "blue", 60),
-  C("L24", 870, 560, "blue", 60),
-  C("L25", 920, 560, "blue", 40),
-  C("L26", 970, 560, "blue", 40),
-  C("L10", 1050,560, "blue", 80),
-  C("L9",  1100,560, "blue", 80),
-
-  // 아래 2x2
-  C("L12", 1035, 610, "blue", 80),
-  C("L11", 1085, 610, "blue", 80),
-  C("L14", 1035, 660, "blue", 80),
-  C("L13", 1085, 660, "blue", 80),
-];
-
-// Bran (원) — 도면 우상단
-const BRAN = { name:"Bran", cx: 1360, cy: 80, type:"gray", capT: 400 };
-
-// Br 박스(가로: Br12~Br5)
-const BR_ROW = [
-  {name:"Br12", x: 1020, y: 390, w: 50, h: 45, capT: 30},
-  {name:"Br11", x: 1070, y: 390, w: 50, h: 45, capT: 30},
-  {name:"Br10", x: 1120, y: 390, w: 50, h: 45, capT: 30},
-  {name:"Br9",  x: 1170, y: 390, w: 50, h: 45, capT: 30},
-  {name:"Br8",  x: 1220, y: 390, w: 50, h: 45, capT: 40},
-  {name:"Br7",  x: 1270, y: 390, w: 50, h: 45, capT: 40},
-  {name:"Br6",  x: 1320, y: 390, w: 50, h: 45, capT: 40},
-  {name:"Br5",  x: 1370, y: 390, w: 50, h: 45, capT: 40},
-];
-
-// Br 스택(세로: Br4~Br1)
-const BR_STACK = [
-  {name:"Br4", x: 1320, y: 435, w: 90, h: 62, capT: 100},
-  {name:"Br3", x: 1320, y: 497, w: 90, h: 62, capT: 100},
-  {name:"Br2", x: 1320, y: 559, w: 90, h: 62, capT: 100},
-  {name:"Br1", x: 1320, y: 621, w: 90, h: 62, capT: 100},
-];
-
-function C(name, cx, cy, type, capT){ return {name, cx, cy, type, capT}; }
-
-/* =========================
-   2) ✅ Raw 데이터 파서 (신규/구형 둘 다 수용)
-   - 신규: TANK NO / 측정량 / 제품명
-   - 구형(혹시 남아있으면): SILO/TANK번호 / 재고량 / 제품명
-========================= */
-
-function normalizeTankName(s){
-  if(!s) return "";
-  // "L  9" -> "L9", "A 1" -> "A1", "T 6" -> "T6", "B 2" -> "B2"
-  s = String(s).trim().replace(/\s+/g,' ');
-  // P1-1 형태는 그대로 유지
-  if(/^P\d-\d$/i.test(s)) return s.toUpperCase();
-  // "L 10" 같은 케이스: 문자+공백+숫자 => 붙이기
-  s = s.replace(/^([A-Za-z])\s+(\d+)$/,'$1$2');
-  return s.toUpperCase();
+  g.appendChild(c);
+  g.appendChild(label);
+  g.appendChild(qty);
+  g.appendChild(pct);
+  svg.appendChild(g);
 }
 
-function parseNumberT(s){
-  if(s==null) return null;
-  // "71", "71.000", "71,000." 등 -> 71
-  let t = String(s).trim();
-  if(!t) return null;
-  t = t.replace(/,/g,'').replace(/\.$/,'');
-  const v = Number(t);
-  return Number.isFinite(v) ? v : null;
-}
+/* ==========================
+   3. 데이터 파싱 (새 Raw 형식)
+========================== */
 
 function parseRaw(raw){
-  const text = (raw||"").trim();
-  if(!text) return { rows:[], mode:"none" };
+  const lines=raw.trim().split("\n");
+  const data={};
 
-  const lines = text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
-  const header = lines[0];
+  lines.forEach(line=>{
+    const cols=line.split("\t");
+    if(cols.length<3) return;
 
-  const isNew = /TANK\s*NO\.?/i.test(header);
-  const isOld = /SILO\/TANK번호/i.test(header) || /재고구분/i.test(header);
+    let tank=cols[0].replace(/\s/g,"");
+    let amount=parseFloat(cols[2])||0;
+    let product=cols[4]||"";
 
-  const rows = [];
+    if(!tankLayout[tank]) return; // 이미지에 없는 탱크 무시
 
-  for(let i=1;i<lines.length;i++){
-    const line = lines[i];
-    // 탭/다중공백 혼합을 최대한 처리
-    const parts = line.split(/\t+/).length>1 ? line.split(/\t+/) : line.split(/\s{2,}/);
-    if(parts.length < 3) continue;
+    data[tank]={qty:amount,product:product};
+  });
 
-    if(isNew){
-      // 신규: [TANK NO., 입출고, 측정량, 단위, 제품명, ...]
-      const tank = normalizeTankName(parts[0]);
-      if(tank === "ETC_3" || tank === "말분") continue; // 요청: 말분 무시(안전장치)
-      const qty = parseNumberT(parts[2]); // D열 측정량
-      const product = (parts[4] ?? "").trim(); // F열 제품명(표에 따라 4번 인덱스)
-      if(!tank) continue;
-      rows.push({tank, qtyT: qty ?? 0, product});
-    }else if(isOld){
-      // 구형: [재고구분, SILO/TANK번호, 제품코드, 제품명, 재고단위, 재고량]
-      const tank = normalizeTankName(parts[1]);
-      const product = (parts[3] ?? "").trim();
-      const qtyKG = parseNumberT(parts[5]); // "71000." 같은 값(kg)
-      const qtyT = (qtyKG ?? 0) / 1000;
-      rows.push({tank, qtyT, product});
-    }else{
-      // 헤더 판별이 안되면: "탱크 수량 제품명" 순으로라도 파싱
-      const tank = normalizeTankName(parts[0]);
-      const qty = parseNumberT(parts[1]);
-      const product = parts.slice(2).join(' ').trim();
-      rows.push({tank, qtyT: qty ?? 0, product});
-    }
-  }
-  return { rows, mode: isNew ? "new" : (isOld ? "old" : "guess") };
+  return data;
 }
 
-/* =========================
-   3) ✅ “간이 DB” : 날짜별 저장/불러오기(localStorage)
-========================= */
-const LS_KEY = "tank_board_snapshots_v1";
+/* ==========================
+   4. 화면 반영
+========================== */
 
-function loadDB(){
-  try{ return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); }catch(e){ return {}; }
-}
-function saveDB(db){
-  localStorage.setItem(LS_KEY, JSON.stringify(db));
-}
+function render(data){
+  for(const name in tankLayout){
+    const layout=tankLayout[name];
+    const g=document.getElementById("tank_"+name);
+    const qtyEl=document.getElementById("qty_"+name);
+    const pctEl=document.getElementById("pct_"+name);
 
-function todayISO(){
-  const d = new Date();
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth()+1).padStart(2,'0');
-  const dd = String(d.getDate()).padStart(2,'0');
-  return `${yyyy}-${mm}-${dd}`;
-}
+    let qty=0;
+    if(data[name]) qty=data[name].qty;
 
-/* =========================
-   4) ✅ SVG 렌더
-========================= */
+    let percent=layout.cap?Math.round((qty/layout.cap)*100):0;
 
-const tankIndex = new Map(TANKS.map(t=>[t.name.toUpperCase(), t]));
-const svg = document.getElementById('board');
-const g = document.getElementById('tankGroup');
+    qtyEl.textContent=qty+"t";
+    pctEl.textContent="("+percent+"%)";
 
-function clearSVG(node){
-  while(node.firstChild) node.removeChild(node.firstChild);
-}
-
-function pct(q, cap){
-  if(!cap || cap<=0) return 0;
-  return Math.round((q/cap)*100);
-}
-
-function formatT(v){
-  // 소수 0~2자리(필요시)
-  if(!Number.isFinite(v)) return "-";
-  const s = (Math.round(v*100)/100).toString();
-  return s;
-}
-
-function circleTank(tank, qtyT, product){
-  const p = pct(qtyT, tank.capT);
-  const isZero = (qtyT === 0);
-  const isHi = (p >= HI_PCT);
-
-  const fill = isZero ? COLORS.zero : (isHi ? COLORS.hi : "#fff");
-
-  const grp = el('g');
-  // 원
-  grp.appendChild(el('circle', {
-    cx: tank.cx, cy: tank.cy, r: R,
-    fill, stroke: COLORS[tank.type] || COLORS.gray, 'stroke-width': 2
-  }));
-
-  // 탱크명
-  grp.appendChild(el('text', {
-    x: tank.cx, y: tank.cy - 6,
-    'text-anchor':'middle',
-    'font-size': FS1, 'font-weight': 900,
-    fill: COLORS[tank.type] || COLORS.gray
-  }, tank.name));
-
-  // 수량(t)
-  grp.appendChild(el('text', {
-    x: tank.cx, y: tank.cy + 11,
-    'text-anchor':'middle',
-    'font-size': FS2, 'font-weight': 900,
-    fill: COLORS[tank.type] || COLORS.gray
-  }, `${formatT(qtyT)}t`));
-
-  // % (괄호)
-  grp.appendChild(el('text', {
-    x: tank.cx, y: tank.cy + 25,
-    'text-anchor':'middle',
-    'font-size': FS3, 'font-weight': 800,
-    fill: '#444'
-  }, `(${p}%)`));
-
-  return grp;
-}
-
-function rectTank(box, qtyT, product){
-  const p = pct(qtyT, box.capT);
-  const isZero = (qtyT === 0);
-  const isHi = (p >= HI_PCT);
-  const fill = isZero ? COLORS.zero : (isHi ? COLORS.hi : "#fff");
-
-  const grp = el('g');
-  grp.appendChild(el('rect', {
-    x:box.x, y:box.y, width:box.w, height:box.h,
-    fill, stroke: COLORS.line, 'stroke-width':2
-  }));
-  grp.appendChild(el('text', {
-    x: box.x + box.w/2, y: box.y + 18,
-    'text-anchor':'middle',
-    'font-size': 13, 'font-weight': 900, fill:'#111'
-  }, box.name));
-  grp.appendChild(el('text', {
-    x: box.x + box.w/2, y: box.y + 36,
-    'text-anchor':'middle',
-    'font-size': 12, 'font-weight': 900, fill:'#111'
-  }, `${formatT(qtyT)}t`));
-  return grp;
-}
-
-function branCircle(qtyT){
-  const p = pct(qtyT, BRAN.capT);
-  const isZero = (qtyT === 0);
-  const isHi = (p >= HI_PCT);
-  const fill = isZero ? COLORS.zero : (isHi ? COLORS.hi : "#fff");
-
-  const host = document.getElementById('tank_Bran');
-  clearSVG(host);
-  const grp = el('g');
-  grp.appendChild(el('circle', {cx:BRAN.cx, cy:BRAN.cy, r:32, fill, stroke:COLORS.line, 'stroke-width':2}));
-  grp.appendChild(el('text', {x:BRAN.cx, y:BRAN.cy-6, 'text-anchor':'middle', 'font-size':16, 'font-weight':900, fill:'#111'}, "Bran"));
-  grp.appendChild(el('text', {x:BRAN.cx, y:BRAN.cy+14, 'text-anchor':'middle', 'font-size':18, 'font-weight':900, fill:'#111'}, `${formatT(qtyT)}t`));
-  grp.appendChild(el('text', {x:BRAN.cx, y:BRAN.cy+32, 'text-anchor':'middle', 'font-size':12, 'font-weight':800, fill:'#444'}, `(${p}%)`));
-  host.appendChild(grp);
-}
-
-function renderBrBoxes(dataMap){
-  // row
-  const rowHost = document.getElementById('rowBr');
-  clearSVG(rowHost);
-  for(const b of BR_ROW){
-    // Br 데이터는 없으므로 이름만(요청)
-    rowHost.appendChild(el('rect',{x:b.x,y:b.y,width:b.w,height:b.h,fill:"#fff",stroke:COLORS.line,'stroke-width':2}));
-    rowHost.appendChild(el('text',{x:b.x+b.w/2,y:b.y+24,'text-anchor':'middle','font-size':13,'font-weight':900,fill:'#111'}, b.name));
-    rowHost.appendChild(el('text',{x:b.x+b.w/2,y:b.y+40,'text-anchor':'middle','font-size':11,'font-weight':800,fill:'#111'}, `${b.capT}t`));
-  }
-  // stack
-  const stHost = document.getElementById('stackBr');
-  clearSVG(stHost);
-  for(const b of BR_STACK){
-    stHost.appendChild(el('rect',{x:b.x,y:b.y,width:b.w,height:b.h,fill:"#fff",stroke:COLORS.line,'stroke-width':2}));
-    stHost.appendChild(el('text',{x:b.x+b.w/2,y:b.y+26,'text-anchor':'middle','font-size':14,'font-weight':900,fill:'#111'}, b.name));
-    stHost.appendChild(el('text',{x:b.x+b.w/2,y:b.y+46,'text-anchor':'middle','font-size':12,'font-weight':800,fill:'#111'}, `${b.capT}t`));
+    g.classList.remove("zero","over85");
+    if(qty===0) g.classList.add("zero");
+    if(percent>=85) g.classList.add("over85");
   }
 }
 
-function renderAll(rows){
-  // 데이터 맵(탱크명 -> {qtyT, product})
-  const data = new Map();
-  for(const r of rows){
-    const key = normalizeTankName(r.tank);
-    if(!key) continue;
-    // 도면에 없는 탱크는 무시(요청)
-    if(!tankIndex.has(key) && key !== "BRAN") continue;
-    data.set(key, {qtyT: Number.isFinite(r.qtyT) ? r.qtyT : 0, product: r.product || ""});
-  }
+/* ==========================
+   5. 저장/조회 (DB화)
+========================== */
 
-  // SVG 탱크 렌더
-  clearSVG(g);
-  for(const tank of TANKS){
-    const d = data.get(tank.name.toUpperCase()) || {qtyT:0, product:""};
-    g.appendChild(circleTank(tank, d.qtyT, d.product));
-  }
+function saveData(){
+  const raw=document.getElementById("rawData").value;
+  const date=new Date().toISOString().slice(0,10);
+  const parsed=parseRaw(raw);
 
-  // Bran (ETC_2 or "Bran" 어느 쪽이든 수용)
-  const branQty = (data.get("ETC_2")?.qtyT) ?? (data.get("BRAN")?.qtyT) ?? 0;
-  branCircle(branQty);
-
-  // Br 박스(이름만)
-  renderBrBoxes(data);
-
-  // 오른쪽 표 렌더
-  const tbody = document.getElementById('tbl');
-  tbody.innerHTML = "";
-
-  // 표는 “도면에 있는 탱크만” + (Br 제외 가능)
-  const ordered = [
-    ...["A6","A5","A4","A3","A2","A1"],
-    ...["P3-8","P3-7","P3-6","P3-5","P3-4","P3-3","P3-2","P3-1"],
-    ...["P2-8","P2-7","P2-6","P2-5","P2-4","P2-3","P2-2","P2-1"],
-    ...["P1-8","P1-7","P1-6","P1-5","P1-4","P1-3","P1-2","P1-1"],
-    ...["T6","T5","T4","T3","T2","T1"],
-    ...["L1","L2","L3","L4","L5","L6"],
-    ...["B4","B1","B3","B2"],
-    ...["L7","L8","L9","L10","L11","L12","L13","L14","L15","L16","L17","L18","L19","L20","L21","L22","L23","L24","L25","L26"],
-    "ETC_2"
-  ];
-
-  for(const name of ordered){
-    if(name === "ETC_2"){
-      const qty = branQty;
-      addRow("Bran", qty, "(소맥피/Bran)");
-      continue;
-    }
-    const d = data.get(name) || {qtyT:0, product:""};
-    addRow(name, d.qtyT, d.product);
-  }
-
-  function addRow(tank, qtyT, product){
-    const tr = document.createElement('tr');
-    const td1 = document.createElement('td'); td1.textContent = tank; td1.className="mono";
-    const td2 = document.createElement('td'); td2.textContent = formatT(qtyT); td2.className="mono";
-    const td3 = document.createElement('td'); td3.textContent = product || ""; td3.className="";
-    tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
-    tbody.appendChild(tr);
-  }
+  localStorage.setItem("tank_"+date,JSON.stringify(parsed));
+  alert("저장 완료 : "+date);
+  render(parsed);
 }
 
-function el(tag, attrs={}, text=null){
-  const n = document.createElementNS('http://www.w3.org/2000/svg', tag);
-  for(const [k,v] of Object.entries(attrs)) n.setAttribute(k, v);
-  if(text!=null) n.textContent = text;
-  return n;
+function loadByDate(){
+  const date=document.getElementById("datePicker").value;
+  if(!date) return;
+
+  const saved=localStorage.getItem("tank_"+date);
+  if(!saved){ alert("데이터 없음"); return; }
+
+  render(JSON.parse(saved));
 }
 
-/* =========================
-   5) 버튼 동작
-========================= */
-
-const rawEl = document.getElementById('raw');
-const dateEl = document.getElementById('datePick');
-
-dateEl.value = todayISO();
-
-document.getElementById('btnApply').addEventListener('click', ()=>{
-  const parsed = parseRaw(rawEl.value);
-  renderAll(parsed.rows);
-});
-
-document.getElementById('btnSave').addEventListener('click', ()=>{
-  const d = dateEl.value || todayISO();
-  const db = loadDB();
-  db[d] = rawEl.value || "";
-  saveDB(db);
-  alert(`저장 완료: ${d}`);
-});
-
-document.getElementById('btnLoad').addEventListener('click', ()=>{
-  const d = dateEl.value || todayISO();
-  const db = loadDB();
-  const v = db[d];
-  if(!v){ alert(`저장된 데이터가 없습니다: ${d}`); return; }
-  rawEl.value = v;
-  const parsed = parseRaw(v);
-  renderAll(parsed.rows);
-});
-
-document.getElementById('btnClear').addEventListener('click', ()=>{
-  rawEl.value = "";
-  renderAll([]);
-});
-
-// 첫 화면: 빈 렌더
-renderAll([]);
-
-/* =========================
-   6) ✅ “픽셀 이동” 정보(요청사항용 메모)
-   - 현재 코드 기준:
-     Packaging 1줄 시작 x = 60
-     2줄 시작 x = 240 (':' 뒤 정렬)
-     Bulk Loding 시작 x = 60
-   - 만약 이전 코드에서 Packaging이 x=30이었다면, 현재는 +30px 이동한 셈
-========================= */
 </script>
 </body>
 </html>
