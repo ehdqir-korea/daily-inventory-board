@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>탱크 재고 현황</title>
 <style>
   body{font-family:Arial;margin:0;background:#f4f4f4}
@@ -9,14 +10,21 @@
   textarea{width:100%;height:170px}
   button{padding:8px 14px;margin-right:10px;margin-top:6px}
   input[type="date"]{padding:6px 10px;margin-top:6px}
-  svg{background:white;border:2px solid #333}
+  svg{background:white;border:2px solid #333; display:block; margin:0 auto;}
 
   /* 탱크 스타일 */
   .tank circle{stroke-width:2; fill:white;}
   .zero circle{fill:#fff9c4;}        /* 0일때 연노랑 */
   .over85 circle{fill:#ffd6d6;}      /* 85%이상 연빨강 */
+
   .tank text{font-size:12px;text-anchor:middle;dominant-baseline:middle;font-weight:bold}
   .percent{font-size:10px;fill:#000}
+
+  /* Br 사각 탱크 */
+  .brtank rect{fill:#fff;stroke:#111;stroke-width:2}
+  .brtank text{font-size:12px;text-anchor:middle;dominant-baseline:middle;font-weight:bold}
+  .brzero rect{fill:#fff9c4;}
+  .brover85 rect{fill:#ffd6d6;}
 </style>
 </head>
 <body>
@@ -24,9 +32,9 @@
 <div class="controls">
   <h3>Raw Data 입력 (새 형식: TANK NO / 측정량 / 제품명)</h3>
   <div style="color:#666;font-size:13px;line-height:1.4">
-    - 엑셀에서 표 범위 복사 → 아래에 붙여넣기<br>
-    - 탱크 번호는 예: <b>L  9</b>, <b>P1-1</b>, <b>A 1</b> 형태도 자동 인식합니다(공백 제거)<br>
-    - 이미지에 없는 탱크 번호는 자동으로 무시합니다.
+    - 엑셀 표 범위 복사 → 아래에 붙여넣기<br>
+    - 탱크번호 예: <b>L  9</b>, <b>P1-1</b>, <b>A 1</b> 형태도 자동 인식(공백 제거)<br>
+    - <b>이미지에 없는 TANK NO.</b>는 자동으로 무시됩니다.
   </div>
   <textarea id="rawData" placeholder="여기에 붙여넣기 (탭 구분)"></textarea><br>
   <button onclick="saveData()">저장(오늘)</button>
@@ -34,14 +42,12 @@
   <button onclick="loadByDate()">날짜조회</button>
 </div>
 
+<!-- ✅ 캔버스 고정 -->
 <svg id="canvas" width="1422" height="725" viewBox="0 0 1422 725" preserveAspectRatio="xMinYMin meet"></svg>
 
 <script>
 /* =========================================================
    1) 탱크 배치(사진 기준 픽셀 정렬) + 용량(cap)
-   - 반지름 r=23 기준
-   - A/ P / T 블록 기준점: START_X=92, START_Y=132, GAP=60
-   - L1~L6: L_START_X=585, L_START_Y=365, GAP=60
 ========================================================= */
 
 const START_X = 92;
@@ -51,6 +57,7 @@ const GAP = 60;
 const L_START_X = 585;
 const L_START_Y = 365;
 
+// ✅ 원 탱크 좌표/용량
 const tankLayout = {
   // ====== Packaging Bin (좌측 상단 빨강) ======
   "A6":{x:START_X+0*GAP,y:START_Y,cap:80},
@@ -103,7 +110,7 @@ const tankLayout = {
   "L5":{x:L_START_X+4*GAP,y:L_START_Y,cap:25},
   "L6":{x:L_START_X+5*GAP,y:L_START_Y,cap:25},
 
-  // ====== 아래쪽 Bulk Loading Bin (파랑) — 필요 시 계속 미세조정 ======
+  // ====== 아래쪽 Bulk Loading Bin (파랑) ======
   "L15":{x:650,y:460,cap:60},"L16":{x:710,y:460,cap:60},"L17":{x:770,y:460,cap:60},
   "L18":{x:830,y:460,cap:60},"L19":{x:890,y:460,cap:40},"L20":{x:950,y:460,cap:40},
 
@@ -114,22 +121,42 @@ const tankLayout = {
   "L10":{x:1010,y:515,cap:80},"L9":{x:1070,y:515,cap:80},
   "L12":{x:1010,y:570,cap:80},"L11":{x:1070,y:570,cap:80},
   "L14":{x:1010,y:625,cap:80},"L13":{x:1070,y:625,cap:80},
+
+  // ✅ 추가: B1~B4 (녹색 원) — 사진 기준 오른쪽(보라 L라인 우측)
+  "B4":{x:980,y:340,cap:35},
+  "B1":{x:1040,y:340,cap:35},
+  "B3":{x:980,y:400,cap:35},
+  "B2":{x:1040,y:400,cap:35},
+};
+
+// ✅ Br 사각 탱크(이미지에 엑셀값 없으니 표시만, 용량 cap=0)
+const brLayout = {
+  // 상단 가로 Br12~Br5
+  "Br12":{x:1120,y:360,w:55,h:50,cap:0},
+  "Br11":{x:1175,y:360,w:55,h:50,cap:0},
+  "Br10":{x:1230,y:360,w:55,h:50,cap:0},
+  "Br9": {x:1285,y:360,w:55,h:50,cap:0},
+  "Br8": {x:1340,y:360,w:55,h:50,cap:0},
+  "Br7": {x:1395,y:360,w:55,h:50,cap:0},
+  "Br6": {x:1450,y:360,w:55,h:50,cap:0}, // viewBox 밖이면 아래서 캔버스 확장 가능
+  "Br5": {x:1505,y:360,w:55,h:50,cap:0}, // viewBox 밖이면 아래서 캔버스 확장 가능
+
+  // 오른쪽 세로 Br4~Br1
+  "Br4":{x:1335,y:410,w:95,h:55,cap:0},
+  "Br3":{x:1335,y:465,w:95,h:55,cap:0},
+  "Br2":{x:1335,y:520,w:95,h:55,cap:0},
+  "Br1":{x:1335,y:575,w:95,h:55,cap:0},
 };
 
 /* =========================================================
-   2) 색상/스타일 규칙
+   2) 색상 규칙
 ========================================================= */
 function strokeColorByTank(name){
-  if(/^A\d+$/.test(name) || /^\dP\d+$/.test(name) || /^P\d-\d$/.test(name) || /^P\d-\d+$/.test(name) || /^[123]P\d$/.test(name)){
-    // A or 1P1 형태 일부가 섞일 수 있어 아래에서 그룹으로 다시 처리함
-  }
-  // 사진 기준 그룹 컬러 지정 (stroke)
   if(name.startsWith("A") || name.startsWith("1P") || name.startsWith("2P") || name.startsWith("3P")) return "#d40000"; // 빨강
   if(name.startsWith("T")) return "#0066cc"; // 파랑
   if(["L1","L2","L3","L4","L5","L6"].includes(name)) return "#7a2bd1"; // 보라
-  // 나머지 L은 파랑으로
-  if(name.startsWith("L")) return "#0066cc";
-  // 기본
+  if(name.startsWith("L")) return "#0066cc"; // 파랑
+  if(name.startsWith("B")) return "#00a651"; // ✅ 녹색
   return "#111";
 }
 
@@ -138,20 +165,29 @@ function strokeColorByTank(name){
 ========================================================= */
 const svg = document.getElementById("canvas");
 
-// 상단 문구 (사진 정렬 픽셀값)
-svg.innerHTML += `
+// ✅ 상단 문구 (정렬)
+svg.innerHTML = `
   <text x="42" y="32" fill="red" font-weight="bold" font-size="18">Packaging Bin :</text>
   <text x="198" y="32" fill="red" font-weight="bold" font-size="18">45M/T x 24Q'ty = 1080M/T</text>
   <text x="198" y="56" fill="red" font-weight="bold" font-size="18">80M/T x 6Q'ty = 450M/T</text>
   <text x="42" y="80" fill="#0057d8" font-weight="bold" font-size="18">Bulk Loding Bin : 80M/T x 6Q'ty = 420M/T</text>
 `;
 
-// (선/구획은 추후 미세조정 단계에서 추가 가능)
+// ✅ Bran 400t 큰 원(우측 상단)
+(function drawBran(){
+  const cx=1365, cy=90, r=45;
+  svg.innerHTML += `
+    <g class="tank" id="tank_Bran">
+      <circle cx="${cx}" cy="${cy}" r="${r}" stroke="#111" fill="#fff"></circle>
+      <text x="${cx}" y="${cy-6}" font-size="16" font-weight="bold">Bran</text>
+      <text x="${cx}" y="${cy+14}" font-size="16" font-weight="bold">400t</text>
+    </g>
+  `;
+})();
 
-// 탱크 생성
+// ✅ 원 탱크 생성
 for(const name in tankLayout){
   const t = tankLayout[name];
-
   const g = document.createElementNS("http://www.w3.org/2000/svg","g");
   g.setAttribute("class","tank");
   g.setAttribute("id","tank_"+name);
@@ -181,10 +217,37 @@ for(const name in tankLayout){
   pct.setAttribute("class","percent");
   pct.textContent = "";
 
-  g.appendChild(c);
-  g.appendChild(label);
-  g.appendChild(qty);
-  g.appendChild(pct);
+  g.appendChild(c); g.appendChild(label); g.appendChild(qty); g.appendChild(pct);
+  svg.appendChild(g);
+}
+
+// ✅ Br 사각 탱크 생성
+for(const name in brLayout){
+  const b = brLayout[name];
+  const g = document.createElementNS("http://www.w3.org/2000/svg","g");
+  g.setAttribute("class","brtank");
+  g.setAttribute("id","br_"+name);
+
+  const rect = document.createElementNS("http://www.w3.org/2000/svg","rect");
+  rect.setAttribute("x", b.x);
+  rect.setAttribute("y", b.y);
+  rect.setAttribute("width", b.w);
+  rect.setAttribute("height", b.h);
+
+  const txt = document.createElementNS("http://www.w3.org/2000/svg","text");
+  txt.setAttribute("x", b.x + b.w/2);
+  txt.setAttribute("y", b.y + b.h/2 - 4);
+  txt.textContent = name;
+
+  const sub = document.createElementNS("http://www.w3.org/2000/svg","text");
+  sub.setAttribute("x", b.x + b.w/2);
+  sub.setAttribute("y", b.y + b.h/2 + 12);
+  sub.setAttribute("id","brqty_"+name);
+  sub.textContent = "30t"; // ✅ 참고 이미지처럼 표기만 (데이터 없음)
+
+  g.appendChild(rect);
+  g.appendChild(txt);
+  g.appendChild(sub);
   svg.appendChild(g);
 }
 
@@ -193,35 +256,32 @@ for(const name in tankLayout){
    - 탱크번호: cols[0] (TANK NO.)
    - 측정량: cols[2]
    - 제품명: cols[4]
-   - 공백 제거해서 "L  9" => "L9", "A  1" => "A1", "T 6" => "T6"
-   - 이미지에 없는 탱크는 무시
+   - 공백 제거: "L  9" -> "L9", "B 1" -> "B1"
 ========================================================= */
 function normalizeTankId(s){
   return (s||"").toString().replace(/\s+/g,"").trim();
 }
-
 function parseNumber(s){
   if(s===null || s===undefined) return 0;
   const v = s.toString().replace(/,/g,"").trim();
   const n = parseFloat(v);
   return isNaN(n) ? 0 : n;
 }
-
 function parseRaw(raw){
   const lines = raw.trim().split(/\r?\n/);
   const data = {};
   for(const line of lines){
-    // 탭 기반이 기본, 혹시 공백+탭 섞이면 split("\t") 유지
     const cols = line.split("\t");
     if(cols.length < 3) continue;
 
     const tank = normalizeTankId(cols[0]);
-    const qtyT = parseNumber(cols[2]);  // 측정량
-    const product = (cols[4]||"").trim();
-
     if(!tank) continue;
-    if(!tankLayout[tank]) continue; // 이미지에 없는 탱크 자동 무시
 
+    // ✅ 이미지에 있는 원 탱크만 반영 (Br은 엑셀에 없다 했으므로 무시)
+    if(!tankLayout[tank]) continue;
+
+    const qtyT = parseNumber(cols[2]); // 측정량(t)
+    const product = (cols[4]||"").trim();
     data[tank] = { qty: qtyT, product };
   }
   return data;
@@ -229,10 +289,10 @@ function parseRaw(raw){
 
 /* =========================================================
    5) 화면 반영
-   - qty는 t 단위로 표시 (이미 Raw가 t 단위로 들어온다고 가정)
+   - qty는 t 단위로 표시
    - percent = qty/cap
-   - 0 => zero(연노랑)
-   - >=85% => over85(연빨강)
+   - 0 => 연노랑
+   - >=85% => 연빨강
 ========================================================= */
 function render(data){
   for(const name in tankLayout){
@@ -246,30 +306,23 @@ function render(data){
 
     const percent = layout.cap ? Math.round((qty/layout.cap)*100) : 0;
 
-    // 표시
     qtyEl.textContent = `${qty}t`;
     pctEl.textContent = layout.cap ? `(${percent}%)` : "";
 
-    // 클래스 초기화
     g.classList.remove("zero","over85");
     if(qty === 0) g.classList.add("zero");
-    if(percent >= 85) g.classList.add("over85");
+    if(layout.cap && percent >= 85) g.classList.add("over85");
   }
 }
 
 /* =========================================================
    6) 날짜별 저장/조회(localStorage)
 ========================================================= */
-function todayStr(){
-  return new Date().toISOString().slice(0,10);
-}
+function todayStr(){ return new Date().toISOString().slice(0,10); }
 
 function saveData(){
   const raw = document.getElementById("rawData").value;
-  if(!raw.trim()){
-    alert("Raw data를 붙여넣어 주세요.");
-    return;
-  }
+  if(!raw.trim()){ alert("Raw data를 붙여넣어 주세요."); return; }
   const date = todayStr();
   const parsed = parseRaw(raw);
   localStorage.setItem("tank_"+date, JSON.stringify(parsed));
@@ -279,15 +332,9 @@ function saveData(){
 
 function loadByDate(){
   const date = document.getElementById("datePicker").value;
-  if(!date){
-    alert("날짜를 선택해 주세요.");
-    return;
-  }
+  if(!date){ alert("날짜를 선택해 주세요."); return; }
   const saved = localStorage.getItem("tank_"+date);
-  if(!saved){
-    alert("해당 날짜 데이터가 없습니다.");
-    return;
-  }
+  if(!saved){ alert("해당 날짜 데이터가 없습니다."); return; }
   render(JSON.parse(saved));
 }
 
