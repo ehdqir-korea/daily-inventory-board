@@ -15,7 +15,7 @@
 
   .tank circle{stroke-width:3; fill:#fff;}
   .zero circle{fill:#fff7b3;}        /* 0일때 연노랑 */
-  .over85 circle{fill:#ffd0d0;}      /* 85%이상 연빨강 */
+  .over90 circle{fill:#ffd0d0;}      /* 85%이상 연빨강 */
 
   .tank .name{font-size:16px;text-anchor:middle;dominant-baseline:middle;font-weight:800}
   .tank .qty{font-size:16px;text-anchor:middle;dominant-baseline:middle;font-weight:800; fill:#111}
@@ -26,7 +26,7 @@
   .brtank .qt{font-size:14px;text-anchor:middle;dominant-baseline:middle;font-weight:800}
 
   .brzero rect{fill:#fff7b3;}
-  .brover85 rect{fill:#ffd0d0;}
+  .brover90 rect{fill:#ffd0d0;}
 
   .zone{fill:none;stroke:#111;stroke-width:3}
   .zoneTitle{font-size:34px;font-weight:500;fill:#111}
@@ -60,90 +60,93 @@
 const svg = document.getElementById("canvas");
 
 /* =========================================================
-   미세조정 파라미터(요청 반영)
+   미세조정 파라미터
 ========================================================= */
-const PACK_TANK_DY = 30;  // (1) 포장동 탱크 +30px 아래
+const PACK_TANK_DY = 30;  // 포장동 탱크 +30px 아래
 
 /* =========================================================
-   건물(검정선) 레이아웃 (요청 반영)
-   (2) 포장동 오른쪽 선 30px 왼쪽 -> w - 30
-   (3) 제분동신관 가로 30px 축소 -> w - 30
+   건물 레이아웃
 ========================================================= */
 const Z = {
   outer: {x:20, y:20, w:1880, h:1040},
 
-  // 1번: 포장동 (w 650 -> 620)
   pack:  {x:40, y:40, w:620, h:520},
-
   office:{x:40, y:560, w:90, h:500},
 
-  // 2번: 제분동신관 (w 560 -> 530)
   newMill:{x:690, y:40, w:530, h:520},
 
-  // 기둥
   pillar:{x:1250, y:40, w:60, h:520},
 
-  // 3번: 제분동구관
   oldMill:{x:1310, y:40, w:590, h:520},
 
-  // Bran 빈공간(우측)
   branArea:{x:1720, y:40, w:180, h:520},
 };
 
-/* 탱크 원 반지름/격자 */
+/* 원 탱크 */
 const R = 28;
 const GX = 72;
 const GY = 72;
 
-/* Br 사각탱크 간격 (너가 요청한 55 유지) */
-const BR_STEP = 55;
+/* ✅ Br 탱크 간격 변경 (55 → 5) : “50px 줄임” 반영
+   - 진짜 빈공간 0으로 하고 싶으면 아래 5를 0으로 바꾸면 됨 */
+const BR_STEP = 5;
 
 /* =========================================================
-   포장동 탱크 시작점 (탱크만 +30px 아래)
+   포장동 탱크 시작점
 ========================================================= */
 const PACK_START = {x: Z.pack.x + 40, y: Z.pack.y + 120 + PACK_TANK_DY};
 
 /* =========================================================
-   L1~L6 라인 (신관 내부: 오른쪽이 잘리지 않게 x를 살짝 왼쪽으로)
+   L1~L6
 ========================================================= */
 const L16_START = {x: Z.newMill.x + 60, y: Z.newMill.y + 420};
 
 /* =========================================================
-   (4) B1~B4 탱크를 신관/구관 사이 "빈 공간"으로 이동
-   - 위치: pillar 왼쪽~오른쪽 주변으로 배치
-   - 2x2를 좀 촘촘히 배치 (64 간격)
+   B1~B4 탱크 (빈 공간)
 ========================================================= */
 const B_GX = 64;
 const B_GY = 64;
-const GAP_LEFT = Z.newMill.x + Z.newMill.w;      // 신관 오른쪽 끝
-const GAP_RIGHT = Z.oldMill.x;                   // 구관 왼쪽 시작
-const GAP_MID = (GAP_LEFT + GAP_RIGHT) / 2;      // 중앙
-const B_START = {x: GAP_MID - B_GX/2, y: Z.newMill.y + 410}; // 중간에 놓기
+const GAP_LEFT = Z.newMill.x + Z.newMill.w;
+const GAP_RIGHT = Z.oldMill.x;
+const GAP_MID = (GAP_LEFT + GAP_RIGHT) / 2;
+const B_START = {x: GAP_MID - B_GX/2, y: Z.newMill.y + 410};
 
 /* =========================================================
-   Br 라인/세로탱크 정렬
-   (5) Br6~Br12 라인 좌우 = "구관 core" 좌우와 일치
-       -> core = oldMill.x ~ branArea.x
-   (6) Br1~Br4 세로탱크 좌우 = branArea 좌우와 일치
+   ✅ 핵심 수정: Br12~Br5를 “Milling Area (Old) 내부”로 강제
+   - 너 말대로 Old 건물 내부 폭을 385px로 잡고,
+   - Br 탱크 폭은 +20px,
+   - 간격은 50px 줄여(55→5) 꽉 들어오게
 ========================================================= */
-const OLD_CORE = {x: Z.oldMill.x, y: Z.oldMill.y, w: (Z.branArea.x - Z.oldMill.x), h: Z.oldMill.h};
+const OLD_CORE = {
+  x: Z.oldMill.x + 20,     // 건물 안쪽으로 살짝 패딩
+  y: Z.oldMill.y,
+  w: 385,                  // ✅ 사용자가 지정한 Old 건물 가로 폭
+  h: Z.oldMill.h
+};
+
 const BR_LINE_Y = Z.oldMill.y + 420;
 const BR_COL_Y  = Z.oldMill.y + 420;
 
-/* ✅ Br12~Br5 8개를 OLD_CORE 폭에 "균등 배치" (간격은 BR_STEP 기준, 폭은 자동계산) */
-function calcBrRowBoxWidth(){
-  const totalGaps = BR_STEP * 7;
-  const w = (OLD_CORE.w - totalGaps) / 8;
-  return Math.max(28, Math.floor(w)); // 너무 작아지면 최소폭 28
+/* Br 박스 크기 계산:
+   - 8개(Br12~Br5)가 OLD_CORE.w 안에 들어오게 기본 폭 산출 후,
+   - “각 탱크 너비 +20px” 반영 */
+function calcBrBoxW(){
+  const base = Math.floor((OLD_CORE.w - BR_STEP*7) / 8);
+  return Math.max(30, base + 20); // ✅ +20px
 }
-const BR_BOX_W = calcBrRowBoxWidth();
+const BR_BOX_W = calcBrBoxW();
 const BR_BOX_H = 54;
 
-/* 하단 Bulk Loading(파랑 원 대군) 위치 */
+/* Br4~Br1 세로 (Bran 영역과 좌우 일치) */
+const colW = Z.branArea.w;
+const colX = Z.branArea.x;
+const colH = 62;
+const vGap = 4;
+
+/* 하단 Bulk */
 const BULK_BASE = {x: 820, y: 720};
 
 const tankLayout = {
-  /* Packaging Bin (빨강) */
   "A6":{x:PACK_START.x+0*GX,y:PACK_START.y+0*GY,cap:80},
   "A5":{x:PACK_START.x+1*GX,y:PACK_START.y+0*GY,cap:80},
   "3P8":{x:PACK_START.x+2*GX,y:PACK_START.y+0*GY,cap:45},
@@ -178,7 +181,6 @@ const tankLayout = {
   "1P2":{x:PACK_START.x+6*GX,y:PACK_START.y+3*GY,cap:45},
   "1P1":{x:PACK_START.x+7*GX,y:PACK_START.y+3*GY,cap:45},
 
-  /* T 라인 (파랑) */
   "T6":{x:PACK_START.x+2*GX,y:PACK_START.y+4*GY,cap:80},
   "T5":{x:PACK_START.x+3*GX,y:PACK_START.y+4*GY,cap:80},
   "T4":{x:PACK_START.x+4*GX,y:PACK_START.y+4*GY,cap:80},
@@ -186,7 +188,6 @@ const tankLayout = {
   "T2":{x:PACK_START.x+6*GX,y:PACK_START.y+4*GY,cap:80},
   "T1":{x:PACK_START.x+7*GX,y:PACK_START.y+4*GY,cap:80},
 
-  /* L1~L6 (보라) */
   "L1":{x:L16_START.x+0*GX,y:L16_START.y,cap:25},
   "L2":{x:L16_START.x+1*GX,y:L16_START.y,cap:25},
   "L3":{x:L16_START.x+2*GX,y:L16_START.y,cap:25},
@@ -194,13 +195,11 @@ const tankLayout = {
   "L5":{x:L16_START.x+4*GX,y:L16_START.y,cap:25},
   "L6":{x:L16_START.x+5*GX,y:L16_START.y,cap:25},
 
-  /* B1~B4 (녹색 원) - (4) 빈공간으로 이동 */
   "B4":{x:B_START.x+0*B_GX,y:B_START.y-1*B_GY,cap:35},
   "B1":{x:B_START.x+1*B_GX,y:B_START.y-1*B_GY,cap:35},
   "B3":{x:B_START.x+0*B_GX,y:B_START.y+0*B_GY,cap:35},
   "B2":{x:B_START.x+1*B_GX,y:B_START.y+0*B_GY,cap:35},
 
-  /* 하단 Bulk Loading Bin */
   "L15":{x:BULK_BASE.x+0*GX,y:BULK_BASE.y+0*GY,cap:60},
   "L16":{x:BULK_BASE.x+1*GX,y:BULK_BASE.y+0*GY,cap:60},
   "L17":{x:BULK_BASE.x+2*GX,y:BULK_BASE.y+0*GY,cap:60},
@@ -226,11 +225,10 @@ const tankLayout = {
   "L13":{x:BULK_BASE.x+7*GX,y:BULK_BASE.y+3*GY,cap:80},
 };
 
-/* ✅ Br 사각 탱크 레이아웃 생성 */
 function buildBrLayout(){
   const layout = {};
 
-  // Br12~Br5: old core(=oldMill 왼쪽 부분) 좌우선과 맞게 배치
+  // ✅ Br12~Br5: OLD_CORE 내부 폭 385px 기준으로 배치 (완전히 Old 건물 안)
   const labels = {Br12:"30t",Br11:"30t",Br10:"30t",Br9:"30t",Br8:"40t",Br7:"40t",Br6:"40t",Br5:"40t"};
   const order = ["Br12","Br11","Br10","Br9","Br8","Br7","Br6","Br5"];
 
@@ -245,12 +243,7 @@ function buildBrLayout(){
     };
   }
 
-  // Br4~Br1: branArea 좌우와 일치
-  const colW = Z.branArea.w;         // (6) 폭 = branArea 폭
-  const colX = Z.branArea.x;         // (6) 좌 = branArea 좌
-  const colH = 62;
-  const vGap = 4;
-
+  // Br4~Br1: Bran 영역과 좌우 일치
   const vOrder = ["Br4","Br3","Br2","Br1"];
   for(let i=0;i<vOrder.length;i++){
     const name = vOrder[i];
@@ -289,47 +282,36 @@ function drawZones(){
 
   addSvg("rect",{class:"zone",x:Z.outer.x,y:Z.outer.y,width:Z.outer.w,height:Z.outer.h});
 
-  // 1번/2번/3번 건물
   addSvg("rect",{class:"zone",x:Z.pack.x,y:Z.pack.y,width:Z.pack.w,height:Z.pack.h});
   addSvg("rect",{class:"zone",x:Z.office.x,y:Z.office.y,width:Z.office.w,height:Z.office.h});
   addSvg("rect",{class:"zone",x:Z.newMill.x,y:Z.newMill.y,width:Z.newMill.w,height:Z.newMill.h});
   addSvg("rect",{class:"zone",x:Z.pillar.x,y:Z.pillar.y,width:Z.pillar.w,height:Z.pillar.h});
   addSvg("rect",{class:"zone",x:Z.oldMill.x,y:Z.oldMill.y,width:Z.oldMill.w,height:Z.oldMill.h});
-
-  // Bran area
   addSvg("rect",{class:"zone",x:Z.branArea.x,y:Z.branArea.y,width:Z.branArea.w,height:Z.branArea.h});
 
-  // OFFICE
   addSvg("text",{x:Z.office.x+45,y:Z.office.y+250,transform:`rotate(90 ${Z.office.x+45} ${Z.office.y+250})`,fontSize:"26",fontWeight:"700",fill:"#111"}, "OFFICE");
 
-  // 건물명
   addSvg("text",{class:"zoneTitle",x:Z.newMill.x+140,y:Z.newMill.y+210}, "Milling Area (New)");
   addSvg("text",{class:"zoneTitle",x:Z.oldMill.x+140,y:Z.oldMill.y+210}, "Milling Area (Old)");
 
-  // 상단 설명(포장동)
   addSvg("text",{class:"zoneNoteRed",x:Z.pack.x+30,y:Z.pack.y+35}, "Packaging Bin : 45M/T x 24Q'ty = 1080M/T");
   addSvg("text",{class:"zoneNoteRed",x:Z.pack.x+165,y:Z.pack.y+62}, "80M/T x 6Q'ty = 450M/T");
   addSvg("text",{class:"zoneNoteBlue",x:Z.pack.x+30,y:Z.pack.y+92}, "Bulk Loding Bin : 80M/T x 6Q'ty = 420M/T");
 
-  // 신관(보라)
   addSvg("text",{class:"zoneNotePurple",x:Z.newMill.x+70,y:Z.newMill.y+380}, "Semi-finished Bin : 25M/T x 6Q'ty = 150M/T");
 
-  // (4) Primix 글씨: 아래 검정선(=신관 하단선) 바로 아래로 25~30px 내리기
   addSvg("text",{
     class:"zoneNoteGreen",
     x:Z.newMill.x + 300,
     y:Z.newMill.y + Z.newMill.h + 30
   }, "Primix Bin : 35M/T x 4Q'ty = 140M/T");
 
-  // 구관(Bran byproduct)
   addSvg("text",{x:Z.oldMill.x+35,y:Z.oldMill.y+380,fontSize:"20",fontWeight:"900",fill:"#111"},
     "Bran byproduct Bin : 30M/T x 8Q'ty = 240M/T");
 
-  // 우하단 문구
   addSvg("text",{x:Z.oldMill.x+450,y:Z.oldMill.y+610,fontSize:"22",fontWeight:"900",fill:"#111"}, "Bran byproduct Bin :");
   addSvg("text",{x:Z.oldMill.x+420,y:Z.oldMill.y+640,fontSize:"22",fontWeight:"900",fill:"#111"}, "100M/T x 4Q'ty = 400M/T");
 
-  // 하단 Bulk Loading
   addSvg("text",{class:"zoneNoteBlue",x:760,y:985}, "Bulk Loding Bin : 40M/T x 12Q'ty + 80M/T x 8Q'ty = 1600M/T");
 }
 
@@ -404,7 +386,6 @@ function drawBrTank(name, x, y, w, h, label){
   svg.appendChild(g);
 }
 
-/* Raw 파싱(새 형식) */
 function normalizeTankId(s){
   return (s||"").toString().replace(/\s+/g,"").trim();
 }
@@ -433,7 +414,6 @@ function parseRaw(raw){
   return data;
 }
 
-/* 화면 반영 */
 function render(data){
   for(const name in tankLayout){
     const layout = tankLayout[name];
@@ -455,7 +435,6 @@ function render(data){
   }
 }
 
-/* 날짜 저장/조회 */
 function todayStr(){ return new Date().toISOString().slice(0,10); }
 
 function saveData(){
@@ -476,7 +455,6 @@ function loadByDate(){
   render(JSON.parse(saved));
 }
 
-/* 초기화 */
 function init(){
   drawZones();
   drawBranBig();
