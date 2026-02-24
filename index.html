@@ -17,7 +17,6 @@
   .zero circle{fill:#fff7b3;}        /* 0일때 연노랑 */
   .over85 circle{fill:#ffd0d0;}      /* 85%이상 연빨강 */
 
-  /* (1) 원형탱크 글씨도 같이 키움 */
   .tank .name{font-size:18px;text-anchor:middle;dominant-baseline:middle;font-weight:800}
   .tank .qty{font-size:18px;text-anchor:middle;dominant-baseline:middle;font-weight:800; fill:#111}
   .tank .pct{font-size:14px;text-anchor:middle;dominant-baseline:middle;font-weight:700; fill:#111}
@@ -64,9 +63,17 @@ const svg = document.getElementById("canvas");
 ========================================================= */
 const PACK_TANK_DY = 30;
 
+/* ✅ 요청 반영
+   - L1~L6: 오른쪽 +30px
+   - 보라색 글씨: 오른쪽 +30px
+   - B1~B4: 왼쪽 -20px
+*/
+const L16_SHIFT_X = 30;
+const PURPLE_SHIFT_X = 30;
+const B_SHIFT_X = -20;
+
 /* =========================================================
    건물(검정선) 레이아웃
-   (4) Milling Area (New) 가로 30px 추가 축소
 ========================================================= */
 const Z = {
   outer: {x:20, y:20, w:1880, h:1040},
@@ -74,7 +81,6 @@ const Z = {
   pack:  {x:40, y:40, w:600, h:520},
   office:{x:40, y:560, w:90, h:500},
 
-  // 기존 530에서 30 더 줄임 => 500
   newMill:{x:640, y:40, w:590, h:520},
 
   pillar:{x:1160, y:40, w:150, h:520},
@@ -83,7 +89,7 @@ const Z = {
   branArea:{x:1720, y:40, w:180, h:520},
 };
 
-/* (1) 원형탱크 크기: 반지름 +5px */
+/* 원형탱크 */
 const R = 33;
 const GX = 72;
 const GY = 72;
@@ -91,29 +97,27 @@ const GY = 72;
 /* Br 사각탱크 간격 */
 const BR_STEP = 5;
 
-/* =========================================================
-   포장동 탱크 시작점 (탱크만 +30px 아래)
-========================================================= */
+/* 포장동 탱크 시작점 */
 const PACK_START = {x: Z.pack.x + 40, y: Z.pack.y + 120 + PACK_TANK_DY};
 
-/* =========================================================
-   (2) L1~L6: 왼쪽 -50px, 아래 +60px
-========================================================= */
-const L16_START = {x: (Z.newMill.x + 60) - 50, y: (Z.newMill.y + 420) + 60};
+/* L1~L6 기준점 */
+const L16_START = {
+  x: (Z.newMill.x + 60) - 50 + L16_SHIFT_X,
+  y: (Z.newMill.y + 420) + 60
+};
 
-/* =========================================================
-   (5) B1~B4: 왼쪽 -20px, 아래 +60px
-========================================================= */
+/* B1~B4 기준점 */
 const B_GX = 64;
 const B_GY = 64;
 const GAP_LEFT = Z.newMill.x + Z.newMill.w;
 const GAP_RIGHT = Z.oldMill.x;
 const GAP_MID = (GAP_LEFT + GAP_RIGHT) / 2;
-const B_START = {x: (GAP_MID - B_GX/2) - 20, y: (Z.newMill.y + 410) + 60};
+const B_START = {
+  x: (GAP_MID - B_GX/2) - 20 + B_SHIFT_X,
+  y: (Z.newMill.y + 410) + 60
+};
 
-/* =========================================================
-   Br 정렬 (구관 core / branArea)
-========================================================= */
+/* Br 정렬 */
 const OLD_CORE = {x: Z.oldMill.x, y: Z.oldMill.y, w: (Z.branArea.x - Z.oldMill.x), h: Z.oldMill.h};
 const BR_LINE_Y = Z.oldMill.y + 420;
 const BR_COL_Y  = Z.oldMill.y + 420;
@@ -123,12 +127,9 @@ function calcBrRowBoxWidth(){
   const w = (OLD_CORE.w - totalGaps) / 8;
   return Math.max(28, Math.floor(w));
 }
-
-/* (6) Br5~12 가로폭 20px 줄임 */
 let BR_BOX_W = Math.max(20, calcBrRowBoxWidth() - 20);
 const BR_BOX_H = 54;
 
-/* Br12~Br5 전체를 OLD_CORE 안에서 가운데 정렬(잘림 방지) */
 function brRowStartX(){
   const total = 8*BR_BOX_W + 7*BR_STEP;
   return OLD_CORE.x + Math.max(0, (OLD_CORE.w - total)/2);
@@ -220,43 +221,24 @@ const tankLayout = {
   "L13":{x:BULK_BASE.x+7*GX,y:BULK_BASE.y+3*GY,cap:80},
 };
 
-/* ✅ Br 사각 탱크 레이아웃 생성 */
 function buildBrLayout(){
   const layout = {};
-
   const labels = {Br12:"30t",Br11:"30t",Br10:"30t",Br9:"30t",Br8:"40t",Br7:"40t",Br6:"40t",Br5:"40t"};
   const order = ["Br12","Br11","Br10","Br9","Br8","Br7","Br6","Br5"];
 
   const startX = brRowStartX();
   for(let i=0;i<order.length;i++){
     const name = order[i];
-    layout[name] = {
-      x: startX + i*(BR_BOX_W + BR_STEP),
-      y: BR_LINE_Y,
-      w: BR_BOX_W,
-      h: BR_BOX_H,
-      label: labels[name]
-    };
+    layout[name] = { x: startX + i*(BR_BOX_W + BR_STEP), y: BR_LINE_Y, w: BR_BOX_W, h: BR_BOX_H, label: labels[name] };
   }
 
-  // Br4~Br1: branArea 좌우와 일치
-  const colW = Z.branArea.w;
-  const colX = Z.branArea.x;
-  const colH = 62;
-  const vGap = 4;
-
+  const colW = Z.branArea.w, colX = Z.branArea.x;
+  const colH = 62, vGap = 4;
   const vOrder = ["Br4","Br3","Br2","Br1"];
   for(let i=0;i<vOrder.length;i++){
     const name = vOrder[i];
-    layout[name] = {
-      x: colX,
-      y: BR_COL_Y + i*(colH+vGap),
-      w: colW,
-      h: colH,
-      label: "100t"
-    };
+    layout[name] = { x: colX, y: BR_COL_Y + i*(colH+vGap), w: colW, h: colH, label: "100t" };
   }
-
   return layout;
 }
 const brLayout = buildBrLayout();
@@ -282,7 +264,6 @@ function drawZones(){
   svg.innerHTML = "";
 
   addSvg("rect",{class:"zone",x:Z.outer.x,y:Z.outer.y,width:Z.outer.w,height:Z.outer.h});
-
   addSvg("rect",{class:"zone",x:Z.pack.x,y:Z.pack.y,width:Z.pack.w,height:Z.pack.h});
   addSvg("rect",{class:"zone",x:Z.office.x,y:Z.office.y,width:Z.office.w,height:Z.office.h});
   addSvg("rect",{class:"zone",x:Z.newMill.x,y:Z.newMill.y,width:Z.newMill.w,height:Z.newMill.h});
@@ -299,15 +280,12 @@ function drawZones(){
   addSvg("text",{class:"zoneNoteRed",x:Z.pack.x+165,y:Z.pack.y+62}, "80M/T x 6Q'ty = 450M/T");
   addSvg("text",{class:"zoneNoteBlue",x:Z.pack.x+30,y:Z.pack.y+92}, "Bulk Loding Bin : 80M/T x 6Q'ty = 420M/T");
 
-  /* (3) 보라색 글씨: 왼쪽 -90px, 아래 +60px */
-  addSvg("text",{class:"zoneNotePurple",x:(Z.newMill.x+70)-90,y:(Z.newMill.y+380)+60},
+  /* ✅ 보라색 글씨 +30px */
+  addSvg("text",{class:"zoneNotePurple",x:(Z.newMill.x+70)-90+PURPLE_SHIFT_X,y:(Z.newMill.y+380)+60},
     "Semi-finished Bin : 25M/T x 6Q'ty = 150M/T");
 
-  addSvg("text",{
-    class:"zoneNoteGreen",
-    x:Z.newMill.x + 300,
-    y:Z.newMill.y + Z.newMill.h + 30
-  }, "Primix Bin : 35M/T x 4Q'ty = 140M/T");
+  addSvg("text",{class:"zoneNoteGreen",x:Z.newMill.x + 300,y:Z.newMill.y + Z.newMill.h + 30},
+    "Primix Bin : 35M/T x 4Q'ty = 140M/T");
 
   addSvg("text",{x:Z.oldMill.x+35,y:Z.oldMill.y+380,fontSize:"20",fontWeight:"900",fill:"#111"},
     "Bran byproduct Bin : 30M/T x 8Q'ty = 240M/T");
@@ -389,10 +367,8 @@ function drawBrTank(name, x, y, w, h, label){
   svg.appendChild(g);
 }
 
-/* Raw 파싱(새 형식) */
-function normalizeTankId(s){
-  return (s||"").toString().replace(/\s+/g,"").trim();
-}
+/* Raw 파싱 */
+function normalizeTankId(s){ return (s||"").toString().replace(/\s+/g,"").trim(); }
 function parseNumber(s){
   if(s===null || s===undefined) return 0;
   const v = s.toString().replace(/,/g,"").trim();
@@ -408,7 +384,6 @@ function parseRaw(raw){
 
     const tank = normalizeTankId(cols[0]);
     if(!tank) continue;
-
     if(!tankLayout[tank]) continue;
 
     const qtyT = parseNumber(cols[2]);
@@ -439,7 +414,6 @@ function render(data){
   }
 }
 
-/* 날짜 저장/조회 */
 function todayStr(){ return new Date().toISOString().slice(0,10); }
 
 function saveData(){
