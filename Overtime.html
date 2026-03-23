@@ -2,161 +2,197 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>연장근무 관리</title>
 
 <style>
-body {font-family: Arial; background:#f5f7fb; padding:20px;}
-.box {background:#fff; padding:20px; border-radius:10px; max-width:600px;}
-input,select,button {width:100%; padding:10px; margin-top:10px;}
-button {background:#2563eb; color:#fff; border:none;}
-#result {margin-top:20px; background:#eef; padding:15px;}
+body {font-family: Arial; background:#f5f7fb; margin:0;}
+.container {max-width:800px; margin:auto; padding:15px;}
+.card {background:#fff; padding:15px; border-radius:12px; margin-bottom:15px;}
+h2 {margin:5px 0 10px;}
+input,select,button {
+width:100%; padding:12px; margin-top:8px;
+font-size:16px;
+border-radius:8px;
+border:1px solid #ddd;
+}
+button {background:#2563eb; color:white; border:none;}
+.result {background:#eef; padding:10px; margin-top:10px; border-radius:8px;}
+table {width:100%; border-collapse:collapse; margin-top:10px;}
+th,td {border:1px solid #ddd; padding:8px; font-size:14px;}
 </style>
 
 </head>
 <body>
 
-<div class="box">
+<div class="container">
 
-<h2>연장근무 계산</h2>
+<div class="card">
+<h2>연장근무 입력</h2>
 
-날짜
 <input type="date" id="date">
 
-이름
-<input type="text" id="name">
+<input list="workers" id="name" placeholder="본인 이름 입력">
+<input list="workers" id="absent" placeholder="휴가자 이름 입력">
 
-휴가자
-<input type="text" id="absent">
+<datalist id="workers"></datalist>
+
+<select id="type">
+<option value="없음">정상</option>
+<option value="오전반차">오전반차</option>
+<option value="오후반차">오후반차</option>
+</select>
 
 <button onclick="calc()">계산</button>
+<button onclick="save()">저장</button>
 
-<div id="result"></div>
+<div id="result" class="result"></div>
+</div>
+
+<div class="card">
+<h2>히스토리 조회</h2>
+
+<input type="date" id="searchDate">
+<button onclick="search()">조회</button>
+
+<table id="historyTable"></table>
+</div>
 
 </div>
 
 <script>
 
-// =============================
-// 🔥 반변경 핵심 로직 (완성본)
-// =============================
-
-// 기본 패턴
+// =====================
+// 🔥 반변경 (완성)
+// =====================
 const patterns = [
-  ["갑","을","병"],
-  ["을","병","갑"],
-  ["병","갑","을"]
+["갑","을","병"],
+["을","병","갑"],
+["병","갑","을"]
 ];
 
-// 기준년도
-const baseYear = 2026;
-
-// 기준: 2026-01-01 = 갑을병
 function getRotation(date){
+const baseYear=2026;
+const shift=(date.getFullYear()-baseYear)%3;
+const start=(0+shift+3)%3;
 
-  const year = date.getFullYear();
+const startDate=new Date(date.getFullYear()+"-01-01");
+const diff=Math.floor((date-startDate)/(1000*60*60*24));
+const week=Math.floor(diff/7);
 
-  // 연도 이동 (핵심)
-  const yearShift = (year - baseYear) % 3;
+const idx=(start+week)%3;
 
-  // 1월1일 기준 패턴
-  let startPatternIndex = (0 + yearShift + 3) % 3;
-
-  // 해당 날짜까지 경과일
-  const start = new Date(year + "-01-01");
-  const diff = Math.floor((date - start) / (1000*60*60*24));
-
-  // 주차 계산
-  const week = Math.floor(diff / 7);
-
-  // 최종 패턴
-  const finalIndex = (startPatternIndex + week) % 3;
-
-  return {
-    조근: patterns[finalIndex][0],
-    중근: patterns[finalIndex][1],
-    야근: patterns[finalIndex][2]
-  };
-}
-
-// =============================
-// 🔧 샘플 인원
-// =============================
-
-const workers = {
-  "고우석": {band:"갑", dept:"제분"},
-  "장진학": {band:"병", dept:"제분"},
-  "김수현": {band:"을", dept:"제분"},
-  "박영수": {band:"갑", dept:"제분"},
-  "김인수": {band:"을", dept:"제분"}
+return {
+조근:patterns[idx][0],
+중근:patterns[idx][1],
+야근:patterns[idx][2]
 };
-
-// =============================
-// 역할 찾기
-// =============================
-function getRole(rot, band){
-  if(rot.조근==band) return "조근";
-  if(rot.중근==band) return "중근";
-  if(rot.야근==band) return "야근";
 }
 
-// =============================
-// 계산
-// =============================
+// =====================
+function getWorkers(){
+return JSON.parse(localStorage.getItem("workers")||"[]");
+}
+function setWorkers(w){
+localStorage.setItem("workers",JSON.stringify(w));
+}
+
+// =====================
+const baseWorkers=[
+{name:"고우석",band:"갑",dept:"제분"},
+{name:"장진학",band:"병",dept:"제분"},
+{name:"김수현",band:"을",dept:"제분"},
+{name:"박영수",band:"갑",dept:"제분"},
+{name:"김인수",band:"을",dept:"제분"}
+];
+
+// =====================
+function renderWorkers(){
+const w=getWorkers();
+let list="";
+w.forEach(x=>{
+list+=`<option value="${x.name}">`;
+});
+document.getElementById("workers").innerHTML=list;
+}
+
+// =====================
+function getRole(rot,band){
+if(rot.조근==band)return"조근";
+if(rot.중근==band)return"중근";
+if(rot.야근==band)return"야근";
+}
+
+// =====================
 function calc(){
 
-  const date = new Date(document.getElementById("date").value);
-  const name = document.getElementById("name").value;
-  const absent = document.getElementById("absent").value;
+let date=new Date(document.getElementById("date").value);
+let name=document.getElementById("name").value;
+let absent=document.getElementById("absent").value;
 
-  const rot = getRotation(date);
+let w=getWorkers();
+let me=w.find(x=>x.name==name);
+let ab=w.find(x=>x.name==absent);
 
-  const me = workers[name];
-  const ab = workers[absent];
+if(!me||!ab)return alert("이름확인");
+if(me.dept!=ab.dept)return alert("부서다름");
 
-  if(!me || !ab){
-    alert("이름 확인");
-    return;
-  }
+let rot=getRotation(date);
 
-  if(me.dept != ab.dept){
-    alert("부서 다름");
-    return;
-  }
+let myRole=getRole(rot,me.band);
+let abRole=getRole(rot,ab.band);
 
-  const myRole = getRole(rot, me.band);
-  const abRole = getRole(rot, ab.band);
+let result="";
 
-  let result = "";
-
-  // 🔥 핵심 로직 (너가 만든 규칙 그대로)
-  if(abRole=="조근"){
-    if(myRole=="중근"){
-      result = "10:00~22:00 / 연장 5시간";
-    }else{
-      result = "22:00~10:00 / 연장 3시간";
-    }
-  }
-
-  else if(abRole=="중근"){
-    if(myRole=="조근"){
-      result = "07:00~19:00 / 연장 4시간";
-    }else{
-      result = "19:00~07:00 / 연장 3시간";
-    }
-  }
-
-  else if(abRole=="야근"){
-    if(myRole=="중근"){
-      result = "19:00~07:00 / 연장 5시간";
-    }else{
-      result = "07:00~19:00 / 연장 4시간";
-    }
-  }
-
-  document.getElementById("result").innerHTML =
-    "<b>반변경:</b> " + rot.조근+" / "+rot.중근+" / "+rot.야근 +
-    "<br><br><b>결과:</b> " + result;
+if(abRole=="조근"){
+if(myRole=="중근") result="10:00~22:00 (연장5)";
+else result="22:00~10:00 (연장3)";
 }
+
+if(abRole=="중근"){
+if(myRole=="조근") result="07:00~19:00 (연장4)";
+else result="19:00~07:00 (연장3)";
+}
+
+if(abRole=="야근"){
+if(myRole=="중근") result="19:00~07:00 (연장5)";
+else result="07:00~19:00 (연장4)";
+}
+
+document.getElementById("result").innerHTML =
+`${rot.조근}/${rot.중근}/${rot.야근}<br>${result}`;
+
+return {date,name,absent,result};
+}
+
+// =====================
+function save(){
+let r=calc();
+let h=JSON.parse(localStorage.getItem("history")||"[]");
+h.push(r);
+localStorage.setItem("history",JSON.stringify(h));
+alert("저장완료");
+}
+
+// =====================
+function search(){
+
+let d=document.getElementById("searchDate").value;
+let h=JSON.parse(localStorage.getItem("history")||"[]")
+.filter(x=>x.date==d);
+
+let t="<tr><th>이름</th><th>내용</th></tr>";
+
+h.forEach(x=>{
+t+=`<tr><td>${x.name}</td><td>${x.absent} 대체<br>${x.result}</td></tr>`;
+});
+
+document.getElementById("historyTable").innerHTML=t;
+}
+
+// =====================
+if(getWorkers().length==0)setWorkers(baseWorkers);
+renderWorkers();
 
 </script>
 
