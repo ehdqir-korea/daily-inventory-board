@@ -17,18 +17,22 @@
       --success: #16a34a;
       --soft: #eef2ff;
     }
+
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       font-family: Arial, "Malgun Gothic", sans-serif;
       background: var(--bg);
       color: var(--text);
     }
+
     .container {
       max-width: 920px;
       margin: 0 auto;
       padding: 16px;
     }
+
     .card {
       background: var(--card);
       border: 1px solid var(--line);
@@ -37,13 +41,16 @@
       margin-bottom: 16px;
       box-shadow: 0 4px 14px rgba(0,0,0,0.04);
     }
+
     h1, h2, h3 { margin: 0 0 12px; }
+
     .subtitle {
       color: var(--muted);
       margin-bottom: 16px;
       font-size: 14px;
       line-height: 1.5;
     }
+
     label {
       display: block;
       font-size: 13px;
@@ -51,17 +58,20 @@
       margin-bottom: 6px;
       margin-top: 10px;
     }
+
     input, select, button {
       width: 100%;
       font: inherit;
       min-height: 44px;
     }
+
     input, select {
       border: 1px solid var(--line);
       border-radius: 10px;
       padding: 10px 12px;
       background: #fff;
     }
+
     button {
       border: none;
       border-radius: 10px;
@@ -70,27 +80,33 @@
       font-weight: 700;
       margin-top: 10px;
     }
+
     .btn-primary {
       background: var(--primary);
       color: #fff;
     }
+
     .btn-primary:hover {
       background: var(--primary-dark);
     }
+
     .btn-secondary {
       background: var(--soft);
       color: #1e3a8a;
     }
+
     .btn-success {
       background: #dcfce7;
       color: #166534;
     }
+
     .btn-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
       margin-top: 8px;
     }
+
     .result-box {
       background: #f8fafc;
       border: 1px dashed var(--line);
@@ -100,23 +116,28 @@
       line-height: 1.7;
       font-size: 14px;
     }
+
     .message {
       margin-top: 10px;
       font-weight: 700;
       font-size: 14px;
     }
+
     .message.success { color: var(--success); }
     .message.error { color: var(--danger); }
+
     .notice {
       color: var(--muted);
       font-size: 13px;
       line-height: 1.5;
     }
+
     .table-wrap {
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
       margin-top: 10px;
     }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -124,6 +145,7 @@
       font-size: 14px;
       background: #fff;
     }
+
     th, td {
       border: 1px solid var(--line);
       padding: 10px 8px;
@@ -132,14 +154,15 @@
       white-space: normal;
       word-break: keep-all;
     }
-    th {
-      background: #f8fafc;
-    }
+
+    th { background: #f8fafc; }
+
     .meta {
       display: grid;
       gap: 8px;
       font-size: 14px;
     }
+
     .badge {
       display: inline-block;
       padding: 4px 8px;
@@ -151,6 +174,7 @@
       margin-right: 6px;
       margin-bottom: 6px;
     }
+
     @media (max-width: 640px) {
       .container { padding: 12px; }
       .card { padding: 14px; }
@@ -260,7 +284,7 @@
     <div class="card">
       <h2>4. 현재 적용 기준</h2>
       <div class="meta">
-        <div><span class="badge">반변경</span> 최신 표 기준, 주차는 월요일~일요일 기준</div>
+        <div><span class="badge">반변경</span> 네 최신 표 기준 직접 매핑 로직</div>
         <div><span class="badge">부서제약</span> 같은 부서끼리만 대체 가능</div>
         <div><span class="badge">반차</span> 빠진 사람 기준 행 사용</div>
         <div><span class="badge">야근결원</span> 중근이 야근, 조근이 중근 대체</div>
@@ -271,8 +295,8 @@
 
   <script>
     const STORAGE_KEYS = {
-      workers: "overtime_workers_v5",
-      history: "overtime_history_v5"
+      workers: "overtime_workers_v6",
+      history: "overtime_history_v6"
     };
 
     const defaultWorkers = [
@@ -439,7 +463,8 @@
     }
 
     function parseDate(dateStr) {
-      return new Date(dateStr + "T00:00:00");
+      const [y, m, d] = dateStr.split("-").map(Number);
+      return new Date(y, m - 1, d);
     }
 
     function formatDate(date) {
@@ -454,45 +479,72 @@
       return ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
     }
 
-    // 최신 표 기준: 2026-01-01~2026-01-04 = 갑/을/병, 2026-01-05~2026-01-11 = 을/병/갑,
-    // 2026-03-15~2026-03-21 = 갑/을/병, 2026-03-22~2026-03-28 = 을/병/갑. :contentReference[oaicite:1]{index=1}
-    // 주차 기준은 월요일~일요일.
-    const rotationPatterns = [
+    // 네 최신 표 기준 직접 매핑용 패턴
+    const basePatterns = [
       ["갑", "을", "병"],
       ["을", "병", "갑"],
       ["병", "갑", "을"]
     ];
 
-    function firstMondayOfYear(year) {
-      const jan1 = new Date(`${year}-01-01T00:00:00`);
-      const day = jan1.getDay(); // 0=일,1=월,...6=토
-      if (day === 1) return jan1;
-      const diff = day === 0 ? 1 : (8 - day);
-      const monday = new Date(jan1);
-      monday.setDate(jan1.getDate() + diff);
-      return monday;
-    }
+    // 최신 표 기준 연도별 1월 1일 시작 패턴
+    // 2026-01-01 = 갑/을/병
+    // 2027-01-01 = 을/병/갑
+    // 2028-01-01 = 병/갑/을
+    // 2029-01-01 = 갑/을/병
+    // 2030-01-01 = 을/병/갑
+    const yearStartPatternIndex = {
+      2025: 1,
+      2026: 0,
+      2027: 1,
+      2028: 2,
+      2029: 0,
+      2030: 1,
+      2031: 2,
+      2032: 0,
+      2033: 1,
+      2034: 2,
+      2035: 0,
+      2036: 1,
+      2037: 2,
+      2038: 0,
+      2039: 1,
+      2040: 2,
+      2041: 0,
+      2042: 1,
+      2043: 2,
+      2044: 0,
+      2045: 1,
+      2046: 2,
+      2047: 0,
+      2048: 1,
+      2049: 2,
+      2050: 0
+    };
 
+    // 표 기준:
+    // 1월1일~1월4일 = 첫 블록
+    // 1월5일부터 7일 단위 반복
+    // 이 규칙으로 2026-03-20 = 갑/을/병, 2026-03-23 = 을/병/갑 일치
     function getRotationForDate(dateStr) {
       const date = parseDate(dateStr);
       const year = date.getFullYear();
 
-      const baseYear = 2026;
-      const startPatternIndex = ((year - baseYear) % 3 + 3) % 3;
-
-      const jan1 = new Date(`${year}-01-01T00:00:00`);
-      const firstMonday = firstMondayOfYear(year);
-
-      let weekOffset;
-      if (date < firstMonday) {
-        weekOffset = 0;
-      } else {
-        const diffDays = Math.floor((date - firstMonday) / (1000 * 60 * 60 * 24));
-        weekOffset = 1 + Math.floor(diffDays / 7);
+      if (!(year in yearStartPatternIndex)) {
+        throw new Error("반변경 기준 연도가 없습니다.");
       }
 
-      const finalIndex = (startPatternIndex + weekOffset) % 3;
-      const pattern = rotationPatterns[finalIndex];
+      const jan1 = new Date(year, 0, 1);
+      const diffDays = Math.floor((date - jan1) / (1000 * 60 * 60 * 24));
+
+      let blockIndex;
+      if (diffDays <= 3) {
+        blockIndex = 0;
+      } else {
+        blockIndex = 1 + Math.floor((diffDays - 4) / 7);
+      }
+
+      const patternIndex = (yearStartPatternIndex[year] + blockIndex) % 3;
+      const pattern = basePatterns[patternIndex];
 
       return {
         조근: pattern[0],
@@ -513,14 +565,17 @@
         if (workerRole === "중근") return "중근";
         if (workerRole === "야근") return "조근";
       }
+
       if (absentRole === "중근") {
         if (workerRole === "조근") return "조근";
         if (workerRole === "야근") return "야근";
       }
+
       if (absentRole === "야근") {
         if (workerRole === "조근") return "중근";
         if (workerRole === "중근") return "야근";
       }
+
       return workerRole;
     }
 
@@ -528,9 +583,16 @@
       if (absenceType === "오전반차" || absenceType === "오후반차") {
         return null;
       }
-      if (absentRole === "조근") return replacementRole === "조근" ? 1 : 2;
-      if (absentRole === "중근") return replacementRole === "조근" ? 1 : 2;
-      if (absentRole === "야근") return replacementRole === "중근" ? 1 : 2;
+
+      if (absentRole === "조근") {
+        return replacementRole === "조근" ? 1 : 2;
+      }
+      if (absentRole === "중근") {
+        return replacementRole === "조근" ? 1 : 2;
+      }
+      if (absentRole === "야근") {
+        return replacementRole === "중근" ? 1 : 2;
+      }
       return 1;
     }
 
@@ -601,9 +663,11 @@
       const workers = getWorkers().sort((a, b) =>
         a.dept.localeCompare(b.dept, "ko") || a.name.localeCompare(b.name, "ko")
       );
+
       const list = workers
         .map(w => `<option value="${w.name}">${w.name} (${w.band}/${w.dept})</option>`)
         .join("");
+
       document.getElementById("workersList").innerHTML = list;
     }
 
@@ -642,6 +706,7 @@
     function renderHistory(date) {
       const history = getHistory().filter(x => x.date === date);
       const summary = document.getElementById("historySummary");
+
       summary.className = "message";
       summary.textContent = `${date} 조회 결과 ${history.length}건`;
 
@@ -757,6 +822,7 @@
       if (!getWorkers().length) {
         setWorkers(defaultWorkers);
       }
+
       renderWorkerList();
       renderWorkerTable();
 
