@@ -17,22 +17,18 @@
       --success: #16a34a;
       --soft: #eef2ff;
     }
-
     * { box-sizing: border-box; }
-
     body {
       margin: 0;
       font-family: Arial, "Malgun Gothic", sans-serif;
       background: var(--bg);
       color: var(--text);
     }
-
     .container {
       max-width: 920px;
       margin: 0 auto;
       padding: 16px;
     }
-
     .card {
       background: var(--card);
       border: 1px solid var(--line);
@@ -41,18 +37,13 @@
       margin-bottom: 16px;
       box-shadow: 0 4px 14px rgba(0,0,0,0.04);
     }
-
-    h1, h2, h3 {
-      margin: 0 0 12px;
-    }
-
+    h1, h2, h3 { margin: 0 0 12px; }
     .subtitle {
       color: var(--muted);
       margin-bottom: 16px;
       font-size: 14px;
       line-height: 1.5;
     }
-
     label {
       display: block;
       font-size: 13px;
@@ -60,20 +51,17 @@
       margin-bottom: 6px;
       margin-top: 10px;
     }
-
     input, select, button {
       width: 100%;
       font: inherit;
       min-height: 44px;
     }
-
     input, select {
       border: 1px solid var(--line);
       border-radius: 10px;
       padding: 10px 12px;
       background: #fff;
     }
-
     button {
       border: none;
       border-radius: 10px;
@@ -82,33 +70,27 @@
       font-weight: 700;
       margin-top: 10px;
     }
-
     .btn-primary {
       background: var(--primary);
       color: #fff;
     }
-
     .btn-primary:hover {
       background: var(--primary-dark);
     }
-
     .btn-secondary {
       background: var(--soft);
       color: #1e3a8a;
     }
-
     .btn-success {
       background: #dcfce7;
       color: #166534;
     }
-
     .btn-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
       margin-top: 8px;
     }
-
     .result-box {
       background: #f8fafc;
       border: 1px dashed var(--line);
@@ -118,28 +100,23 @@
       line-height: 1.7;
       font-size: 14px;
     }
-
     .message {
       margin-top: 10px;
       font-weight: 700;
       font-size: 14px;
     }
-
     .message.success { color: var(--success); }
     .message.error { color: var(--danger); }
-
     .notice {
       color: var(--muted);
       font-size: 13px;
       line-height: 1.5;
     }
-
     .table-wrap {
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
       margin-top: 10px;
     }
-
     table {
       width: 100%;
       border-collapse: collapse;
@@ -147,7 +124,6 @@
       font-size: 14px;
       background: #fff;
     }
-
     th, td {
       border: 1px solid var(--line);
       padding: 10px 8px;
@@ -156,17 +132,14 @@
       white-space: normal;
       word-break: keep-all;
     }
-
     th {
       background: #f8fafc;
     }
-
     .meta {
       display: grid;
       gap: 8px;
       font-size: 14px;
     }
-
     .badge {
       display: inline-block;
       padding: 4px 8px;
@@ -178,28 +151,12 @@
       margin-right: 6px;
       margin-bottom: 6px;
     }
-
     @media (max-width: 640px) {
-      .container {
-        padding: 12px;
-      }
-
-      .card {
-        padding: 14px;
-      }
-
-      .btn-row {
-        grid-template-columns: 1fr;
-      }
-
-      .subtitle, .notice {
-        font-size: 12px;
-      }
-
-      table {
-        min-width: 560px;
-        font-size: 13px;
-      }
+      .container { padding: 12px; }
+      .card { padding: 14px; }
+      .btn-row { grid-template-columns: 1fr; }
+      .subtitle, .notice { font-size: 12px; }
+      table { min-width: 560px; font-size: 13px; }
     }
   </style>
 </head>
@@ -303,7 +260,7 @@
     <div class="card">
       <h2>4. 현재 적용 기준</h2>
       <div class="meta">
-        <div><span class="badge">반변경</span> 2026-01-01 = 갑/을/병 기준, 연도별 1칸 이동</div>
+        <div><span class="badge">반변경</span> 최신 표 기준, 주차는 월요일~일요일 기준</div>
         <div><span class="badge">부서제약</span> 같은 부서끼리만 대체 가능</div>
         <div><span class="badge">반차</span> 빠진 사람 기준 행 사용</div>
         <div><span class="badge">야근결원</span> 중근이 야근, 조근이 중근 대체</div>
@@ -314,8 +271,8 @@
 
   <script>
     const STORAGE_KEYS = {
-      workers: "overtime_workers_v4",
-      history: "overtime_history_v4"
+      workers: "overtime_workers_v5",
+      history: "overtime_history_v5"
     };
 
     const defaultWorkers = [
@@ -497,28 +454,44 @@
       return ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
     }
 
-    // 반변경 최종 로직
-    // 기준: 2026-01-01 = 갑/을/병
-    // 연도별 +1칸 이동
+    // 최신 표 기준: 2026-01-01~2026-01-04 = 갑/을/병, 2026-01-05~2026-01-11 = 을/병/갑,
+    // 2026-03-15~2026-03-21 = 갑/을/병, 2026-03-22~2026-03-28 = 을/병/갑. :contentReference[oaicite:1]{index=1}
+    // 주차 기준은 월요일~일요일.
     const rotationPatterns = [
       ["갑", "을", "병"],
       ["을", "병", "갑"],
       ["병", "갑", "을"]
     ];
 
+    function firstMondayOfYear(year) {
+      const jan1 = new Date(`${year}-01-01T00:00:00`);
+      const day = jan1.getDay(); // 0=일,1=월,...6=토
+      if (day === 1) return jan1;
+      const diff = day === 0 ? 1 : (8 - day);
+      const monday = new Date(jan1);
+      monday.setDate(jan1.getDate() + diff);
+      return monday;
+    }
+
     function getRotationForDate(dateStr) {
       const date = parseDate(dateStr);
       const year = date.getFullYear();
 
       const baseYear = 2026;
-      const yearShift = ((year - baseYear) % 3 + 3) % 3;
-      const startPatternIndex = yearShift;
+      const startPatternIndex = ((year - baseYear) % 3 + 3) % 3;
 
-      const yearStart = new Date(`${year}-01-01T00:00:00`);
-      const diffDays = Math.floor((date - yearStart) / (1000 * 60 * 60 * 24));
-      const weekIndex = Math.floor(diffDays / 7);
+      const jan1 = new Date(`${year}-01-01T00:00:00`);
+      const firstMonday = firstMondayOfYear(year);
 
-      const finalIndex = (startPatternIndex + weekIndex) % 3;
+      let weekOffset;
+      if (date < firstMonday) {
+        weekOffset = 0;
+      } else {
+        const diffDays = Math.floor((date - firstMonday) / (1000 * 60 * 60 * 24));
+        weekOffset = 1 + Math.floor(diffDays / 7);
+      }
+
+      const finalIndex = (startPatternIndex + weekOffset) % 3;
       const pattern = rotationPatterns[finalIndex];
 
       return {
@@ -540,17 +513,14 @@
         if (workerRole === "중근") return "중근";
         if (workerRole === "야근") return "조근";
       }
-
       if (absentRole === "중근") {
         if (workerRole === "조근") return "조근";
         if (workerRole === "야근") return "야근";
       }
-
       if (absentRole === "야근") {
         if (workerRole === "조근") return "중근";
         if (workerRole === "중근") return "야근";
       }
-
       return workerRole;
     }
 
@@ -558,19 +528,9 @@
       if (absenceType === "오전반차" || absenceType === "오후반차") {
         return null;
       }
-
-      if (absentRole === "조근") {
-        return replacementRole === "조근" ? 1 : 2;
-      }
-
-      if (absentRole === "중근") {
-        return replacementRole === "조근" ? 1 : 2;
-      }
-
-      if (absentRole === "야근") {
-        return replacementRole === "중근" ? 1 : 2;
-      }
-
+      if (absentRole === "조근") return replacementRole === "조근" ? 1 : 2;
+      if (absentRole === "중근") return replacementRole === "조근" ? 1 : 2;
+      if (absentRole === "야근") return replacementRole === "중근" ? 1 : 2;
       return 1;
     }
 
@@ -604,7 +564,6 @@
 
       const rotation = getRotationForDate(date);
       const dayName = getDayName(date);
-
       const workerRole = getRoleFromBand(rotation, worker.band);
       const absentRole = getRoleFromBand(rotation, absent.band);
 
@@ -642,11 +601,9 @@
       const workers = getWorkers().sort((a, b) =>
         a.dept.localeCompare(b.dept, "ko") || a.name.localeCompare(b.name, "ko")
       );
-
       const list = workers
         .map(w => `<option value="${w.name}">${w.name} (${w.band}/${w.dept})</option>`)
         .join("");
-
       document.getElementById("workersList").innerHTML = list;
     }
 
@@ -685,12 +642,10 @@
     function renderHistory(date) {
       const history = getHistory().filter(x => x.date === date);
       const summary = document.getElementById("historySummary");
-
       summary.className = "message";
       summary.textContent = `${date} 조회 결과 ${history.length}건`;
 
       let html = "<tr><th>구분</th><th>성명</th><th>작업내용</th><th>작업시간</th><th>비고</th></tr>";
-
       history.forEach(item => {
         html += `
           <tr>
@@ -802,7 +757,6 @@
       if (!getWorkers().length) {
         setWorkers(defaultWorkers);
       }
-
       renderWorkerList();
       renderWorkerTable();
 
