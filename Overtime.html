@@ -47,6 +47,25 @@
       margin: 0 0 12px;
     }
 
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .section-header h2 {
+      margin: 0;
+    }
+
+    .inline-btn {
+      width: auto;
+      min-width: 100px;
+      margin-top: 0;
+      padding: 10px 14px;
+    }
+
     .subtitle {
       color: var(--muted);
       margin-bottom: 16px;
@@ -166,8 +185,8 @@
     th, td {
       border: 1px solid var(--line);
       padding: 10px 8px;
-      text-align: left;
-      vertical-align: top;
+      text-align: center;
+      vertical-align: middle;
       white-space: normal;
       word-break: keep-all;
     }
@@ -245,6 +264,7 @@
     .link-cell {
       max-width: 220px;
       word-break: break-all;
+      margin: 0 auto;
     }
 
     @media (max-width: 640px) {
@@ -254,6 +274,8 @@
       .subtitle, .notice { font-size: 12px; }
       table { min-width: 760px; font-size: 13px; }
       .modal-content { padding: 14px; }
+      .section-header { flex-direction: column; align-items: stretch; }
+      .inline-btn { width: 100%; }
     }
   </style>
 </head>
@@ -334,7 +356,10 @@
     </div>
 
     <div class="card">
-      <h2>3. 일자별 연장근무 히스토리 조회</h2>
+      <div class="section-header">
+        <h2>3. 일자별 연장근무 히스토리 조회</h2>
+        <button class="btn-secondary inline-btn" id="openEditHistoryBtn">수정</button>
+      </div>
 
       <label for="historyDate">조회 날짜</label>
       <input type="date" id="historyDate" />
@@ -400,12 +425,74 @@
     </div>
   </div>
 
+  <div class="modal" id="passwordModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>조회결과 수정 인증</h2>
+        <button type="button" class="close-btn" id="closePasswordBtn">닫기</button>
+      </div>
+
+      <label for="editPassword">비밀번호</label>
+      <input type="password" id="editPassword" placeholder="비밀번호 입력" />
+
+      <div class="btn-row">
+        <button class="btn-primary" id="confirmPasswordBtn">확인</button>
+        <button class="btn-secondary" id="cancelPasswordBtn">취소</button>
+      </div>
+
+      <div id="passwordMessage" class="message"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="editHistoryModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>연장근무 조회결과 수정</h2>
+        <button type="button" class="close-btn" id="closeEditHistoryBtn">닫기</button>
+      </div>
+
+      <label for="editTargetDate">수정 대상 날짜</label>
+      <input type="date" id="editTargetDate" />
+
+      <button class="btn-primary" id="loadEditRowsBtn">조회결과 불러오기</button>
+
+      <label for="editRowSelect">수정할 항목 선택</label>
+      <select id="editRowSelect"></select>
+
+      <label for="editWorkerName">본인 이름</label>
+      <input list="workersList" id="editWorkerName" placeholder="이름 입력 또는 선택" />
+
+      <label for="editAbsentName">휴가자 이름</label>
+      <input list="workersList" id="editAbsentName" placeholder="이름 입력 또는 선택" />
+
+      <label for="editAbsenceType">사유 유형</label>
+      <select id="editAbsenceType">
+        <option value="휴가">휴가</option>
+        <option value="연차">연차</option>
+        <option value="오전반차">오전반차</option>
+        <option value="오후반차">오후반차</option>
+      </select>
+
+      <label for="editNote">비고</label>
+      <input type="text" id="editNote" placeholder="비고 입력" />
+
+      <div class="btn-row">
+        <button class="btn-primary" id="saveEditHistoryBtn">수정 저장</button>
+        <button class="btn-danger" id="deleteEditHistoryBtn">선택 항목 삭제</button>
+      </div>
+
+      <div id="editHistoryMessage" class="message"></div>
+    </div>
+  </div>
+
   <script>
     const STORAGE_KEYS = {
-      workers: "overtime_workers_v11",
-      history: "overtime_history_v11",
-      purchases: "purchase_history_v4"
+      workers: "overtime_workers_v12",
+      history: "overtime_history_v12",
+      purchases: "purchase_history_v5"
     };
+
+    const EDIT_PASSWORD = "1004";
 
     const defaultWorkers = [
       { name: "유흥선", band: "갑", dept: "제분" },
@@ -797,7 +884,17 @@
       summary.textContent = `${date} 조회 결과 ${history.length}건`;
 
       let html = "<tr><th>구분</th><th>성명</th><th>작업내용</th><th>작업시간</th><th>비고</th></tr>";
-      history.forEach(item => {
+      history.forEach((item, index) => {
+        const historyIndex = getHistory().findIndex(h =>
+          h.date === item.date &&
+          h.workerName === item.workerName &&
+          h.absentName === item.absentName &&
+          h.absenceType === item.absenceType &&
+          h.note === item.note &&
+          h.totalWork === item.totalWork &&
+          h.overtime === item.overtime
+        );
+
         html += `
           <tr>
             <td>${item.dept}</td>
@@ -860,6 +957,31 @@
       document.getElementById("purchaseModal").classList.remove("show");
     }
 
+    function openPasswordModal() {
+      document.getElementById("passwordModal").classList.add("show");
+      document.getElementById("editPassword").value = "";
+      setMessage("passwordMessage", "", "success");
+    }
+
+    function closePasswordModal() {
+      document.getElementById("passwordModal").classList.remove("show");
+    }
+
+    function openEditHistoryModal() {
+      document.getElementById("editHistoryModal").classList.add("show");
+      document.getElementById("editTargetDate").value = document.getElementById("historyDate").value || formatDate(new Date());
+      document.getElementById("editRowSelect").innerHTML = '<option value="">선택</option>';
+      document.getElementById("editWorkerName").value = "";
+      document.getElementById("editAbsentName").value = "";
+      document.getElementById("editAbsenceType").value = "휴가";
+      document.getElementById("editNote").value = "";
+      setMessage("editHistoryMessage", "", "success");
+    }
+
+    function closeEditHistoryModal() {
+      document.getElementById("editHistoryModal").classList.remove("show");
+    }
+
     function clearPurchaseForm() {
       document.getElementById("purchaseDate").value = formatDate(new Date());
       document.getElementById("purchaseApplicant").value = "";
@@ -893,6 +1015,41 @@
       items.splice(index, 1);
       setPurchases(items);
       renderPurchaseHistory();
+    }
+
+    function getHistoryByDate(date) {
+      return getHistory()
+        .map((item, index) => ({ ...item, __index: index }))
+        .filter(item => item.date === date);
+    }
+
+    function populateEditRows(date) {
+      const rows = getHistoryByDate(date);
+      const select = document.getElementById("editRowSelect");
+
+      let html = '<option value="">선택</option>';
+      rows.forEach(row => {
+        html += `<option value="${row.__index}">${row.workerName} / ${row.actionText} / ${row.totalWork}</option>`;
+      });
+      select.innerHTML = html;
+
+      if (rows.length === 0) {
+        setMessage("editHistoryMessage", "해당 날짜의 조회결과가 없습니다.", "error");
+      } else {
+        setMessage("editHistoryMessage", `${rows.length}건을 불러왔습니다.`, "success");
+      }
+    }
+
+    function fillEditFormByIndex(index) {
+      if (index === "") return;
+      const history = getHistory();
+      const row = history[Number(index)];
+      if (!row) return;
+
+      document.getElementById("editWorkerName").value = row.workerName;
+      document.getElementById("editAbsentName").value = row.absentName;
+      document.getElementById("editAbsenceType").value = row.absenceType;
+      document.getElementById("editNote").value = row.note || "";
     }
 
     document.getElementById("previewBtn").addEventListener("click", () => {
@@ -1047,10 +1204,112 @@
       }
     });
 
-    document.getElementById("purchaseModal").addEventListener("click", (e) => {
-      if (e.target.id === "purchaseModal") {
-        closePurchaseModal();
+    document.getElementById("openEditHistoryBtn").addEventListener("click", () => {
+      openPasswordModal();
+    });
+
+    document.getElementById("closePasswordBtn").addEventListener("click", closePasswordModal);
+    document.getElementById("cancelPasswordBtn").addEventListener("click", closePasswordModal);
+
+    document.getElementById("confirmPasswordBtn").addEventListener("click", () => {
+      const pw = document.getElementById("editPassword").value;
+      if (pw !== EDIT_PASSWORD) {
+        setMessage("passwordMessage", "비밀번호가 일치하지 않습니다.", "error");
+        return;
       }
+      closePasswordModal();
+      openEditHistoryModal();
+    });
+
+    document.getElementById("closeEditHistoryBtn").addEventListener("click", closeEditHistoryModal);
+
+    document.getElementById("loadEditRowsBtn").addEventListener("click", () => {
+      const date = document.getElementById("editTargetDate").value;
+      if (!date) {
+        setMessage("editHistoryMessage", "수정 대상 날짜를 입력해 주세요.", "error");
+        return;
+      }
+      populateEditRows(date);
+    });
+
+    document.getElementById("editRowSelect").addEventListener("change", (e) => {
+      fillEditFormByIndex(e.target.value);
+    });
+
+    document.getElementById("saveEditHistoryBtn").addEventListener("click", () => {
+      try {
+        const selectedIndex = document.getElementById("editRowSelect").value;
+        if (selectedIndex === "") throw new Error("수정할 항목을 선택해 주세요.");
+
+        const date = document.getElementById("editTargetDate").value;
+        const workerName = document.getElementById("editWorkerName").value.trim();
+        const absentName = document.getElementById("editAbsentName").value.trim();
+        const absenceType = document.getElementById("editAbsenceType").value;
+        const note = document.getElementById("editNote").value.trim();
+
+        const recalculated = calculateWorkResult({
+          date,
+          workerName,
+          absentName,
+          absenceType,
+          note
+        });
+
+        const history = getHistory();
+        history[Number(selectedIndex)] = recalculated;
+        setHistory(history);
+
+        populateEditRows(date);
+        document.getElementById("editRowSelect").value = String(selectedIndex);
+        fillEditFormByIndex(String(selectedIndex));
+
+        if (document.getElementById("historyDate").value === date) {
+          renderHistory(date);
+        }
+
+        setMessage("editHistoryMessage", "조회결과를 수정했습니다.", "success");
+      } catch (e) {
+        setMessage("editHistoryMessage", e.message, "error");
+      }
+    });
+
+    document.getElementById("deleteEditHistoryBtn").addEventListener("click", () => {
+      try {
+        const selectedIndex = document.getElementById("editRowSelect").value;
+        const date = document.getElementById("editTargetDate").value;
+
+        if (selectedIndex === "") throw new Error("삭제할 항목을 선택해 주세요.");
+
+        const history = getHistory();
+        history.splice(Number(selectedIndex), 1);
+        setHistory(history);
+
+        populateEditRows(date);
+        document.getElementById("editWorkerName").value = "";
+        document.getElementById("editAbsentName").value = "";
+        document.getElementById("editAbsenceType").value = "휴가";
+        document.getElementById("editNote").value = "";
+
+        if (document.getElementById("historyDate").value === date) {
+          renderHistory(date);
+        }
+
+        setMessage("editHistoryMessage", "선택 항목을 삭제했습니다.", "success");
+      } catch (e) {
+        setMessage("editHistoryMessage", e.message, "error");
+      }
+    });
+
+    document.getElementById("purchaseModal").addEventListener("click", (e) => {
+      if (e.target.id === "purchaseModal") closePurchaseModal();
+    });
+
+    document.getElementById("passwordModal").addEventListener("click", (e) => {
+      if (e.target.id === "passwordModal") closePasswordModal();
+    });
+
+    document.getElementById("editHistoryModal").addEventListener("click", (e) => {
+      if (e.target.id === "editHistoryModal") closeEditHistoryModal();
     });
 
     function init() {
