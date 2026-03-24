@@ -176,24 +176,6 @@
       background: #f8fafc;
     }
 
-    .meta {
-      display: grid;
-      gap: 8px;
-      font-size: 14px;
-    }
-
-    .badge {
-      display: inline-block;
-      padding: 4px 8px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 700;
-      background: #eff6ff;
-      color: #1d4ed8;
-      margin-right: 6px;
-      margin-bottom: 6px;
-    }
-
     .modal {
       position: fixed;
       inset: 0;
@@ -420,9 +402,9 @@
 
   <script>
     const STORAGE_KEYS = {
-      workers: "overtime_workers_v10",
-      history: "overtime_history_v10",
-      purchases: "purchase_history_v3"
+      workers: "overtime_workers_v11",
+      history: "overtime_history_v11",
+      purchases: "purchase_history_v4"
     };
 
     const defaultWorkers = [
@@ -651,56 +633,66 @@
       return null;
     }
 
-    function determineReplacementRole(absentRole, workerRole) {
-      if (absentRole === "조근") {
-        if (workerRole === "중근") return "중근";
-        if (workerRole === "야근") return "조근";
-      }
-      if (absentRole === "중근") {
-        if (workerRole === "조근") return "조근";
-        if (workerRole === "야근") return "야근";
-      }
-      if (absentRole === "야근") {
-        if (workerRole === "조근") return "중근";
-        if (workerRole === "중근") return "야근";
-      }
-      return workerRole;
-    }
+    function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
+      const dayName = getDayName(dateStr);
 
-    function determineSequenceNo(absentRole, workerRole, dayName, absenceType) {
       if (absenceType === "오전반차" || absenceType === "오후반차") {
-        return null;
+        return {
+          targetRole: absentRole,
+          sequenceNo: null
+        };
       }
 
       if (absentRole === "조근") {
         if (dayName === "월") {
-          return workerRole === "중근" ? 1 : 2;
+          if (workerRole === "중근") {
+            return { targetRole: "조근", sequenceNo: 1 };
+          }
+          if (workerRole === "야근") {
+            return { targetRole: "조근", sequenceNo: 2 };
+          }
+        } else {
+          if (workerRole === "야근") {
+            return { targetRole: "조근", sequenceNo: 1 };
+          }
+          if (workerRole === "중근") {
+            return { targetRole: "조근", sequenceNo: 2 };
+          }
         }
-        return workerRole === "야근" ? 1 : 2;
       }
 
       if (absentRole === "중근") {
-        return workerRole === "조근" ? 1 : 2;
+        if (workerRole === "조근") {
+          return { targetRole: "중근", sequenceNo: 1 };
+        }
+        if (workerRole === "야근") {
+          return { targetRole: "중근", sequenceNo: 2 };
+        }
       }
 
       if (absentRole === "야근") {
-        return workerRole === "조근" ? 1 : 2;
+        if (workerRole === "조근") {
+          return { targetRole: "중근", sequenceNo: 1 };
+        }
+        if (workerRole === "중근") {
+          return { targetRole: "야근", sequenceNo: 2 };
+        }
       }
 
-      return 1;
+      throw new Error("대체근무 조합을 찾을 수 없습니다.");
     }
 
-    function getTimeTemplate(dateStr, absenceType, absentRole, sequenceNo) {
+    function getTimeTemplate(dateStr, absenceType, targetRole, sequenceNo) {
       const dayName = getDayName(dateStr);
       const templateSet = dayName === "월" ? timeTemplates.monday : timeTemplates.default;
 
       if (absenceType === "오전반차" || absenceType === "오후반차") {
-        const row = templateSet[absenceType][absentRole];
+        const row = templateSet[absenceType][targetRole];
         if (!row) throw new Error("반차 시간표를 찾을 수 없습니다.");
         return row;
       }
 
-      const row = templateSet["없음"][absentRole][sequenceNo];
+      const row = templateSet["없음"][targetRole][sequenceNo];
       if (!row) throw new Error("일반 시간표를 찾을 수 없습니다.");
       return row;
     }
@@ -720,6 +712,7 @@
 
       const rotation = getRotationForDate(date);
       const dayName = getDayName(date);
+
       const workerRole = getRoleFromBand(rotation, worker.band);
       const absentRole = getRoleFromBand(rotation, absent.band);
 
@@ -727,9 +720,8 @@
         throw new Error("반변경 계산에 실패했습니다.");
       }
 
-      const replacementRole = determineReplacementRole(absentRole, workerRole);
-      const sequenceNo = determineSequenceNo(absentRole, workerRole, dayName, absenceType);
-      const tpl = getTimeTemplate(date, absenceType, absentRole, sequenceNo);
+      const assignment = resolveAssignment(date, absentRole, workerRole, absenceType);
+      const tpl = getTimeTemplate(date, absenceType, assignment.targetRole, assignment.sequenceNo);
 
       return {
         date,
@@ -744,8 +736,8 @@
         rotation,
         workerRole,
         absentRole,
-        replacementRole,
-        sequenceNo,
+        replacementRole: assignment.targetRole,
+        sequenceNo: assignment.sequenceNo,
         totalWork: tpl.total,
         overtime: tpl.overtime,
         overtimeHours: tpl.overtimeHours,
