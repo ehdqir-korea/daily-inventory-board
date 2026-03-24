@@ -629,20 +629,20 @@
       return Math.floor((diffDays + mondayBasedJan1 - 1) / 7) + 1;
     }
 
-    function getRotationForDate(dateStr) {
-      const year = parseDate(dateStr).getFullYear();
-      const baseYear = 2026;
-      const startPatternIndex = ((year - baseYear) % 3 + 3) % 3;
-      const weekNum = getWeekNumMonday(dateStr);
-      const patternIndex = (startPatternIndex + (weekNum - 1)) % 3;
-      const pattern = rotationPatterns[patternIndex];
+   function getRotationForDate(dateStr) {
+  const year = parseDate(dateStr).getFullYear();
+  const baseYear = 2026;
+  const startPatternIndex = ((year - baseYear) % 3 + 3) % 3;
+  const weekNum = getWeekNumMonday(dateStr);
+  const patternIndex = (startPatternIndex + weekNum) % 3;
+  const pattern = rotationPatterns[patternIndex];
 
-      return {
-        조근: pattern[0],
-        중근: pattern[1],
-        야근: pattern[2]
-      };
-    }
+  return {
+    조근: pattern[0],
+    중근: pattern[1],
+    야근: pattern[2]
+  };
+}
 
     function getRoleFromBand(rotation, band) {
       if (rotation.조근 === band) return "조근";
