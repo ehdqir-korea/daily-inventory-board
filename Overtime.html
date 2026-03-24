@@ -108,11 +108,20 @@
       color: #166534;
     }
 
+    .btn-danger {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
     .btn-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
       margin-top: 8px;
+    }
+
+    .single-btn {
+      margin-top: 10px;
     }
 
     .result-box {
@@ -149,7 +158,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 700px;
+      min-width: 820px;
       font-size: 14px;
       background: #fff;
     }
@@ -183,13 +192,6 @@
       color: #1d4ed8;
       margin-right: 6px;
       margin-bottom: 6px;
-    }
-
-    .top-actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 16px;
     }
 
     .modal {
@@ -245,23 +247,30 @@
       background: #fff;
     }
 
-    .link-cell {
-      max-width: 220px;
-      word-break: break-all;
-    }
-
     .preview-file {
       color: var(--muted);
       font-size: 13px;
       margin-top: 8px;
     }
 
+    .purchase-img {
+      max-width: 100px;
+      max-height: 100px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+    }
+
+    .link-cell {
+      max-width: 220px;
+      word-break: break-all;
+    }
+
     @media (max-width: 640px) {
       .container { padding: 12px; }
       .card { padding: 14px; }
-      .btn-row, .top-actions { grid-template-columns: 1fr; }
+      .btn-row { grid-template-columns: 1fr; }
       .subtitle, .notice { font-size: 12px; }
-      table { min-width: 620px; font-size: 13px; }
+      table { min-width: 760px; font-size: 13px; }
       .modal-content { padding: 14px; }
     }
   </style>
@@ -270,11 +279,6 @@
   <div class="container">
     <h1>연장근무 관리</h1>
     <p class="subtitle">날짜, 본인 이름, 휴가자 이름을 입력하면 반변경에 따라 작업시간과 연장시간을 계산합니다.</p>
-
-    <div class="top-actions">
-      <button class="btn-primary" id="openPurchaseBtn">구매 신청 열기</button>
-      <button class="btn-secondary" id="resetPurchaseBtn">구매 신청 목록 초기화</button>
-    </div>
 
     <div class="card">
       <h2>1. 연장근무 입력</h2>
@@ -362,13 +366,13 @@
       </div>
     </div>
 
+    <div class="single-btn">
+      <button class="btn-primary" id="openPurchaseBtn">구매 신청 열기</button>
+    </div>
+
     <div class="card">
-      <h2>4. 구매 신청 히스토리</h2>
-
-      <label for="purchaseHistoryDate">조회 날짜</label>
-      <input type="date" id="purchaseHistoryDate" />
-
-      <button class="btn-primary" id="searchPurchaseHistoryBtn">조회</button>
+      <h2>4. 구매 신청 목록</h2>
+      <p class="notice">구매 신청은 저장된 순서대로 계속 쌓이며, 각 항목의 마감 버튼으로 개별 종료합니다.</p>
 
       <div id="purchaseHistorySummary" class="message"></div>
 
@@ -416,9 +420,9 @@
 
   <script>
     const STORAGE_KEYS = {
-      workers: "overtime_workers_v8",
-      history: "overtime_history_v8",
-      purchases: "purchase_history_v1"
+      workers: "overtime_workers_v9",
+      history: "overtime_history_v9",
+      purchases: "purchase_history_v2"
     };
 
     const defaultWorkers = [
@@ -802,31 +806,33 @@
       document.getElementById("historyTable").innerHTML = html;
     }
 
-    function renderPurchaseHistory(date) {
-      const items = getPurchases().filter(x => x.date === date);
+    function renderPurchaseHistory() {
+      const items = getPurchases();
       const summary = document.getElementById("purchaseHistorySummary");
 
       summary.className = "message";
-      summary.textContent = `${date} 조회 결과 ${items.length}건`;
+      summary.textContent = `총 ${items.length}건`;
 
-      let html = "<tr><th>신청자</th><th>품목명</th><th>링크</th><th>사진</th><th>비고</th></tr>";
+      let html = "<tr><th>신청일</th><th>신청자</th><th>품목명</th><th>링크</th><th>사진</th><th>비고</th><th>처리</th></tr>";
 
-      items.forEach(item => {
+      items.forEach((item, index) => {
         const linkHtml = item.link
           ? `<div class="link-cell"><a href="${item.link}" target="_blank" rel="noopener noreferrer">${item.link}</a></div>`
           : "-";
 
         const imgHtml = item.imageData
-          ? `<img src="${item.imageData}" alt="구매 이미지" style="max-width:100px; max-height:100px; border-radius:8px; border:1px solid #ddd;" />`
+          ? `<img src="${item.imageData}" alt="구매 이미지" class="purchase-img" />`
           : "-";
 
         html += `
           <tr>
+            <td>${item.date}</td>
             <td>${item.applicant}</td>
             <td>${item.itemName}</td>
             <td>${linkHtml}</td>
             <td>${imgHtml}</td>
             <td>${item.note || "-"}</td>
+            <td><button class="btn-danger" onclick="closePurchaseItem(${index})">마감</button></td>
           </tr>
         `;
       });
@@ -859,7 +865,8 @@
       const preview = document.getElementById("purchasePreview");
       preview.src = "";
       preview.style.display = "none";
-      setMessage("purchaseMessage", "", "success");
+      document.getElementById("purchaseMessage").textContent = "";
+      document.getElementById("purchaseMessage").className = "message";
     }
 
     function readFileAsDataURL(file) {
@@ -873,6 +880,13 @@
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
+    }
+
+    function closePurchaseItem(index) {
+      const items = getPurchases();
+      items.splice(index, 1);
+      setPurchases(items);
+      renderPurchaseHistory();
     }
 
     document.getElementById("previewBtn").addEventListener("click", () => {
@@ -1020,29 +1034,11 @@
         });
         setPurchases(purchases);
 
+        renderPurchaseHistory();
         setMessage("purchaseMessage", "구매 신청을 저장했습니다.", "success");
-
-        if (document.getElementById("purchaseHistoryDate").value === date) {
-          renderPurchaseHistory(date);
-        }
       } catch (e) {
         setMessage("purchaseMessage", e.message, "error");
       }
-    });
-
-    document.getElementById("searchPurchaseHistoryBtn").addEventListener("click", () => {
-      const date = document.getElementById("purchaseHistoryDate").value;
-      if (!date) {
-        setMessage("purchaseHistorySummary", "조회 날짜를 입력해 주세요.", "error");
-        return;
-      }
-      renderPurchaseHistory(date);
-    });
-
-    document.getElementById("resetPurchaseBtn").addEventListener("click", () => {
-      setPurchases([]);
-      renderPurchaseHistory(document.getElementById("purchaseHistoryDate").value || formatDate(new Date()));
-      setMessage("purchaseHistorySummary", "구매 신청 목록을 초기화했습니다.", "success");
     });
 
     document.getElementById("purchaseModal").addEventListener("click", (e) => {
@@ -1063,10 +1059,9 @@
       document.getElementById("workDate").value = today;
       document.getElementById("historyDate").value = today;
       document.getElementById("purchaseDate").value = today;
-      document.getElementById("purchaseHistoryDate").value = today;
 
       renderHistory(today);
-      renderPurchaseHistory(today);
+      renderPurchaseHistory();
     }
 
     init();
