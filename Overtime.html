@@ -16,6 +16,7 @@
       --danger: #dc2626;
       --success: #16a34a;
       --soft: #eef2ff;
+      --overlay: rgba(15, 23, 42, 0.55);
     }
 
     * { box-sizing: border-box; }
@@ -28,7 +29,7 @@
     }
 
     .container {
-      max-width: 920px;
+      max-width: 980px;
       margin: 0 auto;
       padding: 16px;
     }
@@ -42,7 +43,9 @@
       box-shadow: 0 4px 14px rgba(0,0,0,0.04);
     }
 
-    h1, h2, h3 { margin: 0 0 12px; }
+    h1, h2, h3 {
+      margin: 0 0 12px;
+    }
 
     .subtitle {
       color: var(--muted);
@@ -59,17 +62,22 @@
       margin-top: 10px;
     }
 
-    input, select, button {
+    input, select, button, textarea {
       width: 100%;
       font: inherit;
       min-height: 44px;
     }
 
-    input, select {
+    input, select, textarea {
       border: 1px solid var(--line);
       border-radius: 10px;
       padding: 10px 12px;
       background: #fff;
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: vertical;
     }
 
     button {
@@ -141,7 +149,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 640px;
+      min-width: 700px;
       font-size: 14px;
       background: #fff;
     }
@@ -155,7 +163,9 @@
       word-break: keep-all;
     }
 
-    th { background: #f8fafc; }
+    th {
+      background: #f8fafc;
+    }
 
     .meta {
       display: grid;
@@ -175,22 +185,96 @@
       margin-bottom: 6px;
     }
 
+    .top-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: var(--overlay);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 1000;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-content {
+      width: min(760px, 100%);
+      max-height: 92vh;
+      overflow-y: auto;
+      background: #fff;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.18);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .close-btn {
+      width: auto;
+      min-width: 44px;
+      margin-top: 0;
+      background: #e5e7eb;
+      color: #111827;
+      padding: 10px 12px;
+    }
+
+    .thumb {
+      max-width: 180px;
+      max-height: 180px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      margin-top: 10px;
+      display: none;
+      object-fit: cover;
+      background: #fff;
+    }
+
+    .link-cell {
+      max-width: 220px;
+      word-break: break-all;
+    }
+
+    .preview-file {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 8px;
+    }
+
     @media (max-width: 640px) {
       .container { padding: 12px; }
       .card { padding: 14px; }
-      .btn-row { grid-template-columns: 1fr; }
+      .btn-row, .top-actions { grid-template-columns: 1fr; }
       .subtitle, .notice { font-size: 12px; }
-      table { min-width: 560px; font-size: 13px; }
+      table { min-width: 620px; font-size: 13px; }
+      .modal-content { padding: 14px; }
     }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>연장근무 관리</h1>
-    <p class="subtitle">
-      날짜, 본인 이름, 휴가자 이름을 입력하면 반변경에 따라 작업시간과 연장시간을 계산합니다.
-      인원 추가와 일자별 조회도 가능합니다.
-    </p>
+    <p class="subtitle">날짜, 본인 이름, 휴가자 이름을 입력하면 반변경에 따라 작업시간과 연장시간을 계산합니다.</p>
+
+    <div class="top-actions">
+      <button class="btn-primary" id="openPurchaseBtn">구매 신청 열기</button>
+      <button class="btn-secondary" id="resetPurchaseBtn">구매 신청 목록 초기화</button>
+    </div>
 
     <div class="card">
       <h2>1. 연장근무 입력</h2>
@@ -228,10 +312,7 @@
 
     <div class="card">
       <h2>2. 인원관리</h2>
-      <p class="notice">
-        이름, 반, 부서를 추가하면 바로 선택 목록에 반영됩니다.
-        기본 인원 불러오기를 누르면 현재 브라우저에 저장된 인원 목록을 기준표로 초기화합니다.
-      </p>
+      <p class="notice">이름, 반, 부서를 추가하면 연장근무와 구매 신청의 신청자 목록에 바로 반영됩니다.</p>
 
       <label for="newName">이름</label>
       <input type="text" id="newName" placeholder="예: 홍길동" />
@@ -267,7 +348,7 @@
     </div>
 
     <div class="card">
-      <h2>3. 일자별 히스토리 조회</h2>
+      <h2>3. 일자별 연장근무 히스토리 조회</h2>
 
       <label for="historyDate">조회 날짜</label>
       <input type="date" id="historyDate" />
@@ -282,21 +363,62 @@
     </div>
 
     <div class="card">
-      <h2>4. 현재 적용 기준</h2>
-      <div class="meta">
-        <div><span class="badge">반변경</span> 네 최신 표 기준 직접 매핑 로직</div>
-        <div><span class="badge">부서제약</span> 같은 부서끼리만 대체 가능</div>
-        <div><span class="badge">반차</span> 빠진 사람 기준 행 사용</div>
-        <div><span class="badge">야근결원</span> 중근이 야근, 조근이 중근 대체</div>
-        <div><span class="badge">월요일</span> 월요일 전용 시간표 우선</div>
+      <h2>4. 구매 신청 히스토리</h2>
+
+      <label for="purchaseHistoryDate">조회 날짜</label>
+      <input type="date" id="purchaseHistoryDate" />
+
+      <button class="btn-primary" id="searchPurchaseHistoryBtn">조회</button>
+
+      <div id="purchaseHistorySummary" class="message"></div>
+
+      <div class="table-wrap">
+        <table id="purchaseHistoryTable"></table>
       </div>
+    </div>
+  </div>
+
+  <div class="modal" id="purchaseModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>구매 신청</h2>
+        <button type="button" class="close-btn" id="closePurchaseBtn">닫기</button>
+      </div>
+
+      <label for="purchaseDate">신청일</label>
+      <input type="date" id="purchaseDate" />
+
+      <label for="purchaseApplicant">신청자</label>
+      <input list="workersList" id="purchaseApplicant" placeholder="이름 입력 또는 선택" />
+
+      <label for="purchaseItem">품목명</label>
+      <input type="text" id="purchaseItem" placeholder="예: 베어링, 장갑, 윤활유" />
+
+      <label for="purchaseLink">링크</label>
+      <input type="text" id="purchaseLink" placeholder="예: 구매 링크 입력" />
+
+      <label for="purchaseImage">사진 업로드</label>
+      <input type="file" id="purchaseImage" accept="image/*" />
+      <div id="purchaseFileName" class="preview-file"></div>
+      <img id="purchasePreview" class="thumb" alt="미리보기" />
+
+      <label for="purchaseNote">비고 (사용목적 및 사용부위)</label>
+      <textarea id="purchaseNote" placeholder="예: 정선 라인 베어링 교체용 / 시프터 하부"></textarea>
+
+      <div class="btn-row">
+        <button class="btn-primary" id="savePurchaseBtn">구매 신청 저장</button>
+        <button class="btn-secondary" id="clearPurchaseBtn">입력 초기화</button>
+      </div>
+
+      <div id="purchaseMessage" class="message"></div>
     </div>
   </div>
 
   <script>
     const STORAGE_KEYS = {
-      workers: "overtime_workers_v6",
-      history: "overtime_history_v6"
+      workers: "overtime_workers_v8",
+      history: "overtime_history_v8",
+      purchases: "purchase_history_v1"
     };
 
     const defaultWorkers = [
@@ -433,6 +555,12 @@
       }
     };
 
+    const rotationPatterns = [
+      ["갑", "을", "병"],
+      ["을", "병", "갑"],
+      ["병", "갑", "을"]
+    ];
+
     function load(key, fallback) {
       try {
         const raw = localStorage.getItem(key);
@@ -462,6 +590,14 @@
       saveData(STORAGE_KEYS.history, history);
     }
 
+    function getPurchases() {
+      return load(STORAGE_KEYS.purchases, []);
+    }
+
+    function setPurchases(items) {
+      saveData(STORAGE_KEYS.purchases, items);
+    }
+
     function parseDate(dateStr) {
       const [y, m, d] = dateStr.split("-").map(Number);
       return new Date(y, m - 1, d);
@@ -479,72 +615,23 @@
       return ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
     }
 
-    // 네 최신 표 기준 직접 매핑용 패턴
-    const basePatterns = [
-      ["갑", "을", "병"],
-      ["을", "병", "갑"],
-      ["병", "갑", "을"]
-    ];
-
-    // 최신 표 기준 연도별 1월 1일 시작 패턴
-    // 2026-01-01 = 갑/을/병
-    // 2027-01-01 = 을/병/갑
-    // 2028-01-01 = 병/갑/을
-    // 2029-01-01 = 갑/을/병
-    // 2030-01-01 = 을/병/갑
-    const yearStartPatternIndex = {
-      2025: 1,
-      2026: 0,
-      2027: 1,
-      2028: 2,
-      2029: 0,
-      2030: 1,
-      2031: 2,
-      2032: 0,
-      2033: 1,
-      2034: 2,
-      2035: 0,
-      2036: 1,
-      2037: 2,
-      2038: 0,
-      2039: 1,
-      2040: 2,
-      2041: 0,
-      2042: 1,
-      2043: 2,
-      2044: 0,
-      2045: 1,
-      2046: 2,
-      2047: 0,
-      2048: 1,
-      2049: 2,
-      2050: 0
-    };
-
-    // 표 기준:
-    // 1월1일~1월4일 = 첫 블록
-    // 1월5일부터 7일 단위 반복
-    // 이 규칙으로 2026-03-20 = 갑/을/병, 2026-03-23 = 을/병/갑 일치
-    function getRotationForDate(dateStr) {
+    function getWeekNumMonday(dateStr) {
       const date = parseDate(dateStr);
       const year = date.getFullYear();
-
-      if (!(year in yearStartPatternIndex)) {
-        throw new Error("반변경 기준 연도가 없습니다.");
-      }
-
       const jan1 = new Date(year, 0, 1);
-      const diffDays = Math.floor((date - jan1) / (1000 * 60 * 60 * 24));
+      const jan1Day = jan1.getDay();
+      const mondayBasedJan1 = jan1Day === 0 ? 7 : jan1Day;
+      const diffDays = Math.floor((date - jan1) / 86400000);
+      return Math.floor((diffDays + mondayBasedJan1 - 1) / 7) + 1;
+    }
 
-      let blockIndex;
-      if (diffDays <= 3) {
-        blockIndex = 0;
-      } else {
-        blockIndex = 1 + Math.floor((diffDays - 4) / 7);
-      }
-
-      const patternIndex = (yearStartPatternIndex[year] + blockIndex) % 3;
-      const pattern = basePatterns[patternIndex];
+    function getRotationForDate(dateStr) {
+      const year = parseDate(dateStr).getFullYear();
+      const baseYear = 2026;
+      const startPatternIndex = ((year - baseYear) % 3 + 3) % 3;
+      const weekNum = getWeekNumMonday(dateStr);
+      const patternIndex = (startPatternIndex + (weekNum - 1)) % 3;
+      const pattern = rotationPatterns[patternIndex];
 
       return {
         조근: pattern[0],
@@ -565,17 +652,14 @@
         if (workerRole === "중근") return "중근";
         if (workerRole === "야근") return "조근";
       }
-
       if (absentRole === "중근") {
         if (workerRole === "조근") return "조근";
         if (workerRole === "야근") return "야근";
       }
-
       if (absentRole === "야근") {
         if (workerRole === "조근") return "중근";
         if (workerRole === "중근") return "야근";
       }
-
       return workerRole;
     }
 
@@ -583,16 +667,9 @@
       if (absenceType === "오전반차" || absenceType === "오후반차") {
         return null;
       }
-
-      if (absentRole === "조근") {
-        return replacementRole === "조근" ? 1 : 2;
-      }
-      if (absentRole === "중근") {
-        return replacementRole === "조근" ? 1 : 2;
-      }
-      if (absentRole === "야근") {
-        return replacementRole === "중근" ? 1 : 2;
-      }
+      if (absentRole === "조근") return replacementRole === "조근" ? 1 : 2;
+      if (absentRole === "중근") return replacementRole === "조근" ? 1 : 2;
+      if (absentRole === "야근") return replacementRole === "중근" ? 1 : 2;
       return 1;
     }
 
@@ -625,7 +702,6 @@
       if (worker.dept !== absent.dept) throw new Error("같은 부서끼리만 대체 가능합니다.");
 
       const rotation = getRotationForDate(date);
-      const dayName = getDayName(date);
       const workerRole = getRoleFromBand(rotation, worker.band);
       const absentRole = getRoleFromBand(rotation, absent.band);
 
@@ -639,7 +715,7 @@
 
       return {
         date,
-        dayName,
+        dayName: getDayName(date),
         dept: worker.dept,
         workerName: worker.name,
         workerBand: worker.band,
@@ -726,10 +802,77 @@
       document.getElementById("historyTable").innerHTML = html;
     }
 
+    function renderPurchaseHistory(date) {
+      const items = getPurchases().filter(x => x.date === date);
+      const summary = document.getElementById("purchaseHistorySummary");
+
+      summary.className = "message";
+      summary.textContent = `${date} 조회 결과 ${items.length}건`;
+
+      let html = "<tr><th>신청자</th><th>품목명</th><th>링크</th><th>사진</th><th>비고</th></tr>";
+
+      items.forEach(item => {
+        const linkHtml = item.link
+          ? `<div class="link-cell"><a href="${item.link}" target="_blank" rel="noopener noreferrer">${item.link}</a></div>`
+          : "-";
+
+        const imgHtml = item.imageData
+          ? `<img src="${item.imageData}" alt="구매 이미지" style="max-width:100px; max-height:100px; border-radius:8px; border:1px solid #ddd;" />`
+          : "-";
+
+        html += `
+          <tr>
+            <td>${item.applicant}</td>
+            <td>${item.itemName}</td>
+            <td>${linkHtml}</td>
+            <td>${imgHtml}</td>
+            <td>${item.note || "-"}</td>
+          </tr>
+        `;
+      });
+
+      document.getElementById("purchaseHistoryTable").innerHTML = html;
+    }
+
     function setMessage(targetId, message, type) {
       const el = document.getElementById(targetId);
       el.textContent = message;
       el.className = `message ${type}`;
+    }
+
+    function openPurchaseModal() {
+      document.getElementById("purchaseModal").classList.add("show");
+    }
+
+    function closePurchaseModal() {
+      document.getElementById("purchaseModal").classList.remove("show");
+    }
+
+    function clearPurchaseForm() {
+      document.getElementById("purchaseDate").value = formatDate(new Date());
+      document.getElementById("purchaseApplicant").value = "";
+      document.getElementById("purchaseItem").value = "";
+      document.getElementById("purchaseLink").value = "";
+      document.getElementById("purchaseImage").value = "";
+      document.getElementById("purchaseNote").value = "";
+      document.getElementById("purchaseFileName").textContent = "";
+      const preview = document.getElementById("purchasePreview");
+      preview.src = "";
+      preview.style.display = "none";
+      setMessage("purchaseMessage", "", "success");
+    }
+
+    function readFileAsDataURL(file) {
+      return new Promise((resolve, reject) => {
+        if (!file) {
+          resolve("");
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
     }
 
     document.getElementById("previewBtn").addEventListener("click", () => {
@@ -818,6 +961,96 @@
       renderHistory(date);
     });
 
+    document.getElementById("openPurchaseBtn").addEventListener("click", () => {
+      openPurchaseModal();
+    });
+
+    document.getElementById("closePurchaseBtn").addEventListener("click", () => {
+      closePurchaseModal();
+    });
+
+    document.getElementById("clearPurchaseBtn").addEventListener("click", () => {
+      clearPurchaseForm();
+    });
+
+    document.getElementById("purchaseImage").addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      const preview = document.getElementById("purchasePreview");
+      const fileName = document.getElementById("purchaseFileName");
+
+      if (!file) {
+        fileName.textContent = "";
+        preview.src = "";
+        preview.style.display = "none";
+        return;
+      }
+
+      fileName.textContent = `선택 파일: ${file.name}`;
+      const dataUrl = await readFileAsDataURL(file);
+      preview.src = dataUrl;
+      preview.style.display = "block";
+    });
+
+    document.getElementById("savePurchaseBtn").addEventListener("click", async () => {
+      try {
+        const date = document.getElementById("purchaseDate").value;
+        const applicant = document.getElementById("purchaseApplicant").value.trim();
+        const itemName = document.getElementById("purchaseItem").value.trim();
+        const link = document.getElementById("purchaseLink").value.trim();
+        const note = document.getElementById("purchaseNote").value.trim();
+        const file = document.getElementById("purchaseImage").files[0];
+
+        if (!date) throw new Error("신청일을 입력해 주세요.");
+        if (!applicant) throw new Error("신청자를 입력해 주세요.");
+        if (!itemName) throw new Error("품목명을 입력해 주세요.");
+
+        const workerExists = getWorkers().some(w => w.name === applicant);
+        if (!workerExists) throw new Error("신청자는 인원관리 목록에 있는 이름만 사용할 수 있습니다.");
+
+        const imageData = file ? await readFileAsDataURL(file) : "";
+
+        const purchases = getPurchases();
+        purchases.push({
+          date,
+          applicant,
+          itemName,
+          link,
+          note,
+          imageData
+        });
+        setPurchases(purchases);
+
+        setMessage("purchaseMessage", "구매 신청을 저장했습니다.", "success");
+
+        if (document.getElementById("purchaseHistoryDate").value === date) {
+          renderPurchaseHistory(date);
+        }
+      } catch (e) {
+        setMessage("purchaseMessage", e.message, "error");
+      }
+    });
+
+    document.getElementById("searchPurchaseHistoryBtn").addEventListener("click", () => {
+      const date = document.getElementById("purchaseHistoryDate").value;
+      if (!date) {
+        setMessage("purchaseHistorySummary", "조회 날짜를 입력해 주세요.", "error");
+        return;
+      }
+      renderPurchaseHistory(date);
+    });
+
+    document.getElementById("resetPurchaseBtn").addEventListener("click", () => {
+      setPurchases([]);
+      renderPurchaseHistory(document.getElementById("purchaseHistoryDate").value || formatDate(new Date()));
+      setMessage("purchaseHistorySummary", "구매 신청 목록을 초기화했습니다.", "success");
+    });
+
+    document.getElementById("purchaseModal").addEventListener("click", (e) => {
+      if (e.target.id === "purchaseModal") {
+        closePurchaseModal();
+      }
+    });
+
     function init() {
       if (!getWorkers().length) {
         setWorkers(defaultWorkers);
@@ -829,8 +1062,11 @@
       const today = formatDate(new Date());
       document.getElementById("workDate").value = today;
       document.getElementById("historyDate").value = today;
+      document.getElementById("purchaseDate").value = today;
+      document.getElementById("purchaseHistoryDate").value = today;
 
       renderHistory(today);
+      renderPurchaseHistory(today);
     }
 
     init();
