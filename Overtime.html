@@ -420,9 +420,9 @@
 
   <script>
     const STORAGE_KEYS = {
-      workers: "overtime_workers_v9",
-      history: "overtime_history_v9",
-      purchases: "purchase_history_v2"
+      workers: "overtime_workers_v10",
+      history: "overtime_history_v10",
+      purchases: "purchase_history_v3"
     };
 
     const defaultWorkers = [
@@ -629,20 +629,20 @@
       return Math.floor((diffDays + mondayBasedJan1 - 1) / 7) + 1;
     }
 
-   function getRotationForDate(dateStr) {
-  const year = parseDate(dateStr).getFullYear();
-  const baseYear = 2026;
-  const startPatternIndex = ((year - baseYear) % 3 + 3) % 3;
-  const weekNum = getWeekNumMonday(dateStr);
-  const patternIndex = (startPatternIndex + weekNum) % 3;
-  const pattern = rotationPatterns[patternIndex];
+    function getRotationForDate(dateStr) {
+      const year = parseDate(dateStr).getFullYear();
+      const baseYear = 2026;
+      const startPatternIndex = ((year - baseYear) % 3 + 3) % 3;
+      const weekNum = getWeekNumMonday(dateStr);
+      const patternIndex = (startPatternIndex + weekNum) % 3;
+      const pattern = rotationPatterns[patternIndex];
 
-  return {
-    조근: pattern[0],
-    중근: pattern[1],
-    야근: pattern[2]
-  };
-}
+      return {
+        조근: pattern[0],
+        중근: pattern[1],
+        야근: pattern[2]
+      };
+    }
 
     function getRoleFromBand(rotation, band) {
       if (rotation.조근 === band) return "조근";
@@ -667,13 +667,26 @@
       return workerRole;
     }
 
-    function determineSequenceNo(absentRole, replacementRole, absenceType) {
+    function determineSequenceNo(absentRole, workerRole, dayName, absenceType) {
       if (absenceType === "오전반차" || absenceType === "오후반차") {
         return null;
       }
-      if (absentRole === "조근") return replacementRole === "조근" ? 1 : 2;
-      if (absentRole === "중근") return replacementRole === "조근" ? 1 : 2;
-      if (absentRole === "야근") return replacementRole === "중근" ? 1 : 2;
+
+      if (absentRole === "조근") {
+        if (dayName === "월") {
+          return workerRole === "중근" ? 1 : 2;
+        }
+        return workerRole === "야근" ? 1 : 2;
+      }
+
+      if (absentRole === "중근") {
+        return workerRole === "조근" ? 1 : 2;
+      }
+
+      if (absentRole === "야근") {
+        return workerRole === "조근" ? 1 : 2;
+      }
+
       return 1;
     }
 
@@ -706,6 +719,7 @@
       if (worker.dept !== absent.dept) throw new Error("같은 부서끼리만 대체 가능합니다.");
 
       const rotation = getRotationForDate(date);
+      const dayName = getDayName(date);
       const workerRole = getRoleFromBand(rotation, worker.band);
       const absentRole = getRoleFromBand(rotation, absent.band);
 
@@ -714,12 +728,12 @@
       }
 
       const replacementRole = determineReplacementRole(absentRole, workerRole);
-      const sequenceNo = determineSequenceNo(absentRole, replacementRole, absenceType);
+      const sequenceNo = determineSequenceNo(absentRole, workerRole, dayName, absenceType);
       const tpl = getTimeTemplate(date, absenceType, absentRole, sequenceNo);
 
       return {
         date,
-        dayName: getDayName(date),
+        dayName,
         dept: worker.dept,
         workerName: worker.name,
         workerBand: worker.band,
