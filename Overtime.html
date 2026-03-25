@@ -274,8 +274,9 @@
       margin: 0 auto;
     }
 
-    .hidden-box {
-      display: none;
+    .edit-table td input, .edit-table td select {
+      min-height: 38px;
+      padding: 8px 10px;
     }
 
     @media (max-width: 640px) {
@@ -331,34 +332,13 @@
 
     <div class="card">
       <h2>2. 인원관리</h2>
-      <p class="notice">인원 추가 후 업데이트를 누르면 입력 목록에 반영됩니다. 숨기기/열기는 인원관리 영역 전체를 접고 펼치는 기능입니다.</p>
-
-      <label for="newName">이름</label>
-      <input type="text" id="newName" placeholder="예: 홍길동" />
-
-      <label for="newBand">반</label>
-      <select id="newBand">
-        <option value="갑">갑</option>
-        <option value="을">을</option>
-        <option value="병">병</option>
-      </select>
-
-      <label for="newDept">부서</label>
-      <select id="newDept">
-        <option value="제분">제분</option>
-        <option value="정선">정선</option>
-        <option value="대포장">대포장</option>
-        <option value="소포장">소포장</option>
-        <option value="품질관리">품질관리</option>
-        <option value="기술">기술</option>
-        <option value="생산2팀">생산2팀</option>
-      </select>
+      <p class="notice">업데이트는 현재 저장된 인원 데이터를 화면과 입력목록에 다시 반영합니다. 수정은 비밀번호 1004 입력 후 인원을 직접 추가/삭제할 수 있습니다.</p>
 
       <div class="btn-row-4">
-        <button class="btn-success" id="addWorkerBtn">인원 추가</button>
         <button class="btn-secondary" id="toggleWorkerPanelBtn">숨기기</button>
         <button class="btn-primary" id="updateWorkersBtn">업데이트</button>
-        <button class="btn-secondary" id="resetWorkersBtn">기본 인원 불러오기</button>
+        <button class="btn-secondary" id="openWorkerManageBtn">수정</button>
+        <button class="btn-secondary" id="refreshWorkerViewBtn">새로고침</button>
       </div>
 
       <div id="workerMessage" class="message"></div>
@@ -441,7 +421,7 @@
   <div class="modal" id="passwordModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>조회결과 수정 인증</h2>
+        <h2 id="passwordModalTitle">비밀번호 확인</h2>
         <button type="button" class="close-btn" id="closePasswordBtn">닫기</button>
       </div>
 
@@ -498,11 +478,33 @@
     </div>
   </div>
 
+  <div class="modal" id="workerManageModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>인원 직접 수정</h2>
+        <button type="button" class="close-btn" id="closeWorkerManageBtn">닫기</button>
+      </div>
+
+      <p class="notice">기존 인원을 직접 추가/삭제할 수 있습니다. 저장 후 업데이트를 누르면 입력목록과 표에 반영됩니다.</p>
+
+      <div class="btn-row">
+        <button class="btn-success" id="addManageRowBtn">행 추가</button>
+        <button class="btn-primary" id="saveWorkerManageBtn">인원 저장</button>
+      </div>
+
+      <div id="workerManageMessage" class="message"></div>
+
+      <div class="table-wrap">
+        <table id="workerManageTable" class="edit-table"></table>
+      </div>
+    </div>
+  </div>
+
   <script>
     const STORAGE_KEYS = {
-      workers: "overtime_workers_v15",
-      history: "overtime_history_v15",
-      purchases: "purchase_history_v8"
+      workers: "overtime_workers_v16",
+      history: "overtime_history_v16",
+      purchases: "purchase_history_v9"
     };
 
     const EDIT_PASSWORD = "1004";
@@ -599,6 +601,9 @@
       { name: "이건호", band: "병", dept: "제분" }
     ];
 
+    const deptOptions = ["제분", "정선", "대포장", "소포장", "품질관리", "기술", "생산2팀"];
+    const bandOptions = ["갑", "을", "병"];
+
     const timeTemplates = {
       default: {
         없음: {
@@ -657,6 +662,7 @@
     ];
 
     let workerPanelOpen = true;
+    let passwordAction = "";
 
     function load(key, fallback) {
       try {
@@ -671,12 +677,22 @@
       localStorage.setItem(key, JSON.stringify(value));
     }
 
+    function normalizeWorkers(workers) {
+      return workers
+        .map(w => ({
+          name: String(w.name || "").trim(),
+          band: String(w.band || "").trim(),
+          dept: String(w.dept || "").trim()
+        }))
+        .filter(w => w.name && w.band && w.dept);
+    }
+
     function getWorkers() {
-      return load(STORAGE_KEYS.workers, []);
+      return normalizeWorkers(load(STORAGE_KEYS.workers, []));
     }
 
     function setWorkers(workers) {
-      saveData(STORAGE_KEYS.workers, workers);
+      saveData(STORAGE_KEYS.workers, normalizeWorkers(workers));
     }
 
     function getHistory() {
@@ -963,6 +979,49 @@
       document.getElementById("purchaseHistoryTable").innerHTML = html;
     }
 
+    function renderWorkerManageTable() {
+      const workers = getWorkers();
+
+      let html = `
+        <tr>
+          <th>성명</th>
+          <th>반</th>
+          <th>부서</th>
+          <th>삭제</th>
+        </tr>
+      `;
+
+      workers.forEach((w, index) => {
+        html += `
+          <tr>
+            <td><input type="text" data-field="name" data-index="${index}" value="${escapeHtml(w.name)}" /></td>
+            <td>
+              <select data-field="band" data-index="${index}">
+                ${bandOptions.map(opt => `<option value="${opt}" ${w.band === opt ? "selected" : ""}>${opt}</option>`).join("")}
+              </select>
+            </td>
+            <td>
+              <select data-field="dept" data-index="${index}">
+                ${deptOptions.map(opt => `<option value="${opt}" ${w.dept === opt ? "selected" : ""}>${opt}</option>`).join("")}
+              </select>
+            </td>
+            <td><button class="btn-danger" onclick="deleteWorkerManageRow(${index})">삭제</button></td>
+          </tr>
+        `;
+      });
+
+      document.getElementById("workerManageTable").innerHTML = html;
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
     function setMessage(targetId, message, type) {
       const el = document.getElementById(targetId);
       el.textContent = message;
@@ -977,7 +1036,9 @@
       document.getElementById("purchaseModal").classList.remove("show");
     }
 
-    function openPasswordModal() {
+    function openPasswordModal(titleText, actionName) {
+      passwordAction = actionName;
+      document.getElementById("passwordModalTitle").textContent = titleText;
       document.getElementById("passwordModal").classList.add("show");
       document.getElementById("editPassword").value = "";
       setMessage("passwordMessage", "", "success");
@@ -985,6 +1046,7 @@
 
     function closePasswordModal() {
       document.getElementById("passwordModal").classList.remove("show");
+      passwordAction = "";
     }
 
     function openEditHistoryModal() {
@@ -1000,6 +1062,16 @@
 
     function closeEditHistoryModal() {
       document.getElementById("editHistoryModal").classList.remove("show");
+    }
+
+    function openWorkerManageModal() {
+      document.getElementById("workerManageModal").classList.add("show");
+      renderWorkerManageTable();
+      setMessage("workerManageMessage", "", "success");
+    }
+
+    function closeWorkerManageModal() {
+      document.getElementById("workerManageModal").classList.remove("show");
     }
 
     function clearPurchaseForm() {
@@ -1081,7 +1153,54 @@
     function updateWorkersView() {
       renderWorkerList();
       renderWorkerTable();
-      setMessage("workerMessage", "인원관리 변경사항을 업데이트했습니다.", "success");
+      setMessage("workerMessage", "현재 저장된 인원 데이터를 반영했습니다.", "success");
+    }
+
+    function addWorkerManageRow() {
+      const workers = getWorkers();
+      workers.push({ name: "", band: "갑", dept: "제분" });
+      setWorkers(workers);
+      renderWorkerManageTable();
+    }
+
+    function deleteWorkerManageRow(index) {
+      const workers = getWorkers();
+      workers.splice(index, 1);
+      setWorkers(workers);
+      renderWorkerManageTable();
+    }
+
+    function saveWorkerManage() {
+      const rows = Array.from(document.querySelectorAll("#workerManageTable tr")).slice(1);
+      const updated = [];
+
+      for (const row of rows) {
+        const nameInput = row.querySelector('input[data-field="name"]');
+        const bandSelect = row.querySelector('select[data-field="band"]');
+        const deptSelect = row.querySelector('select[data-field="dept"]');
+
+        const name = nameInput.value.trim();
+        const band = bandSelect.value.trim();
+        const dept = deptSelect.value.trim();
+
+        if (!name) continue;
+
+        updated.push({ name, band, dept });
+      }
+
+      const duplicateCheck = new Set();
+      for (const item of updated) {
+        const key = `${item.name}__${item.dept}`;
+        if (duplicateCheck.has(key)) {
+          setMessage("workerManageMessage", `중복 인원이 있습니다: ${item.name} / ${item.dept}`, "error");
+          return;
+        }
+        duplicateCheck.add(key);
+      }
+
+      setWorkers(updated);
+      renderWorkerManageTable();
+      setMessage("workerManageMessage", "인원 정보를 저장했습니다. 인원관리에서 업데이트를 눌러 반영하세요.", "success");
     }
 
     document.getElementById("previewBtn").addEventListener("click", () => {
@@ -1128,39 +1247,16 @@
       }
     });
 
-    document.getElementById("addWorkerBtn").addEventListener("click", () => {
-      const name = document.getElementById("newName").value.trim();
-      const band = document.getElementById("newBand").value;
-      const dept = document.getElementById("newDept").value;
-
-      if (!name) {
-        setMessage("workerMessage", "이름을 입력해 주세요.", "error");
-        return;
-      }
-
-      const workers = getWorkers();
-      if (workers.some(w => w.name === name && w.dept === dept)) {
-        setMessage("workerMessage", "같은 부서에 동일 이름이 이미 있습니다.", "error");
-        return;
-      }
-
-      workers.push({ name, band, dept });
-      setWorkers(workers);
-      document.getElementById("newName").value = "";
-      setMessage("workerMessage", "인원을 추가했습니다. 업데이트를 눌러 반영하세요.", "success");
-    });
-
     document.getElementById("toggleWorkerPanelBtn").addEventListener("click", toggleWorkerPanel);
     document.getElementById("updateWorkersBtn").addEventListener("click", updateWorkersView);
-
-    document.getElementById("resetWorkersBtn").addEventListener("click", () => {
-      setWorkers(defaultWorkers);
+    document.getElementById("refreshWorkerViewBtn").addEventListener("click", () => {
       renderWorkerList();
       renderWorkerTable();
-      workerPanelOpen = true;
-      document.getElementById("toggleWorkerPanelBtn").textContent = "숨기기";
-      document.getElementById("workerTableWrap").style.display = "block";
-      setMessage("workerMessage", "기본 인원을 불러왔습니다.", "success");
+      setMessage("workerMessage", "화면을 새로 반영했습니다.", "success");
+    });
+
+    document.getElementById("openWorkerManageBtn").addEventListener("click", () => {
+      openPasswordModal("인원관리 수정 인증", "worker-manage");
     });
 
     document.getElementById("searchHistoryBtn").addEventListener("click", () => {
@@ -1239,7 +1335,7 @@
     });
 
     document.getElementById("openEditHistoryBtn").addEventListener("click", () => {
-      openPasswordModal();
+      openPasswordModal("조회결과 수정 인증", "history-edit");
     });
 
     document.getElementById("closePasswordBtn").addEventListener("click", closePasswordModal);
@@ -1251,11 +1347,19 @@
         setMessage("passwordMessage", "비밀번호가 일치하지 않습니다.", "error");
         return;
       }
+
+      const action = passwordAction;
       closePasswordModal();
-      openEditHistoryModal();
+
+      if (action === "history-edit") {
+        openEditHistoryModal();
+      } else if (action === "worker-manage") {
+        openWorkerManageModal();
+      }
     });
 
     document.getElementById("closeEditHistoryBtn").addEventListener("click", closeEditHistoryModal);
+    document.getElementById("closeWorkerManageBtn").addEventListener("click", closeWorkerManageModal);
 
     document.getElementById("loadEditRowsBtn").addEventListener("click", () => {
       const date = document.getElementById("editTargetDate").value;
@@ -1334,6 +1438,9 @@
       }
     });
 
+    document.getElementById("addManageRowBtn").addEventListener("click", addWorkerManageRow);
+    document.getElementById("saveWorkerManageBtn").addEventListener("click", saveWorkerManage);
+
     document.getElementById("purchaseModal").addEventListener("click", (e) => {
       if (e.target.id === "purchaseModal") closePurchaseModal();
     });
@@ -1344,6 +1451,10 @@
 
     document.getElementById("editHistoryModal").addEventListener("click", (e) => {
       if (e.target.id === "editHistoryModal") closeEditHistoryModal();
+    });
+
+    document.getElementById("workerManageModal").addEventListener("click", (e) => {
+      if (e.target.id === "workerManageModal") closeWorkerManageModal();
     });
 
     function init() {
