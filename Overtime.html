@@ -139,13 +139,6 @@
       margin-top: 8px;
     }
 
-    .btn-row-4 {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr 1fr;
-      gap: 10px;
-      margin-top: 8px;
-    }
-
     .single-btn {
       margin-top: 10px;
     }
@@ -274,14 +267,10 @@
       margin: 0 auto;
     }
 
-    .hidden-box {
-      display: none;
-    }
-
     @media (max-width: 640px) {
       .container { padding: 12px; }
       .card { padding: 14px; }
-      .btn-row, .btn-row-4 { grid-template-columns: 1fr; }
+      .btn-row { grid-template-columns: 1fr; }
       .subtitle, .notice { font-size: 12px; }
       table { min-width: 760px; font-size: 13px; }
       .modal-content { padding: 14px; }
@@ -331,7 +320,7 @@
 
     <div class="card">
       <h2>2. 인원관리</h2>
-      <p class="notice">인원 추가 후 업데이트를 누르면 입력 목록에 반영됩니다. 숨기기/열기는 인원관리 영역 전체를 접고 펼치는 기능입니다.</p>
+      <p class="notice">이름, 반, 부서를 추가하면 연장근무와 구매 신청의 신청자 목록에 바로 반영됩니다.</p>
 
       <label for="newName">이름</label>
       <input type="text" id="newName" placeholder="예: 홍길동" />
@@ -354,16 +343,14 @@
         <option value="생산2팀">생산2팀</option>
       </select>
 
-      <div class="btn-row-4">
+      <div class="btn-row">
         <button class="btn-success" id="addWorkerBtn">인원 추가</button>
-        <button class="btn-secondary" id="toggleWorkerPanelBtn">숨기기</button>
-        <button class="btn-primary" id="updateWorkersBtn">업데이트</button>
         <button class="btn-secondary" id="resetWorkersBtn">기본 인원 불러오기</button>
       </div>
 
       <div id="workerMessage" class="message"></div>
 
-      <div class="table-wrap" id="workerTableWrap">
+      <div class="table-wrap">
         <table id="workerTable"></table>
       </div>
     </div>
@@ -500,9 +487,9 @@
 
   <script>
     const STORAGE_KEYS = {
-      workers: "overtime_workers_v15",
-      history: "overtime_history_v15",
-      purchases: "purchase_history_v8"
+      workers: "overtime_workers_v12",
+      history: "overtime_history_v12",
+      purchases: "purchase_history_v5"
     };
 
     const EDIT_PASSWORD = "1004";
@@ -519,7 +506,6 @@
       { name: "한동홍", band: "갑", dept: "제분" },
       { name: "원종민", band: "갑", dept: "제분" },
       { name: "고경한", band: "갑", dept: "제분" },
-
       { name: "이승길", band: "갑", dept: "정선" },
       { name: "신형태", band: "갑", dept: "정선" },
       { name: "박시환", band: "갑", dept: "정선" },
@@ -536,7 +522,6 @@
       { name: "임준수", band: "을", dept: "제분" },
       { name: "김정민", band: "을", dept: "제분" },
       { name: "방정환", band: "을", dept: "제분" },
-
       { name: "구희철", band: "을", dept: "정선" },
       { name: "문창조", band: "을", dept: "정선" },
       { name: "박태원", band: "을", dept: "정선" },
@@ -553,7 +538,6 @@
       { name: "탁영수", band: "병", dept: "제분" },
       { name: "장진학", band: "병", dept: "제분" },
       { name: "공민규", band: "병", dept: "제분" },
-
       { name: "장종준", band: "병", dept: "정선" },
       { name: "박종현", band: "병", dept: "정선" },
       { name: "이정배", band: "병", dept: "정선" },
@@ -563,9 +547,7 @@
       { name: "황민수", band: "갑", dept: "대포장" },
       { name: "강현묵", band: "갑", dept: "대포장" },
       { name: "이철민", band: "갑", dept: "대포장" },
-
       { name: "백명현", band: "갑", dept: "품질관리" },
-
       { name: "방성준", band: "갑", dept: "소포장" },
       { name: "이현우", band: "갑", dept: "소포장" },
       { name: "김현학", band: "갑", dept: "소포장" },
@@ -575,9 +557,7 @@
       { name: "이성민", band: "을", dept: "대포장" },
       { name: "김민석", band: "을", dept: "대포장" },
       { name: "추민수", band: "을", dept: "대포장" },
-
       { name: "이호연", band: "을", dept: "품질관리" },
-
       { name: "최인호", band: "을", dept: "소포장" },
       { name: "이현수", band: "을", dept: "소포장" },
       { name: "정영훈", band: "을", dept: "소포장" },
@@ -587,9 +567,7 @@
       { name: "이태수", band: "병", dept: "대포장" },
       { name: "구봉석", band: "병", dept: "대포장" },
       { name: "백승철", band: "병", dept: "대포장" },
-
       { name: "장기호", band: "병", dept: "품질관리" },
-
       { name: "백종환", band: "병", dept: "소포장" },
       { name: "신진식", band: "병", dept: "소포장" },
       { name: "배상수", band: "병", dept: "소포장" },
@@ -655,8 +633,6 @@
       ["을", "병", "갑"],
       ["병", "갑", "을"]
     ];
-
-    let workerPanelOpen = true;
 
     function load(key, fallback) {
       try {
@@ -875,13 +851,7 @@
 
       let html = "<tr><th>성명</th><th>반</th><th>부서</th></tr>";
       workers.forEach(w => {
-        html += `
-          <tr>
-            <td>${w.name}</td>
-            <td>${w.band}</td>
-            <td>${w.dept}</td>
-          </tr>
-        `;
+        html += `<tr><td>${w.name}</td><td>${w.band}</td><td>${w.dept}</td></tr>`;
       });
 
       document.getElementById("workerTable").innerHTML = html;
@@ -914,7 +884,17 @@
       summary.textContent = `${date} 조회 결과 ${history.length}건`;
 
       let html = "<tr><th>구분</th><th>성명</th><th>작업내용</th><th>작업시간</th><th>비고</th></tr>";
-      history.forEach(item => {
+      history.forEach((item, index) => {
+        const historyIndex = getHistory().findIndex(h =>
+          h.date === item.date &&
+          h.workerName === item.workerName &&
+          h.absentName === item.absentName &&
+          h.absenceType === item.absenceType &&
+          h.note === item.note &&
+          h.totalWork === item.totalWork &&
+          h.overtime === item.overtime
+        );
+
         html += `
           <tr>
             <td>${item.dept}</td>
@@ -1072,18 +1052,6 @@
       document.getElementById("editNote").value = row.note || "";
     }
 
-    function toggleWorkerPanel() {
-      workerPanelOpen = !workerPanelOpen;
-      document.getElementById("toggleWorkerPanelBtn").textContent = workerPanelOpen ? "숨기기" : "열기";
-      document.getElementById("workerTableWrap").style.display = workerPanelOpen ? "block" : "none";
-    }
-
-    function updateWorkersView() {
-      renderWorkerList();
-      renderWorkerTable();
-      setMessage("workerMessage", "인원관리 변경사항을 업데이트했습니다.", "success");
-    }
-
     document.getElementById("previewBtn").addEventListener("click", () => {
       try {
         const result = calculateWorkResult({
@@ -1146,20 +1114,18 @@
 
       workers.push({ name, band, dept });
       setWorkers(workers);
-      document.getElementById("newName").value = "";
-      setMessage("workerMessage", "인원을 추가했습니다. 업데이트를 눌러 반영하세요.", "success");
-    });
 
-    document.getElementById("toggleWorkerPanelBtn").addEventListener("click", toggleWorkerPanel);
-    document.getElementById("updateWorkersBtn").addEventListener("click", updateWorkersView);
+      renderWorkerList();
+      renderWorkerTable();
+
+      document.getElementById("newName").value = "";
+      setMessage("workerMessage", "인원을 추가했습니다.", "success");
+    });
 
     document.getElementById("resetWorkersBtn").addEventListener("click", () => {
       setWorkers(defaultWorkers);
       renderWorkerList();
       renderWorkerTable();
-      workerPanelOpen = true;
-      document.getElementById("toggleWorkerPanelBtn").textContent = "숨기기";
-      document.getElementById("workerTableWrap").style.display = "block";
       setMessage("workerMessage", "기본 인원을 불러왔습니다.", "success");
     });
 
@@ -1347,8 +1313,7 @@
     });
 
     function init() {
-      const savedWorkers = getWorkers();
-      if (!savedWorkers.length) {
+      if (!getWorkers().length) {
         setWorkers(defaultWorkers);
       }
 
