@@ -1,457 +1,1392 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>탱크 재고 현황</title>
-<style>
-  body{font-family:Arial;margin:0;background:#f4f4f4}
-  .controls{padding:14px;background:#fff;border-bottom:1px solid #ddd}
-  textarea{width:100%;height:170px}
-  button{padding:8px 14px;margin-right:8px;margin-top:6px}
-  input[type="date"]{padding:6px 10px;margin-top:6px}
-  .wrap{padding:10px}
-  svg{background:#fff;border:2px solid #111; display:block; margin:0 auto; max-width:100%; height:auto;}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>연장근무 관리</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --line: #d9dee8;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --danger: #dc2626;
+      --success: #16a34a;
+      --soft: #eef2ff;
+      --overlay: rgba(15, 23, 42, 0.55);
+    }
 
-  .tank circle{stroke-width:3; fill:#fff;}
-  .zero circle{fill:#fff7b3;}        /* 0일때 연노랑 */
-  .over85 circle{fill:#ffd0d0;}      /* 85%이상 연빨강 */
+    * { box-sizing: border-box; }
 
-  .tank .name{font-size:18px;text-anchor:middle;dominant-baseline:middle;font-weight:800}
-  .tank .qty{font-size:18px;text-anchor:middle;dominant-baseline:middle;font-weight:800; fill:#111}
-  .tank .pct{font-size:14px;text-anchor:middle;dominant-baseline:middle;font-weight:700; fill:#111}
+    body {
+      margin: 0;
+      font-family: Arial, "Malgun Gothic", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
 
-  .brtank rect{fill:#fff;stroke:#111;stroke-width:3}
-  .brtank .nm{font-size:16px;text-anchor:middle;dominant-baseline:middle;font-weight:800}
-  .brtank .qt{font-size:14px;text-anchor:middle;dominant-baseline:middle;font-weight:800}
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 16px;
+    }
 
-  .brzero rect{fill:#fff7b3;}
-  .brover85 rect{fill:#ffd0d0;}
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+    }
 
-  .zone{fill:none;stroke:#111;stroke-width:3}
-  .zoneTitle{font-size:34px;font-weight:500;fill:#111}
-  .zoneNoteRed{font-size:22px;font-weight:900;fill:#d10000}
-  .zoneNoteBlue{font-size:22px;font-weight:900;fill:#0066cc}
-  .zoneNotePurple{font-size:20px;font-weight:900;fill:#7a2bd1}
-  .zoneNoteGreen{font-size:20px;font-weight:900;fill:#00a651}
-</style>
+    h1, h2, h3 {
+      margin: 0 0 12px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .section-header h2 {
+      margin: 0;
+    }
+
+    .inline-btn {
+      width: auto;
+      min-width: 100px;
+      margin-top: 0;
+      padding: 10px 14px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin-bottom: 16px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      margin-top: 10px;
+    }
+
+    input, select, button, textarea {
+      width: 100%;
+      font: inherit;
+      min-height: 44px;
+    }
+
+    input, select, textarea {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: #fff;
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 12px 14px;
+      cursor: pointer;
+      font-weight: 700;
+      margin-top: 10px;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn-secondary {
+      background: var(--soft);
+      color: #1e3a8a;
+    }
+
+    .btn-success {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .btn-danger {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .btn-row-4 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .single-btn {
+      margin-top: 10px;
+    }
+
+    .result-box {
+      background: #f8fafc;
+      border: 1px dashed var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      margin-top: 12px;
+      line-height: 1.7;
+      font-size: 14px;
+    }
+
+    .message {
+      margin-top: 10px;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .message.success { color: var(--success); }
+    .message.error { color: var(--danger); }
+
+    .notice {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin-top: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 820px;
+      font-size: 14px;
+      background: #fff;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 10px 8px;
+      text-align: center;
+      vertical-align: middle;
+      white-space: normal;
+      word-break: keep-all;
+    }
+
+    th {
+      background: #f8fafc;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: var(--overlay);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 1000;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-content {
+      width: min(760px, 100%);
+      max-height: 92vh;
+      overflow-y: auto;
+      background: #fff;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.18);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .close-btn {
+      width: auto;
+      min-width: 44px;
+      margin-top: 0;
+      background: #e5e7eb;
+      color: #111827;
+      padding: 10px 12px;
+    }
+
+    .thumb {
+      max-width: 180px;
+      max-height: 180px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      margin-top: 10px;
+      display: none;
+      object-fit: cover;
+      background: #fff;
+    }
+
+    .preview-file {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 8px;
+    }
+
+    .purchase-img {
+      max-width: 100px;
+      max-height: 100px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+    }
+
+    .link-cell {
+      max-width: 220px;
+      word-break: break-all;
+      margin: 0 auto;
+    }
+
+    .hidden-row {
+      opacity: 0.45;
+      background: #fafafa;
+    }
+
+    .hidden-box {
+      display: none;
+    }
+
+    @media (max-width: 640px) {
+      .container { padding: 12px; }
+      .card { padding: 14px; }
+      .btn-row, .btn-row-4 { grid-template-columns: 1fr; }
+      .subtitle, .notice { font-size: 12px; }
+      table { min-width: 760px; font-size: 13px; }
+      .modal-content { padding: 14px; }
+      .section-header { flex-direction: column; align-items: stretch; }
+      .inline-btn { width: 100%; }
+    }
+  </style>
 </head>
 <body>
+  <div class="container">
+    <h1>연장근무 관리</h1>
+    <p class="subtitle">날짜, 본인 이름, 휴가자 이름을 입력하면 반변경에 따라 작업시간과 연장시간을 계산합니다.</p>
 
-<div class="controls">
-  <div style="font-size:13px;color:#666;line-height:1.45">
-    - 엑셀 표 복사 → 아래에 붙여넣기<br>
-    - Raw 형식: <b>TANK NO.</b>(0열) / <b>측정량</b>(2열) / <b>제품명</b>(4열)<br>
-    - 탱크번호 공백 자동 제거: 예) <b>L&nbsp;&nbsp;9</b> → <b>L9</b>, <b>B&nbsp;1</b> → <b>B1</b><br>
-    - 도면에 없는 탱크는 자동 무시
+    <div class="card">
+      <h2>1. 연장근무 입력</h2>
+
+      <label for="workDate">날짜</label>
+      <input type="date" id="workDate" />
+
+      <label for="workerName">본인 이름</label>
+      <input list="workersList" id="workerName" placeholder="이름 입력 또는 선택" />
+
+      <label for="absentName">휴가자 이름</label>
+      <input list="workersList" id="absentName" placeholder="이름 입력 또는 선택" />
+
+      <datalist id="workersList"></datalist>
+
+      <label for="absenceType">사유 유형</label>
+      <select id="absenceType">
+        <option value="휴가">휴가</option>
+        <option value="연차">연차</option>
+        <option value="오전반차">오전반차</option>
+        <option value="오후반차">오후반차</option>
+      </select>
+
+      <label for="note">비고</label>
+      <input type="text" id="note" placeholder="예: 현장 요청, 제분, 설비대응" />
+
+      <div class="btn-row">
+        <button class="btn-primary" id="previewBtn">계산</button>
+        <button class="btn-secondary" id="saveBtn">계산 후 저장</button>
+      </div>
+
+      <div id="calcMessage" class="message"></div>
+      <div id="calcResult" class="result-box" style="display:none;"></div>
+    </div>
+
+    <div class="card">
+      <h2>2. 인원관리</h2>
+      <p class="notice">인원 추가 후 업데이트를 누르면 입력 목록에 반영됩니다. 숨기기를 누르면 입력 목록에서만 빠지고, 열기를 누르면 다시 보입니다.</p>
+
+      <label for="newName">이름</label>
+      <input type="text" id="newName" placeholder="예: 홍길동" />
+
+      <label for="newBand">반</label>
+      <select id="newBand">
+        <option value="갑">갑</option>
+        <option value="을">을</option>
+        <option value="병">병</option>
+      </select>
+
+      <label for="newDept">부서</label>
+      <select id="newDept">
+        <option value="제분">제분</option>
+        <option value="정선">정선</option>
+        <option value="대포장">대포장</option>
+        <option value="소포장">소포장</option>
+        <option value="품질관리">품질관리</option>
+        <option value="기술">기술</option>
+        <option value="생산2팀">생산2팀</option>
+      </select>
+
+      <div class="btn-row-4">
+        <button class="btn-success" id="addWorkerBtn">인원 추가</button>
+        <button class="btn-secondary" id="toggleWorkerPanelBtn">숨기기</button>
+        <button class="btn-primary" id="updateWorkersBtn">업데이트</button>
+        <button class="btn-secondary" id="resetWorkersBtn">기본 인원 불러오기</button>
+      </div>
+
+      <div id="workerMessage" class="message"></div>
+
+      <div class="table-wrap" id="workerTableWrap">
+        <table id="workerTable"></table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-header">
+        <h2>3. 일자별 연장근무 히스토리 조회</h2>
+        <button class="btn-secondary inline-btn" id="openEditHistoryBtn">수정</button>
+      </div>
+
+      <label for="historyDate">조회 날짜</label>
+      <input type="date" id="historyDate" />
+
+      <button class="btn-primary" id="searchHistoryBtn">조회</button>
+
+      <div id="historySummary" class="message"></div>
+
+      <div class="table-wrap">
+        <table id="historyTable"></table>
+      </div>
+    </div>
+
+    <div class="single-btn">
+      <button class="btn-primary" id="openPurchaseBtn">구매 신청 열기</button>
+    </div>
+
+    <div class="card">
+      <h2>4. 구매 신청 목록</h2>
+      <p class="notice">구매 신청은 저장된 순서대로 계속 쌓이며, 각 항목의 마감 버튼으로 개별 종료합니다.</p>
+
+      <div id="purchaseHistorySummary" class="message"></div>
+
+      <div class="table-wrap">
+        <table id="purchaseHistoryTable"></table>
+      </div>
+    </div>
   </div>
-  <textarea id="rawData" placeholder="여기에 붙여넣기 (탭 구분)"></textarea><br>
-  <button onclick="saveData()">저장(오늘)</button>
-  <input type="date" id="datePicker">
-  <button onclick="loadByDate()">날짜조회</button>
-</div>
-
-<div class="wrap">
-  <svg id="canvas" width="1920" height="1080" viewBox="0 0 1920 1080" preserveAspectRatio="xMinYMin meet"></svg>
-</div>
-
-<script>
-const svg = document.getElementById("canvas");
-
-/* =========================================================
-   미세조정 파라미터
-========================================================= */
-const PACK_TANK_DY = 30;
-
-/* ✅ 요청 반영
-   - L1~L6: 오른쪽 +30px
-   - 보라색 글씨: 오른쪽 +30px
-   - B1~B4: 왼쪽 -20px
-*/
-const L16_SHIFT_X = 30;
-const PURPLE_SHIFT_X = 30;
-const B_SHIFT_X = -20;
-
-/* =========================================================
-   건물(검정선) 레이아웃
-========================================================= */
-const Z = {
-  outer: {x:20, y:20, w:1880, h:1040},
-
-  pack:  {x:40, y:40, w:600, h:520},
-  office:{x:40, y:560, w:90, h:500},
-
-  newMill:{x:640, y:40, w:550, h:520},
-
-  pillar:{x:1160, y:40, w:150, h:520},
-  oldMill:{x:1310, y:40, w:590, h:520},
-
-  branArea:{x:1720, y:40, w:180, h:520},
-};
-
-/* 원형탱크 */
-const R = 33;
-const GX = 72;
-const GY = 72;
-
-/* Br 사각탱크 간격 */
-const BR_STEP = 5;
-
-/* 포장동 탱크 시작점 */
-const PACK_START = {x: Z.pack.x + 40, y: Z.pack.y + 120 + PACK_TANK_DY};
-
-/* L1~L6 기준점 */
-const L16_START = {
-  x: (Z.newMill.x + 60) - 50 + L16_SHIFT_X,
-  y: (Z.newMill.y + 420) + 60
-};
-
-/* B1~B4 기준점 */
-const B_GX = 64;
-const B_GY = 64;
-const GAP_LEFT = Z.newMill.x + Z.newMill.w;
-const GAP_RIGHT = Z.oldMill.x;
-const GAP_MID = (GAP_LEFT + GAP_RIGHT) / 2;
-const B_START = {
-  x: (GAP_MID - B_GX/2) - 20 + B_SHIFT_X,
-  y: (Z.newMill.y + 410) + 60
-};
-
-/* Br 정렬 */
-const OLD_CORE = {x: Z.oldMill.x, y: Z.oldMill.y, w: (Z.branArea.x - Z.oldMill.x), h: Z.oldMill.h};
-const BR_LINE_Y = Z.oldMill.y + 420;
-const BR_COL_Y  = Z.oldMill.y + 420;
-
-function calcBrRowBoxWidth(){
-  const totalGaps = BR_STEP * 7;
-  const w = (OLD_CORE.w - totalGaps) / 8;
-  return Math.max(28, Math.floor(w));
-}
-let BR_BOX_W = Math.max(20, calcBrRowBoxWidth() - 20);
-const BR_BOX_H = 54;
-
-function brRowStartX(){
-  const total = 8*BR_BOX_W + 7*BR_STEP;
-  return OLD_CORE.x + Math.max(0, (OLD_CORE.w - total)/2);
-}
-
-const BULK_BASE = {x: 820, y: 720};
-
-const tankLayout = {
-  /* Packaging Bin (빨강) */
-  "A6":{x:PACK_START.x+0*GX,y:PACK_START.y+0*GY,cap:80},
-  "A5":{x:PACK_START.x+1*GX,y:PACK_START.y+0*GY,cap:80},
-  "3P8":{x:PACK_START.x+2*GX,y:PACK_START.y+0*GY,cap:45},
-  "3P7":{x:PACK_START.x+3*GX,y:PACK_START.y+0*GY,cap:45},
-  "2P8":{x:PACK_START.x+4*GX,y:PACK_START.y+0*GY,cap:45},
-  "2P7":{x:PACK_START.x+5*GX,y:PACK_START.y+0*GY,cap:45},
-  "1P8":{x:PACK_START.x+6*GX,y:PACK_START.y+0*GY,cap:45},
-  "1P7":{x:PACK_START.x+7*GX,y:PACK_START.y+0*GY,cap:45},
-
-  "A4":{x:PACK_START.x+0*GX,y:PACK_START.y+1*GY,cap:80},
-  "A3":{x:PACK_START.x+1*GX,y:PACK_START.y+1*GY,cap:80},
-  "3P6":{x:PACK_START.x+2*GX,y:PACK_START.y+1*GY,cap:45},
-  "3P5":{x:PACK_START.x+3*GX,y:PACK_START.y+1*GY,cap:45},
-  "2P6":{x:PACK_START.x+4*GX,y:PACK_START.y+1*GY,cap:45},
-  "2P5":{x:PACK_START.x+5*GX,y:PACK_START.y+1*GY,cap:45},
-  "1P6":{x:PACK_START.x+6*GX,y:PACK_START.y+1*GY,cap:45},
-  "1P5":{x:PACK_START.x+7*GX,y:PACK_START.y+1*GY,cap:45},
-
-  "A2":{x:PACK_START.x+0*GX,y:PACK_START.y+2*GY,cap:80},
-  "A1":{x:PACK_START.x+1*GX,y:PACK_START.y+2*GY,cap:80},
-  "3P4":{x:PACK_START.x+2*GX,y:PACK_START.y+2*GY,cap:45},
-  "3P3":{x:PACK_START.x+3*GX,y:PACK_START.y+2*GY,cap:45},
-  "2P4":{x:PACK_START.x+4*GX,y:PACK_START.y+2*GY,cap:45},
-  "2P3":{x:PACK_START.x+5*GX,y:PACK_START.y+2*GY,cap:45},
-  "1P4":{x:PACK_START.x+6*GX,y:PACK_START.y+2*GY,cap:45},
-  "1P3":{x:PACK_START.x+7*GX,y:PACK_START.y+2*GY,cap:45},
-
-  "3P2":{x:PACK_START.x+2*GX,y:PACK_START.y+3*GY,cap:45},
-  "3P1":{x:PACK_START.x+3*GX,y:PACK_START.y+3*GY,cap:45},
-  "2P2":{x:PACK_START.x+4*GX,y:PACK_START.y+3*GY,cap:45},
-  "2P1":{x:PACK_START.x+5*GX,y:PACK_START.y+3*GY,cap:45},
-  "1P2":{x:PACK_START.x+6*GX,y:PACK_START.y+3*GY,cap:45},
-  "1P1":{x:PACK_START.x+7*GX,y:PACK_START.y+3*GY,cap:45},
-
-  /* T 라인 (파랑) */
-  "T6":{x:PACK_START.x+2*GX,y:PACK_START.y+4*GY,cap:80},
-  "T5":{x:PACK_START.x+3*GX,y:PACK_START.y+4*GY,cap:80},
-  "T4":{x:PACK_START.x+4*GX,y:PACK_START.y+4*GY,cap:80},
-  "T3":{x:PACK_START.x+5*GX,y:PACK_START.y+4*GY,cap:80},
-  "T2":{x:PACK_START.x+6*GX,y:PACK_START.y+4*GY,cap:80},
-  "T1":{x:PACK_START.x+7*GX,y:PACK_START.y+4*GY,cap:80},
-
-  /* L1~L6 (보라) */
-  "L1":{x:L16_START.x+0*GX,y:L16_START.y,cap:25},
-  "L2":{x:L16_START.x+1*GX,y:L16_START.y,cap:25},
-  "L3":{x:L16_START.x+2*GX,y:L16_START.y,cap:25},
-  "L4":{x:L16_START.x+3*GX,y:L16_START.y,cap:25},
-  "L5":{x:L16_START.x+4*GX,y:L16_START.y,cap:25},
-  "L6":{x:L16_START.x+5*GX,y:L16_START.y,cap:25},
-
-  /* B1~B4 (녹색 원) */
-  "B4":{x:B_START.x+0*B_GX,y:B_START.y-1*B_GY,cap:35},
-  "B1":{x:B_START.x+1*B_GX,y:B_START.y-1*B_GY,cap:35},
-  "B3":{x:B_START.x+0*B_GX,y:B_START.y+0*B_GY,cap:35},
-  "B2":{x:B_START.x+1*B_GX,y:B_START.y+0*B_GY,cap:35},
-
-  /* 하단 Bulk Loading Bin */
-  "L15":{x:BULK_BASE.x+0*GX,y:BULK_BASE.y+0*GY,cap:60},
-  "L16":{x:BULK_BASE.x+1*GX,y:BULK_BASE.y+0*GY,cap:60},
-  "L17":{x:BULK_BASE.x+2*GX,y:BULK_BASE.y+0*GY,cap:60},
-  "L18":{x:BULK_BASE.x+3*GX,y:BULK_BASE.y+0*GY,cap:60},
-  "L19":{x:BULK_BASE.x+4*GX,y:BULK_BASE.y+0*GY,cap:40},
-  "L20":{x:BULK_BASE.x+5*GX,y:BULK_BASE.y+0*GY,cap:40},
-
-  "L21":{x:BULK_BASE.x+0*GX,y:BULK_BASE.y+1*GY,cap:60},
-  "L22":{x:BULK_BASE.x+1*GX,y:BULK_BASE.y+1*GY,cap:60},
-  "L23":{x:BULK_BASE.x+2*GX,y:BULK_BASE.y+1*GY,cap:60},
-  "L24":{x:BULK_BASE.x+3*GX,y:BULK_BASE.y+1*GY,cap:60},
-  "L25":{x:BULK_BASE.x+4*GX,y:BULK_BASE.y+1*GY,cap:40},
-  "L26":{x:BULK_BASE.x+5*GX,y:BULK_BASE.y+1*GY,cap:40},
-
-  "L8": {x:BULK_BASE.x+6*GX,y:BULK_BASE.y+0*GY,cap:80},
-  "L7": {x:BULK_BASE.x+7*GX,y:BULK_BASE.y+0*GY,cap:80},
-  "L10":{x:BULK_BASE.x+6*GX,y:BULK_BASE.y+1*GY,cap:80},
-  "L9": {x:BULK_BASE.x+7*GX,y:BULK_BASE.y+1*GY,cap:80},
-
-  "L12":{x:BULK_BASE.x+6*GX,y:BULK_BASE.y+2*GY,cap:80},
-  "L11":{x:BULK_BASE.x+7*GX,y:BULK_BASE.y+2*GY,cap:80},
-  "L14":{x:BULK_BASE.x+6*GX,y:BULK_BASE.y+3*GY,cap:80},
-  "L13":{x:BULK_BASE.x+7*GX,y:BULK_BASE.y+3*GY,cap:80},
-};
-
-function buildBrLayout(){
-  const layout = {};
-  const labels = {Br12:"30t",Br11:"30t",Br10:"30t",Br9:"30t",Br8:"40t",Br7:"40t",Br6:"40t",Br5:"40t"};
-  const order = ["Br12","Br11","Br10","Br9","Br8","Br7","Br6","Br5"];
-
-  const startX = brRowStartX();
-  for(let i=0;i<order.length;i++){
-    const name = order[i];
-    layout[name] = { x: startX + i*(BR_BOX_W + BR_STEP), y: BR_LINE_Y, w: BR_BOX_W, h: BR_BOX_H, label: labels[name] };
-  }
-
-  const colW = Z.branArea.w, colX = Z.branArea.x;
-  const colH = 62, vGap = 4;
-  const vOrder = ["Br4","Br3","Br2","Br1"];
-  for(let i=0;i<vOrder.length;i++){
-    const name = vOrder[i];
-    layout[name] = { x: colX, y: BR_COL_Y + i*(colH+vGap), w: colW, h: colH, label: "100t" };
-  }
-  return layout;
-}
-const brLayout = buildBrLayout();
-
-function strokeColorByTank(name){
-  if(name.startsWith("A") || name.startsWith("1P") || name.startsWith("2P") || name.startsWith("3P")) return "#d10000";
-  if(name.startsWith("T")) return "#0066cc";
-  if(["L1","L2","L3","L4","L5","L6"].includes(name)) return "#7a2bd1";
-  if(name.startsWith("L")) return "#0066cc";
-  if(name.startsWith("B")) return "#00a651";
-  return "#111";
-}
-
-function addSvg(tag, attrs={}, text=""){
-  const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
-  for(const k in attrs) el.setAttribute(k, attrs[k]);
-  if(text) el.textContent = text;
-  svg.appendChild(el);
-  return el;
-}
-
-function drawZones(){
-  svg.innerHTML = "";
-
-  addSvg("rect",{class:"zone",x:Z.outer.x,y:Z.outer.y,width:Z.outer.w,height:Z.outer.h});
-  addSvg("rect",{class:"zone",x:Z.pack.x,y:Z.pack.y,width:Z.pack.w,height:Z.pack.h});
-  addSvg("rect",{class:"zone",x:Z.office.x,y:Z.office.y,width:Z.office.w,height:Z.office.h});
-  addSvg("rect",{class:"zone",x:Z.newMill.x,y:Z.newMill.y,width:Z.newMill.w,height:Z.newMill.h});
-  addSvg("rect",{class:"zone",x:Z.pillar.x,y:Z.pillar.y,width:Z.pillar.w,height:Z.pillar.h});
-  addSvg("rect",{class:"zone",x:Z.oldMill.x,y:Z.oldMill.y,width:Z.oldMill.w,height:Z.oldMill.h});
-  addSvg("rect",{class:"zone",x:Z.branArea.x,y:Z.branArea.y,width:Z.branArea.w,height:Z.branArea.h});
-
-  addSvg("text",{x:Z.office.x+45,y:Z.office.y+250,transform:`rotate(90 ${Z.office.x+45} ${Z.office.y+250})`,fontSize:"26",fontWeight:"700",fill:"#111"}, "OFFICE");
-
-  addSvg("text",{class:"zoneTitle",x:Z.newMill.x+140,y:Z.newMill.y+210}, "Milling Area (New)");
-  addSvg("text",{class:"zoneTitle",x:Z.oldMill.x+140,y:Z.oldMill.y+210}, "Milling Area (Old)");
-
-  addSvg("text",{class:"zoneNoteRed",x:Z.pack.x+30,y:Z.pack.y+35}, "Packaging Bin : 45M/T x 24Q'ty = 1080M/T");
-  addSvg("text",{class:"zoneNoteRed",x:Z.pack.x+165,y:Z.pack.y+62}, "80M/T x 6Q'ty = 450M/T");
-  addSvg("text",{class:"zoneNoteBlue",x:Z.pack.x+30,y:Z.pack.y+92}, "Bulk Loding Bin : 80M/T x 6Q'ty = 420M/T");
-
-  /* ✅ 보라색 글씨 +30px */
-  addSvg("text",{class:"zoneNotePurple",x:(Z.newMill.x+70)-90+PURPLE_SHIFT_X,y:(Z.newMill.y+380)+60},
-    "Semi-finished Bin : 25M/T x 6Q'ty = 150M/T");
-
-  addSvg("text",{class:"zoneNoteGreen",x:Z.newMill.x + 300,y:Z.newMill.y + Z.newMill.h + 30},
-    "Primix Bin : 35M/T x 4Q'ty = 140M/T");
-
-  addSvg("text",{x:Z.oldMill.x+35,y:Z.oldMill.y+380,fontSize:"20",fontWeight:"900",fill:"#111"},
-    "Bran byproduct Bin : 30M/T x 8Q'ty = 240M/T");
-
-  addSvg("text",{x:Z.oldMill.x+450,y:Z.oldMill.y+610,fontSize:"22",fontWeight:"900",fill:"#111"}, "Bran byproduct Bin :");
-  addSvg("text",{x:Z.oldMill.x+420,y:Z.oldMill.y+640,fontSize:"22",fontWeight:"900",fill:"#111"}, "100M/T x 4Q'ty = 400M/T");
-
-  addSvg("text",{class:"zoneNoteBlue",x:760,y:985}, "Bulk Loding Bin : 40M/T x 12Q'ty + 80M/T x 8Q'ty = 1600M/T");
-}
-
-function drawBranBig(){
-  const cx = Z.branArea.x + Z.branArea.w/2;
-  const cy = Z.branArea.y + 110;
-  addSvg("circle",{cx,cy,r:58,stroke:"#111","stroke-width":3,fill:"#fff"});
-  addSvg("text",{x:cx,y:cy-10,fontSize:"22",fontWeight:"900",textAnchor:"middle"},"Bran");
-  addSvg("text",{x:cx,y:cy+18,fontSize:"22",fontWeight:"900",textAnchor:"middle"},"400t");
-}
-
-function drawCircleTank(name, x, y){
-  const g = document.createElementNS("http://www.w3.org/2000/svg","g");
-  g.setAttribute("class","tank");
-  g.setAttribute("id","tank_"+name);
-
-  const c = document.createElementNS("http://www.w3.org/2000/svg","circle");
-  c.setAttribute("cx",x);
-  c.setAttribute("cy",y);
-  c.setAttribute("r",R);
-  c.setAttribute("stroke", strokeColorByTank(name));
-
-  const nm = document.createElementNS("http://www.w3.org/2000/svg","text");
-  nm.setAttribute("class","name");
-  nm.setAttribute("x",x);
-  nm.setAttribute("y",y-12);
-  nm.setAttribute("fill", strokeColorByTank(name));
-  nm.textContent = name;
-
-  const qt = document.createElementNS("http://www.w3.org/2000/svg","text");
-  qt.setAttribute("class","qty");
-  qt.setAttribute("x",x);
-  qt.setAttribute("y",y+10);
-  qt.setAttribute("id","qty_"+name);
-  qt.textContent = "-";
-
-  const pct = document.createElementNS("http://www.w3.org/2000/svg","text");
-  pct.setAttribute("class","pct");
-  pct.setAttribute("x",x);
-  pct.setAttribute("y",y+30);
-  pct.setAttribute("id","pct_"+name);
-  pct.textContent = "";
-
-  g.appendChild(c); g.appendChild(nm); g.appendChild(qt); g.appendChild(pct);
-  svg.appendChild(g);
-}
-
-function drawBrTank(name, x, y, w, h, label){
-  const g = document.createElementNS("http://www.w3.org/2000/svg","g");
-  g.setAttribute("class","brtank");
-  g.setAttribute("id","br_"+name);
-
-  const r = document.createElementNS("http://www.w3.org/2000/svg","rect");
-  r.setAttribute("x",x);
-  r.setAttribute("y",y);
-  r.setAttribute("width",w);
-  r.setAttribute("height",h);
-
-  const nm = document.createElementNS("http://www.w3.org/2000/svg","text");
-  nm.setAttribute("class","nm");
-  nm.setAttribute("x",x+w/2);
-  nm.setAttribute("y",y+h/2-8);
-  nm.textContent = name;
-
-  const qt = document.createElementNS("http://www.w3.org/2000/svg","text");
-  qt.setAttribute("class","qt");
-  qt.setAttribute("x",x+w/2);
-  qt.setAttribute("y",y+h/2+14);
-  qt.textContent = label || "";
-
-  g.appendChild(r); g.appendChild(nm); g.appendChild(qt);
-  svg.appendChild(g);
-}
-
-/* Raw 파싱 */
-function normalizeTankId(s){ return (s||"").toString().replace(/\s+/g,"").trim(); }
-function parseNumber(s){
-  if(s===null || s===undefined) return 0;
-  const v = s.toString().replace(/,/g,"").trim();
-  const n = parseFloat(v);
-  return isNaN(n) ? 0 : n;
-}
-function parseRaw(raw){
-  const lines = raw.trim().split(/\r?\n/);
-  const data = {};
-  for(const line of lines){
-    const cols = line.split("\t");
-    if(cols.length < 3) continue;
-
-    const tank = normalizeTankId(cols[0]);
-    if(!tank) continue;
-    if(!tankLayout[tank]) continue;
-
-    const qtyT = parseNumber(cols[2]);
-    const product = (cols[4]||"").trim();
-    data[tank] = { qty: qtyT, product };
-  }
-  return data;
-}
-
-function render(data){
-  for(const name in tankLayout){
-    const layout = tankLayout[name];
-    const g = document.getElementById("tank_"+name);
-    const qtyEl = document.getElementById("qty_"+name);
-    const pctEl = document.getElementById("pct_"+name);
-
-    let qty = 0;
-    if(data && data[name]) qty = data[name].qty;
-
-    const percent = layout.cap ? Math.round((qty/layout.cap)*100) : 0;
-
-    qtyEl.textContent = `${qty}t`;
-    pctEl.textContent = layout.cap ? `(${percent}%)` : "";
-
-    g.classList.remove("zero","over85");
-    if(qty === 0) g.classList.add("zero");
-    if(layout.cap && percent >= 85) g.classList.add("over85");
-  }
-}
-
-function todayStr(){ return new Date().toISOString().slice(0,10); }
-
-function saveData(){
-  const raw = document.getElementById("rawData").value;
-  if(!raw.trim()){ alert("Raw data를 붙여넣어 주세요."); return; }
-  const date = todayStr();
-  const parsed = parseRaw(raw);
-  localStorage.setItem("tank_"+date, JSON.stringify(parsed));
-  alert("저장 완료 : " + date);
-  render(parsed);
-}
-
-function loadByDate(){
-  const date = document.getElementById("datePicker").value;
-  if(!date){ alert("날짜를 선택해 주세요."); return; }
-  const saved = localStorage.getItem("tank_"+date);
-  if(!saved){ alert("해당 날짜 데이터가 없습니다."); return; }
-  render(JSON.parse(saved));
-}
-
-function init(){
-  drawZones();
-  drawBranBig();
-
-  for(const name in tankLayout){
-    const t = tankLayout[name];
-    drawCircleTank(name, t.x, t.y);
-  }
-
-  for(const name in brLayout){
-    const b = brLayout[name];
-    drawBrTank(name, b.x, b.y, b.w, b.h, b.label);
-  }
-
-  const saved = localStorage.getItem("tank_"+todayStr());
-  if(saved) render(JSON.parse(saved));
-}
-init();
-</script>
+
+  <div class="modal" id="purchaseModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>구매 신청</h2>
+        <button type="button" class="close-btn" id="closePurchaseBtn">닫기</button>
+      </div>
+
+      <label for="purchaseDate">신청일</label>
+      <input type="date" id="purchaseDate" />
+
+      <label for="purchaseApplicant">신청자</label>
+      <input list="workersList" id="purchaseApplicant" placeholder="이름 입력 또는 선택" />
+
+      <label for="purchaseItem">품목명</label>
+      <input type="text" id="purchaseItem" placeholder="예: 베어링, 장갑, 윤활유" />
+
+      <label for="purchaseLink">링크</label>
+      <input type="text" id="purchaseLink" placeholder="예: 구매 링크 입력" />
+
+      <label for="purchaseImage">사진 업로드</label>
+      <input type="file" id="purchaseImage" accept="image/*" />
+      <div id="purchaseFileName" class="preview-file"></div>
+      <img id="purchasePreview" class="thumb" alt="미리보기" />
+
+      <label for="purchaseNote">비고 (사용목적 및 사용부위)</label>
+      <textarea id="purchaseNote" placeholder="예: 정선 라인 베어링 교체용 / 시프터 하부"></textarea>
+
+      <div class="btn-row">
+        <button class="btn-primary" id="savePurchaseBtn">구매 신청 저장</button>
+        <button class="btn-secondary" id="clearPurchaseBtn">입력 초기화</button>
+      </div>
+
+      <div id="purchaseMessage" class="message"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="passwordModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>조회결과 수정 인증</h2>
+        <button type="button" class="close-btn" id="closePasswordBtn">닫기</button>
+      </div>
+
+      <label for="editPassword">비밀번호</label>
+      <input type="password" id="editPassword" placeholder="비밀번호 입력" />
+
+      <div class="btn-row">
+        <button class="btn-primary" id="confirmPasswordBtn">확인</button>
+        <button class="btn-secondary" id="cancelPasswordBtn">취소</button>
+      </div>
+
+      <div id="passwordMessage" class="message"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="editHistoryModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>연장근무 조회결과 수정</h2>
+        <button type="button" class="close-btn" id="closeEditHistoryBtn">닫기</button>
+      </div>
+
+      <label for="editTargetDate">수정 대상 날짜</label>
+      <input type="date" id="editTargetDate" />
+
+      <button class="btn-primary" id="loadEditRowsBtn">조회결과 불러오기</button>
+
+      <label for="editRowSelect">수정할 항목 선택</label>
+      <select id="editRowSelect"></select>
+
+      <label for="editWorkerName">본인 이름</label>
+      <input list="workersList" id="editWorkerName" placeholder="이름 입력 또는 선택" />
+
+      <label for="editAbsentName">휴가자 이름</label>
+      <input list="workersList" id="editAbsentName" placeholder="이름 입력 또는 선택" />
+
+      <label for="editAbsenceType">사유 유형</label>
+      <select id="editAbsenceType">
+        <option value="휴가">휴가</option>
+        <option value="연차">연차</option>
+        <option value="오전반차">오전반차</option>
+        <option value="오후반차">오후반차</option>
+      </select>
+
+      <label for="editNote">비고</label>
+      <input type="text" id="editNote" placeholder="비고 입력" />
+
+      <div class="btn-row">
+        <button class="btn-primary" id="saveEditHistoryBtn">수정 저장</button>
+        <button class="btn-danger" id="deleteEditHistoryBtn">선택 항목 삭제</button>
+      </div>
+
+      <div id="editHistoryMessage" class="message"></div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEYS = {
+      workers: "overtime_workers_v14",
+      history: "overtime_history_v14",
+      purchases: "purchase_history_v7"
+    };
+
+    const EDIT_PASSWORD = "1004";
+
+    const defaultWorkers = [
+      { name: "유흥선", band: "갑", dept: "제분", hidden: false },
+      { name: "최남호", band: "갑", dept: "제분", hidden: false },
+      { name: "정순철", band: "갑", dept: "제분", hidden: false },
+      { name: "고우석", band: "갑", dept: "제분", hidden: false },
+      { name: "박재록", band: "갑", dept: "제분", hidden: false },
+      { name: "박승기", band: "갑", dept: "제분", hidden: false },
+      { name: "장준연", band: "갑", dept: "제분", hidden: false },
+      { name: "김영주", band: "갑", dept: "제분", hidden: false },
+      { name: "한동홍", band: "갑", dept: "제분", hidden: false },
+      { name: "원종민", band: "갑", dept: "제분", hidden: false },
+      { name: "고경한", band: "갑", dept: "제분", hidden: false },
+      { name: "이승길", band: "갑", dept: "정선", hidden: false },
+      { name: "신형태", band: "갑", dept: "정선", hidden: false },
+      { name: "박시환", band: "갑", dept: "정선", hidden: false },
+
+      { name: "김수철", band: "을", dept: "제분", hidden: false },
+      { name: "김인수", band: "을", dept: "제분", hidden: false },
+      { name: "김수현", band: "을", dept: "제분", hidden: false },
+      { name: "송희열", band: "을", dept: "제분", hidden: false },
+      { name: "서기원", band: "을", dept: "제분", hidden: false },
+      { name: "박희복", band: "을", dept: "제분", hidden: false },
+      { name: "신승곤", band: "을", dept: "제분", hidden: false },
+      { name: "윤현철", band: "을", dept: "제분", hidden: false },
+      { name: "김민기", band: "을", dept: "제분", hidden: false },
+      { name: "임준수", band: "을", dept: "제분", hidden: false },
+      { name: "김정민", band: "을", dept: "제분", hidden: false },
+      { name: "방정환", band: "을", dept: "제분", hidden: false },
+      { name: "구희철", band: "을", dept: "정선", hidden: false },
+      { name: "문창조", band: "을", dept: "정선", hidden: false },
+      { name: "박태원", band: "을", dept: "정선", hidden: false },
+
+      { name: "박우진", band: "병", dept: "제분", hidden: false },
+      { name: "유인선", band: "병", dept: "제분", hidden: false },
+      { name: "하영기", band: "병", dept: "제분", hidden: false },
+      { name: "이영렬", band: "병", dept: "제분", hidden: false },
+      { name: "장학봉", band: "병", dept: "제분", hidden: false },
+      { name: "구봉춘", band: "병", dept: "제분", hidden: false },
+      { name: "종용선", band: "병", dept: "제분", hidden: false },
+      { name: "최광백", band: "병", dept: "제분", hidden: false },
+      { name: "성대경", band: "병", dept: "제분", hidden: false },
+      { name: "탁영수", band: "병", dept: "제분", hidden: false },
+      { name: "장진학", band: "병", dept: "제분", hidden: false },
+      { name: "공민규", band: "병", dept: "제분", hidden: false },
+      { name: "장종준", band: "병", dept: "정선", hidden: false },
+      { name: "박종현", band: "병", dept: "정선", hidden: false },
+      { name: "이정배", band: "병", dept: "정선", hidden: false },
+
+      { name: "정경원", band: "갑", dept: "대포장", hidden: false },
+      { name: "이원석", band: "갑", dept: "대포장", hidden: false },
+      { name: "황민수", band: "갑", dept: "대포장", hidden: false },
+      { name: "강현묵", band: "갑", dept: "대포장", hidden: false },
+      { name: "이철민", band: "갑", dept: "대포장", hidden: false },
+      { name: "백명현", band: "갑", dept: "품질관리", hidden: false },
+      { name: "방성준", band: "갑", dept: "소포장", hidden: false },
+      { name: "이현우", band: "갑", dept: "소포장", hidden: false },
+      { name: "김현학", band: "갑", dept: "소포장", hidden: false },
+
+      { name: "윤재영", band: "을", dept: "대포장", hidden: false },
+      { name: "허인무", band: "을", dept: "대포장", hidden: false },
+      { name: "이성민", band: "을", dept: "대포장", hidden: false },
+      { name: "김민석", band: "을", dept: "대포장", hidden: false },
+      { name: "추민수", band: "을", dept: "대포장", hidden: false },
+      { name: "이호연", band: "을", dept: "품질관리", hidden: false },
+      { name: "최인호", band: "을", dept: "소포장", hidden: false },
+      { name: "이현수", band: "을", dept: "소포장", hidden: false },
+      { name: "정영훈", band: "을", dept: "소포장", hidden: false },
+
+      { name: "문응남", band: "병", dept: "대포장", hidden: false },
+      { name: "강승훈", band: "병", dept: "대포장", hidden: false },
+      { name: "이태수", band: "병", dept: "대포장", hidden: false },
+      { name: "구봉석", band: "병", dept: "대포장", hidden: false },
+      { name: "백승철", band: "병", dept: "대포장", hidden: false },
+      { name: "장기호", band: "병", dept: "품질관리", hidden: false },
+      { name: "백종환", band: "병", dept: "소포장", hidden: false },
+      { name: "신진식", band: "병", dept: "소포장", hidden: false },
+      { name: "배상수", band: "병", dept: "소포장", hidden: false },
+
+      { name: "박영수", band: "갑", dept: "제분", hidden: false },
+      { name: "박세진", band: "병", dept: "대포장", hidden: false },
+      { name: "이건호", band: "병", dept: "제분", hidden: false }
+    ];
+
+    const timeTemplates = {
+      default: {
+        없음: {
+          조근: {
+            1: { total: "전일 22:00 ~ 10:00", overtime: "07:00 ~ 10:00", overtimeHours: 3 },
+            2: { total: "10:00 ~ 22:00", overtime: "10:00 ~ 15:00", overtimeHours: 5 }
+          },
+          중근: {
+            1: { total: "07:00 ~ 19:00", overtime: "15:00 ~ 19:00", overtimeHours: 4 },
+            2: { total: "19:00 ~ 익일07:00", overtime: "19:00 ~ 22:00", overtimeHours: 3 }
+          },
+          야근: {
+            1: { total: "07:00 ~ 19:00", overtime: "15:00 ~ 19:00", overtimeHours: 4 },
+            2: { total: "19:00 ~ 익일07:00", overtime: "익일 02:00 ~ 익일 07:00", overtimeHours: 5 }
+          }
+        },
+        오전반차: {
+          조근: { total: "전일 22:00 ~ 10:00", overtime: "07:00 ~ 10:00", overtimeHours: 3 },
+          중근: { total: "07:00 ~ 18:30", overtime: "15:00 ~ 18:30", overtimeHours: 3.5 }
+        },
+        오후반차: {
+          조근: { total: "11:00 ~ 22:00", overtime: "11:00 ~ 15:00", overtimeHours: 4 },
+          중근: { total: "18:30 ~ 익일07:00", overtime: "18:30 ~ 22:00", overtimeHours: 3.5 }
+        }
+      },
+      monday: {
+        없음: {
+          조근: {
+            1: { total: "07:00 ~ 19:00", overtime: "14:00 ~ 19:00", overtimeHours: 5 },
+            2: { total: "19:00 ~ 익일07:00", overtime: "19:00 ~ 22:00", overtimeHours: 3 }
+          },
+          중근: {
+            1: { total: "07:00 ~ 19:00", overtime: "15:00 ~ 19:00", overtimeHours: 4 },
+            2: { total: "19:00 ~ 익일07:00", overtime: "19:00 ~ 22:00", overtimeHours: 3 }
+          },
+          야근: {
+            1: { total: "07:00 ~ 19:00", overtime: "14:00 ~ 19:00", overtimeHours: 5 },
+            2: { total: "19:00 ~ 익일07:00", overtime: "익일 02:00 ~ 익일 07:00", overtimeHours: 5 }
+          }
+        },
+        오전반차: {
+          조근: { total: "전일 22:00 ~ 10:00", overtime: "07:00 ~ 10:00", overtimeHours: 3 },
+          중근: { total: "07:00 ~ 18:30", overtime: "15:00 ~ 18:30", overtimeHours: 3.5 }
+        },
+        오후반차: {
+          조근: { total: "11:00 ~ 22:00", overtime: "11:00 ~ 15:00", overtimeHours: 4 },
+          중근: { total: "18:30 ~ 익일07:00", overtime: "18:30 ~ 22:00", overtimeHours: 3.5 }
+        }
+      }
+    };
+
+    const rotationPatterns = [
+      ["갑", "을", "병"],
+      ["을", "병", "갑"],
+      ["병", "갑", "을"]
+    ];
+
+    let workerPanelOpen = true;
+
+    function load(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch {
+        return fallback;
+      }
+    }
+
+    function saveData(key, value) {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    function normalizeWorkers(workers) {
+      return workers.map(w => ({
+        ...w,
+        hidden: w.hidden === true
+      }));
+    }
+
+    function getWorkers() {
+      return normalizeWorkers(load(STORAGE_KEYS.workers, []));
+    }
+
+    function setWorkers(workers) {
+      saveData(STORAGE_KEYS.workers, normalizeWorkers(workers));
+    }
+
+    function getActiveWorkers() {
+      return getWorkers().filter(w => !w.hidden);
+    }
+
+    function getHistory() {
+      return load(STORAGE_KEYS.history, []);
+    }
+
+    function setHistory(history) {
+      saveData(STORAGE_KEYS.history, history);
+    }
+
+    function getPurchases() {
+      return load(STORAGE_KEYS.purchases, []);
+    }
+
+    function setPurchases(items) {
+      saveData(STORAGE_KEYS.purchases, items);
+    }
+
+    function parseDate(dateStr) {
+      const [y, m, d] = dateStr.split("-").map(Number);
+      return new Date(y, m - 1, d);
+    }
+
+    function formatDate(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+
+    function getDayName(dateStr) {
+      const d = parseDate(dateStr);
+      return ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
+    }
+
+    function getWeekNumMonday(dateStr) {
+      const date = parseDate(dateStr);
+      const year = date.getFullYear();
+      const jan1 = new Date(year, 0, 1);
+      const jan1Day = jan1.getDay();
+      const mondayBasedJan1 = jan1Day === 0 ? 7 : jan1Day;
+      const diffDays = Math.floor((date - jan1) / 86400000);
+      return Math.floor((diffDays + mondayBasedJan1 - 1) / 7) + 1;
+    }
+
+    function getRotationForDate(dateStr) {
+      const year = parseDate(dateStr).getFullYear();
+      const baseYear = 2026;
+      const startPatternIndex = ((year - baseYear) % 3 + 3) % 3;
+      const weekNum = getWeekNumMonday(dateStr);
+      const patternIndex = (startPatternIndex + weekNum) % 3;
+      const pattern = rotationPatterns[patternIndex];
+
+      return {
+        조근: pattern[0],
+        중근: pattern[1],
+        야근: pattern[2]
+      };
+    }
+
+    function getRoleFromBand(rotation, band) {
+      if (rotation.조근 === band) return "조근";
+      if (rotation.중근 === band) return "중근";
+      if (rotation.야근 === band) return "야근";
+      return null;
+    }
+
+    function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
+      const dayName = getDayName(dateStr);
+
+      if (absenceType === "오전반차" || absenceType === "오후반차") {
+        return {
+          targetRole: absentRole,
+          sequenceNo: null
+        };
+      }
+
+      if (absentRole === "조근") {
+        if (dayName === "월") {
+          if (workerRole === "중근") {
+            return { targetRole: "조근", sequenceNo: 1 };
+          }
+          if (workerRole === "야근") {
+            return { targetRole: "조근", sequenceNo: 2 };
+          }
+        } else {
+          if (workerRole === "야근") {
+            return { targetRole: "조근", sequenceNo: 1 };
+          }
+          if (workerRole === "중근") {
+            return { targetRole: "조근", sequenceNo: 2 };
+          }
+        }
+      }
+
+      if (absentRole === "중근") {
+        if (workerRole === "조근") {
+          return { targetRole: "중근", sequenceNo: 1 };
+        }
+        if (workerRole === "야근") {
+          return { targetRole: "중근", sequenceNo: 2 };
+        }
+      }
+
+      if (absentRole === "야근") {
+        if (workerRole === "조근") {
+          return { targetRole: "중근", sequenceNo: 1 };
+        }
+        if (workerRole === "중근") {
+          return { targetRole: "야근", sequenceNo: 2 };
+        }
+      }
+
+      throw new Error("대체근무 조합을 찾을 수 없습니다.");
+    }
+
+    function getTimeTemplate(dateStr, absenceType, targetRole, sequenceNo) {
+      const dayName = getDayName(dateStr);
+      const templateSet = dayName === "월" ? timeTemplates.monday : timeTemplates.default;
+
+      if (absenceType === "오전반차" || absenceType === "오후반차") {
+        const row = templateSet[absenceType][targetRole];
+        if (!row) throw new Error("반차 시간표를 찾을 수 없습니다.");
+        return row;
+      }
+
+      const row = templateSet["없음"][targetRole][sequenceNo];
+      if (!row) throw new Error("일반 시간표를 찾을 수 없습니다.");
+      return row;
+    }
+
+    function calculateWorkResult({ date, workerName, absentName, absenceType, note }) {
+      if (!date) throw new Error("날짜를 입력해 주세요.");
+      if (!workerName) throw new Error("본인 이름을 입력해 주세요.");
+      if (!absentName) throw new Error("휴가자 이름을 입력해 주세요.");
+
+      const workers = getActiveWorkers();
+      const worker = workers.find(w => w.name === workerName);
+      const absent = workers.find(w => w.name === absentName);
+
+      if (!worker) throw new Error("본인 이름이 인원목록에 없거나 숨김 상태입니다.");
+      if (!absent) throw new Error("휴가자 이름이 인원목록에 없거나 숨김 상태입니다.");
+      if (worker.dept !== absent.dept) throw new Error("같은 부서끼리만 대체 가능합니다.");
+
+      const rotation = getRotationForDate(date);
+      const dayName = getDayName(date);
+
+      const workerRole = getRoleFromBand(rotation, worker.band);
+      const absentRole = getRoleFromBand(rotation, absent.band);
+
+      if (!workerRole || !absentRole) {
+        throw new Error("반변경 계산에 실패했습니다.");
+      }
+
+      const assignment = resolveAssignment(date, absentRole, workerRole, absenceType);
+      const tpl = getTimeTemplate(date, absenceType, assignment.targetRole, assignment.sequenceNo);
+
+      return {
+        date,
+        dayName,
+        dept: worker.dept,
+        workerName: worker.name,
+        workerBand: worker.band,
+        absentName: absent.name,
+        absentBand: absent.band,
+        absenceType,
+        note,
+        rotation,
+        workerRole,
+        absentRole,
+        replacementRole: assignment.targetRole,
+        sequenceNo: assignment.sequenceNo,
+        totalWork: tpl.total,
+        overtime: tpl.overtime,
+        overtimeHours: tpl.overtimeHours,
+        actionText: `${absent.name} ${absenceType}대체`
+      };
+    }
+
+    function renderWorkerList() {
+      const workers = getActiveWorkers().sort((a, b) =>
+        a.dept.localeCompare(b.dept, "ko") || a.name.localeCompare(b.name, "ko")
+      );
+
+      const list = workers
+        .map(w => `<option value="${w.name}">${w.name} (${w.band}/${w.dept})</option>`)
+        .join("");
+
+      document.getElementById("workersList").innerHTML = list;
+    }
+
+    function renderWorkerTable() {
+      const workers = getWorkers().sort((a, b) =>
+        a.dept.localeCompare(b.dept, "ko") || a.name.localeCompare(b.name, "ko")
+      );
+
+      let html = "<tr><th>성명</th><th>반</th><th>부서</th><th>관리</th></tr>";
+      workers.forEach((w, index) => {
+        html += `
+          <tr class="${w.hidden ? "hidden-row" : ""}">
+            <td>${w.name}</td>
+            <td>${w.band}</td>
+            <td>${w.dept}</td>
+            <td>
+              <button class="${w.hidden ? 'btn-success' : 'btn-secondary'}" onclick="toggleWorkerHidden(${index})">
+                ${w.hidden ? "열기" : "숨기기"}
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+
+      document.getElementById("workerTable").innerHTML = html;
+    }
+
+    function renderCalcResult(result) {
+      const box = document.getElementById("calcResult");
+      box.style.display = "block";
+      box.innerHTML = `
+        <h3>계산 결과</h3>
+        <div><b>일자</b>: ${result.date} (${result.dayName})</div>
+        <div><b>반변경</b>: 조근 ${result.rotation.조근} / 중근 ${result.rotation.중근} / 야근 ${result.rotation.야근}</div>
+        <div><b>구분</b>: ${result.dept}</div>
+        <div><b>성명</b>: ${result.workerName}</div>
+        <div><b>작업내용</b>: ${result.actionText}</div>
+        <div><b>빠진 사람 역할</b>: ${result.absentRole}</div>
+        <div><b>대체 역할</b>: ${result.replacementRole}</div>
+        <div><b>근무순번</b>: ${result.sequenceNo ?? "-"}</div>
+        <div><b>총근무</b>: ${result.totalWork}</div>
+        <div><b>연장근무시간</b>: ${result.overtime} (${result.overtimeHours}시간)</div>
+        <div><b>비고</b>: ${result.note || "-"}</div>
+      `;
+    }
+
+    function renderHistory(date) {
+      const history = getHistory().filter(x => x.date === date);
+      const summary = document.getElementById("historySummary");
+
+      summary.className = "message";
+      summary.textContent = `${date} 조회 결과 ${history.length}건`;
+
+      let html = "<tr><th>구분</th><th>성명</th><th>작업내용</th><th>작업시간</th><th>비고</th></tr>";
+      history.forEach(item => {
+        html += `
+          <tr>
+            <td>${item.dept}</td>
+            <td>${item.workerName}</td>
+            <td>${item.actionText}</td>
+            <td>총근무: ${item.totalWork}<br>연장: ${item.overtime}</td>
+            <td>${item.note || "-"}</td>
+          </tr>
+        `;
+      });
+
+      document.getElementById("historyTable").innerHTML = html;
+    }
+
+    function renderPurchaseHistory() {
+      const items = getPurchases();
+      const summary = document.getElementById("purchaseHistorySummary");
+
+      summary.className = "message";
+      summary.textContent = `총 ${items.length}건`;
+
+      let html = "<tr><th>신청일</th><th>신청자</th><th>품목명</th><th>링크</th><th>사진</th><th>비고</th><th>처리</th></tr>";
+
+      items.forEach((item, index) => {
+        const linkHtml = item.link
+          ? `<div class="link-cell"><a href="${item.link}" target="_blank" rel="noopener noreferrer">${item.link}</a></div>`
+          : "-";
+
+        const imgHtml = item.imageData
+          ? `<img src="${item.imageData}" alt="구매 이미지" class="purchase-img" />`
+          : "-";
+
+        html += `
+          <tr>
+            <td>${item.date}</td>
+            <td>${item.applicant}</td>
+            <td>${item.itemName}</td>
+            <td>${linkHtml}</td>
+            <td>${imgHtml}</td>
+            <td>${item.note || "-"}</td>
+            <td><button class="btn-danger" onclick="closePurchaseItem(${index})">마감</button></td>
+          </tr>
+        `;
+      });
+
+      document.getElementById("purchaseHistoryTable").innerHTML = html;
+    }
+
+    function setMessage(targetId, message, type) {
+      const el = document.getElementById(targetId);
+      el.textContent = message;
+      el.className = `message ${type}`;
+    }
+
+    function openPurchaseModal() {
+      document.getElementById("purchaseModal").classList.add("show");
+    }
+
+    function closePurchaseModal() {
+      document.getElementById("purchaseModal").classList.remove("show");
+    }
+
+    function openPasswordModal() {
+      document.getElementById("passwordModal").classList.add("show");
+      document.getElementById("editPassword").value = "";
+      setMessage("passwordMessage", "", "success");
+    }
+
+    function closePasswordModal() {
+      document.getElementById("passwordModal").classList.remove("show");
+    }
+
+    function openEditHistoryModal() {
+      document.getElementById("editHistoryModal").classList.add("show");
+      document.getElementById("editTargetDate").value = document.getElementById("historyDate").value || formatDate(new Date());
+      document.getElementById("editRowSelect").innerHTML = '<option value="">선택</option>';
+      document.getElementById("editWorkerName").value = "";
+      document.getElementById("editAbsentName").value = "";
+      document.getElementById("editAbsenceType").value = "휴가";
+      document.getElementById("editNote").value = "";
+      setMessage("editHistoryMessage", "", "success");
+    }
+
+    function closeEditHistoryModal() {
+      document.getElementById("editHistoryModal").classList.remove("show");
+    }
+
+    function clearPurchaseForm() {
+      document.getElementById("purchaseDate").value = formatDate(new Date());
+      document.getElementById("purchaseApplicant").value = "";
+      document.getElementById("purchaseItem").value = "";
+      document.getElementById("purchaseLink").value = "";
+      document.getElementById("purchaseImage").value = "";
+      document.getElementById("purchaseNote").value = "";
+      document.getElementById("purchaseFileName").textContent = "";
+      const preview = document.getElementById("purchasePreview");
+      preview.src = "";
+      preview.style.display = "none";
+      document.getElementById("purchaseMessage").textContent = "";
+      document.getElementById("purchaseMessage").className = "message";
+    }
+
+    function readFileAsDataURL(file) {
+      return new Promise((resolve, reject) => {
+        if (!file) {
+          resolve("");
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function closePurchaseItem(index) {
+      const items = getPurchases();
+      items.splice(index, 1);
+      setPurchases(items);
+      renderPurchaseHistory();
+    }
+
+    function getHistoryByDate(date) {
+      return getHistory()
+        .map((item, index) => ({ ...item, __index: index }))
+        .filter(item => item.date === date);
+    }
+
+    function populateEditRows(date) {
+      const rows = getHistoryByDate(date);
+      const select = document.getElementById("editRowSelect");
+
+      let html = '<option value="">선택</option>';
+      rows.forEach(row => {
+        html += `<option value="${row.__index}">${row.workerName} / ${row.actionText} / ${row.totalWork}</option>`;
+      });
+      select.innerHTML = html;
+
+      if (rows.length === 0) {
+        setMessage("editHistoryMessage", "해당 날짜의 조회결과가 없습니다.", "error");
+      } else {
+        setMessage("editHistoryMessage", `${rows.length}건을 불러왔습니다.`, "success");
+      }
+    }
+
+    function fillEditFormByIndex(index) {
+      if (index === "") return;
+      const history = getHistory();
+      const row = history[Number(index)];
+      if (!row) return;
+
+      document.getElementById("editWorkerName").value = row.workerName;
+      document.getElementById("editAbsentName").value = row.absentName;
+      document.getElementById("editAbsenceType").value = row.absenceType;
+      document.getElementById("editNote").value = row.note || "";
+    }
+
+    function toggleWorkerPanel() {
+      workerPanelOpen = !workerPanelOpen;
+      document.getElementById("toggleWorkerPanelBtn").textContent = workerPanelOpen ? "숨기기" : "열기";
+      document.getElementById("workerTableWrap").style.display = workerPanelOpen ? "block" : "none";
+    }
+
+    function toggleWorkerHidden(index) {
+      const workers = getWorkers();
+      workers[index].hidden = !workers[index].hidden;
+      setWorkers(workers);
+      renderWorkerTable();
+    }
+
+    function updateWorkersView() {
+      renderWorkerList();
+      renderWorkerTable();
+      setMessage("workerMessage", "인원관리 변경사항을 업데이트했습니다.", "success");
+    }
+
+    document.getElementById("previewBtn").addEventListener("click", () => {
+      try {
+        const result = calculateWorkResult({
+          date: document.getElementById("workDate").value,
+          workerName: document.getElementById("workerName").value.trim(),
+          absentName: document.getElementById("absentName").value.trim(),
+          absenceType: document.getElementById("absenceType").value,
+          note: document.getElementById("note").value.trim()
+        });
+
+        renderCalcResult(result);
+        setMessage("calcMessage", "계산이 완료되었습니다.", "success");
+      } catch (e) {
+        document.getElementById("calcResult").style.display = "none";
+        setMessage("calcMessage", e.message, "error");
+      }
+    });
+
+    document.getElementById("saveBtn").addEventListener("click", () => {
+      try {
+        const result = calculateWorkResult({
+          date: document.getElementById("workDate").value,
+          workerName: document.getElementById("workerName").value.trim(),
+          absentName: document.getElementById("absentName").value.trim(),
+          absenceType: document.getElementById("absenceType").value,
+          note: document.getElementById("note").value.trim()
+        });
+
+        const history = getHistory();
+        history.push(result);
+        setHistory(history);
+
+        renderCalcResult(result);
+        setMessage("calcMessage", "계산 후 저장했습니다.", "success");
+
+        if (document.getElementById("historyDate").value === result.date) {
+          renderHistory(result.date);
+        }
+      } catch (e) {
+        document.getElementById("calcResult").style.display = "none";
+        setMessage("calcMessage", e.message, "error");
+      }
+    });
+
+    document.getElementById("addWorkerBtn").addEventListener("click", () => {
+      const name = document.getElementById("newName").value.trim();
+      const band = document.getElementById("newBand").value;
+      const dept = document.getElementById("newDept").value;
+
+      if (!name) {
+        setMessage("workerMessage", "이름을 입력해 주세요.", "error");
+        return;
+      }
+
+      const workers = getWorkers();
+      if (workers.some(w => w.name === name && w.dept === dept)) {
+        setMessage("workerMessage", "같은 부서에 동일 이름이 이미 있습니다.", "error");
+        return;
+      }
+
+      workers.push({ name, band, dept, hidden: false });
+      setWorkers(workers);
+      document.getElementById("newName").value = "";
+      setMessage("workerMessage", "인원을 추가했습니다. 업데이트를 눌러 반영하세요.", "success");
+    });
+
+    document.getElementById("toggleWorkerPanelBtn").addEventListener("click", toggleWorkerPanel);
+    document.getElementById("updateWorkersBtn").addEventListener("click", updateWorkersView);
+
+    document.getElementById("resetWorkersBtn").addEventListener("click", () => {
+      setWorkers(defaultWorkers);
+      renderWorkerList();
+      renderWorkerTable();
+      workerPanelOpen = true;
+      document.getElementById("toggleWorkerPanelBtn").textContent = "숨기기";
+      document.getElementById("workerTableWrap").style.display = "block";
+      setMessage("workerMessage", "기본 인원을 불러왔습니다.", "success");
+    });
+
+    document.getElementById("searchHistoryBtn").addEventListener("click", () => {
+      const date = document.getElementById("historyDate").value;
+      if (!date) {
+        setMessage("historySummary", "조회 날짜를 입력해 주세요.", "error");
+        return;
+      }
+      renderHistory(date);
+    });
+
+    document.getElementById("openPurchaseBtn").addEventListener("click", () => {
+      openPurchaseModal();
+    });
+
+    document.getElementById("closePurchaseBtn").addEventListener("click", () => {
+      closePurchaseModal();
+    });
+
+    document.getElementById("clearPurchaseBtn").addEventListener("click", () => {
+      clearPurchaseForm();
+    });
+
+    document.getElementById("purchaseImage").addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      const preview = document.getElementById("purchasePreview");
+      const fileName = document.getElementById("purchaseFileName");
+
+      if (!file) {
+        fileName.textContent = "";
+        preview.src = "";
+        preview.style.display = "none";
+        return;
+      }
+
+      fileName.textContent = `선택 파일: ${file.name}`;
+      const dataUrl = await readFileAsDataURL(file);
+      preview.src = dataUrl;
+      preview.style.display = "block";
+    });
+
+    document.getElementById("savePurchaseBtn").addEventListener("click", async () => {
+      try {
+        const date = document.getElementById("purchaseDate").value;
+        const applicant = document.getElementById("purchaseApplicant").value.trim();
+        const itemName = document.getElementById("purchaseItem").value.trim();
+        const link = document.getElementById("purchaseLink").value.trim();
+        const note = document.getElementById("purchaseNote").value.trim();
+        const file = document.getElementById("purchaseImage").files[0];
+
+        if (!date) throw new Error("신청일을 입력해 주세요.");
+        if (!applicant) throw new Error("신청자를 입력해 주세요.");
+        if (!itemName) throw new Error("품목명을 입력해 주세요.");
+
+        const workerExists = getActiveWorkers().some(w => w.name === applicant);
+        if (!workerExists) throw new Error("신청자는 현재 사용중인 인원 목록의 이름만 사용할 수 있습니다.");
+
+        const imageData = file ? await readFileAsDataURL(file) : "";
+
+        const purchases = getPurchases();
+        purchases.push({
+          date,
+          applicant,
+          itemName,
+          link,
+          note,
+          imageData
+        });
+        setPurchases(purchases);
+
+        renderPurchaseHistory();
+        setMessage("purchaseMessage", "구매 신청을 저장했습니다.", "success");
+      } catch (e) {
+        setMessage("purchaseMessage", e.message, "error");
+      }
+    });
+
+    document.getElementById("openEditHistoryBtn").addEventListener("click", () => {
+      openPasswordModal();
+    });
+
+    document.getElementById("closePasswordBtn").addEventListener("click", closePasswordModal);
+    document.getElementById("cancelPasswordBtn").addEventListener("click", closePasswordModal);
+
+    document.getElementById("confirmPasswordBtn").addEventListener("click", () => {
+      const pw = document.getElementById("editPassword").value;
+      if (pw !== EDIT_PASSWORD) {
+        setMessage("passwordMessage", "비밀번호가 일치하지 않습니다.", "error");
+        return;
+      }
+      closePasswordModal();
+      openEditHistoryModal();
+    });
+
+    document.getElementById("closeEditHistoryBtn").addEventListener("click", closeEditHistoryModal);
+
+    document.getElementById("loadEditRowsBtn").addEventListener("click", () => {
+      const date = document.getElementById("editTargetDate").value;
+      if (!date) {
+        setMessage("editHistoryMessage", "수정 대상 날짜를 입력해 주세요.", "error");
+        return;
+      }
+      populateEditRows(date);
+    });
+
+    document.getElementById("editRowSelect").addEventListener("change", (e) => {
+      fillEditFormByIndex(e.target.value);
+    });
+
+    document.getElementById("saveEditHistoryBtn").addEventListener("click", () => {
+      try {
+        const selectedIndex = document.getElementById("editRowSelect").value;
+        if (selectedIndex === "") throw new Error("수정할 항목을 선택해 주세요.");
+
+        const date = document.getElementById("editTargetDate").value;
+        const workerName = document.getElementById("editWorkerName").value.trim();
+        const absentName = document.getElementById("editAbsentName").value.trim();
+        const absenceType = document.getElementById("editAbsenceType").value;
+        const note = document.getElementById("editNote").value.trim();
+
+        const recalculated = calculateWorkResult({
+          date,
+          workerName,
+          absentName,
+          absenceType,
+          note
+        });
+
+        const history = getHistory();
+        history[Number(selectedIndex)] = recalculated;
+        setHistory(history);
+
+        populateEditRows(date);
+        document.getElementById("editRowSelect").value = String(selectedIndex);
+        fillEditFormByIndex(String(selectedIndex));
+
+        if (document.getElementById("historyDate").value === date) {
+          renderHistory(date);
+        }
+
+        setMessage("editHistoryMessage", "조회결과를 수정했습니다.", "success");
+      } catch (e) {
+        setMessage("editHistoryMessage", e.message, "error");
+      }
+    });
+
+    document.getElementById("deleteEditHistoryBtn").addEventListener("click", () => {
+      try {
+        const selectedIndex = document.getElementById("editRowSelect").value;
+        const date = document.getElementById("editTargetDate").value;
+
+        if (selectedIndex === "") throw new Error("삭제할 항목을 선택해 주세요.");
+
+        const history = getHistory();
+        history.splice(Number(selectedIndex), 1);
+        setHistory(history);
+
+        populateEditRows(date);
+        document.getElementById("editWorkerName").value = "";
+        document.getElementById("editAbsentName").value = "";
+        document.getElementById("editAbsenceType").value = "휴가";
+        document.getElementById("editNote").value = "";
+
+        if (document.getElementById("historyDate").value === date) {
+          renderHistory(date);
+        }
+
+        setMessage("editHistoryMessage", "선택 항목을 삭제했습니다.", "success");
+      } catch (e) {
+        setMessage("editHistoryMessage", e.message, "error");
+      }
+    });
+
+    document.getElementById("purchaseModal").addEventListener("click", (e) => {
+      if (e.target.id === "purchaseModal") closePurchaseModal();
+    });
+
+    document.getElementById("passwordModal").addEventListener("click", (e) => {
+      if (e.target.id === "passwordModal") closePasswordModal();
+    });
+
+    document.getElementById("editHistoryModal").addEventListener("click", (e) => {
+      if (e.target.id === "editHistoryModal") closeEditHistoryModal();
+    });
+
+    function init() {
+      const savedWorkers = getWorkers();
+      if (!savedWorkers.length) {
+        setWorkers(defaultWorkers);
+      } else {
+        const normalized = normalizeWorkers(savedWorkers);
+        setWorkers(normalized);
+      }
+
+      renderWorkerList();
+      renderWorkerTable();
+
+      const today = formatDate(new Date());
+      document.getElementById("workDate").value = today;
+      document.getElementById("historyDate").value = today;
+      document.getElementById("purchaseDate").value = today;
+
+      renderHistory(today);
+      renderPurchaseHistory();
+    }
+
+    init();
+  </script>
 </body>
 </html>
