@@ -139,6 +139,13 @@
       margin-top: 8px;
     }
 
+    .btn-row-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
     .single-btn {
       margin-top: 10px;
     }
@@ -267,10 +274,15 @@
       margin: 0 auto;
     }
 
+    .hidden-row {
+      opacity: 0.45;
+      background: #fafafa;
+    }
+
     @media (max-width: 640px) {
       .container { padding: 12px; }
       .card { padding: 14px; }
-      .btn-row { grid-template-columns: 1fr; }
+      .btn-row, .btn-row-3 { grid-template-columns: 1fr; }
       .subtitle, .notice { font-size: 12px; }
       table { min-width: 760px; font-size: 13px; }
       .modal-content { padding: 14px; }
@@ -320,7 +332,7 @@
 
     <div class="card">
       <h2>2. 인원관리</h2>
-      <p class="notice">이름, 반, 부서를 추가하면 연장근무와 구매 신청의 신청자 목록에 바로 반영됩니다.</p>
+      <p class="notice">인원 추가 후 업데이트를 누르면 입력 목록에 반영됩니다. 숨기기를 누르면 잠시 숨겨지고, 버튼은 열기로 바뀝니다.</p>
 
       <label for="newName">이름</label>
       <input type="text" id="newName" placeholder="예: 홍길동" />
@@ -343,9 +355,10 @@
         <option value="생산2팀">생산2팀</option>
       </select>
 
-      <div class="btn-row">
+      <div class="btn-row-3">
         <button class="btn-success" id="addWorkerBtn">인원 추가</button>
-        <button class="btn-secondary" id="resetWorkersBtn">기본 인원 불러오기</button>
+        <button class="btn-secondary" id="toggleHiddenBtn">숨기기</button>
+        <button class="btn-primary" id="updateWorkersBtn">업데이트</button>
       </div>
 
       <div id="workerMessage" class="message"></div>
@@ -487,94 +500,94 @@
 
   <script>
     const STORAGE_KEYS = {
-      workers: "overtime_workers_v12",
-      history: "overtime_history_v12",
-      purchases: "purchase_history_v5"
+      workers: "overtime_workers_v13",
+      history: "overtime_history_v13",
+      purchases: "purchase_history_v6"
     };
 
     const EDIT_PASSWORD = "1004";
 
     const defaultWorkers = [
-      { name: "유흥선", band: "갑", dept: "제분" },
-      { name: "최남호", band: "갑", dept: "제분" },
-      { name: "정순철", band: "갑", dept: "제분" },
-      { name: "고우석", band: "갑", dept: "제분" },
-      { name: "박재록", band: "갑", dept: "제분" },
-      { name: "박승기", band: "갑", dept: "제분" },
-      { name: "장준연", band: "갑", dept: "제분" },
-      { name: "김영주", band: "갑", dept: "제분" },
-      { name: "한동홍", band: "갑", dept: "제분" },
-      { name: "원종민", band: "갑", dept: "제분" },
-      { name: "고경한", band: "갑", dept: "제분" },
-      { name: "이승길", band: "갑", dept: "정선" },
-      { name: "신형태", band: "갑", dept: "정선" },
-      { name: "박시환", band: "갑", dept: "정선" },
+      { name: "유흥선", band: "갑", dept: "제분", hidden: false },
+      { name: "최남호", band: "갑", dept: "제분", hidden: false },
+      { name: "정순철", band: "갑", dept: "제분", hidden: false },
+      { name: "고우석", band: "갑", dept: "제분", hidden: false },
+      { name: "박재록", band: "갑", dept: "제분", hidden: false },
+      { name: "박승기", band: "갑", dept: "제분", hidden: false },
+      { name: "장준연", band: "갑", dept: "제분", hidden: false },
+      { name: "김영주", band: "갑", dept: "제분", hidden: false },
+      { name: "한동홍", band: "갑", dept: "제분", hidden: false },
+      { name: "원종민", band: "갑", dept: "제분", hidden: false },
+      { name: "고경한", band: "갑", dept: "제분", hidden: false },
+      { name: "이승길", band: "갑", dept: "정선", hidden: false },
+      { name: "신형태", band: "갑", dept: "정선", hidden: false },
+      { name: "박시환", band: "갑", dept: "정선", hidden: false },
 
-      { name: "김수철", band: "을", dept: "제분" },
-      { name: "김인수", band: "을", dept: "제분" },
-      { name: "김수현", band: "을", dept: "제분" },
-      { name: "송희열", band: "을", dept: "제분" },
-      { name: "서기원", band: "을", dept: "제분" },
-      { name: "박희복", band: "을", dept: "제분" },
-      { name: "신승곤", band: "을", dept: "제분" },
-      { name: "윤현철", band: "을", dept: "제분" },
-      { name: "김민기", band: "을", dept: "제분" },
-      { name: "임준수", band: "을", dept: "제분" },
-      { name: "김정민", band: "을", dept: "제분" },
-      { name: "방정환", band: "을", dept: "제분" },
-      { name: "구희철", band: "을", dept: "정선" },
-      { name: "문창조", band: "을", dept: "정선" },
-      { name: "박태원", band: "을", dept: "정선" },
+      { name: "김수철", band: "을", dept: "제분", hidden: false },
+      { name: "김인수", band: "을", dept: "제분", hidden: false },
+      { name: "김수현", band: "을", dept: "제분", hidden: false },
+      { name: "송희열", band: "을", dept: "제분", hidden: false },
+      { name: "서기원", band: "을", dept: "제분", hidden: false },
+      { name: "박희복", band: "을", dept: "제분", hidden: false },
+      { name: "신승곤", band: "을", dept: "제분", hidden: false },
+      { name: "윤현철", band: "을", dept: "제분", hidden: false },
+      { name: "김민기", band: "을", dept: "제분", hidden: false },
+      { name: "임준수", band: "을", dept: "제분", hidden: false },
+      { name: "김정민", band: "을", dept: "제분", hidden: false },
+      { name: "방정환", band: "을", dept: "제분", hidden: false },
+      { name: "구희철", band: "을", dept: "정선", hidden: false },
+      { name: "문창조", band: "을", dept: "정선", hidden: false },
+      { name: "박태원", band: "을", dept: "정선", hidden: false },
 
-      { name: "박우진", band: "병", dept: "제분" },
-      { name: "유인선", band: "병", dept: "제분" },
-      { name: "하영기", band: "병", dept: "제분" },
-      { name: "이영렬", band: "병", dept: "제분" },
-      { name: "장학봉", band: "병", dept: "제분" },
-      { name: "구봉춘", band: "병", dept: "제분" },
-      { name: "종용선", band: "병", dept: "제분" },
-      { name: "최광백", band: "병", dept: "제분" },
-      { name: "성대경", band: "병", dept: "제분" },
-      { name: "탁영수", band: "병", dept: "제분" },
-      { name: "장진학", band: "병", dept: "제분" },
-      { name: "공민규", band: "병", dept: "제분" },
-      { name: "장종준", band: "병", dept: "정선" },
-      { name: "박종현", band: "병", dept: "정선" },
-      { name: "이정배", band: "병", dept: "정선" },
+      { name: "박우진", band: "병", dept: "제분", hidden: false },
+      { name: "유인선", band: "병", dept: "제분", hidden: false },
+      { name: "하영기", band: "병", dept: "제분", hidden: false },
+      { name: "이영렬", band: "병", dept: "제분", hidden: false },
+      { name: "장학봉", band: "병", dept: "제분", hidden: false },
+      { name: "구봉춘", band: "병", dept: "제분", hidden: false },
+      { name: "종용선", band: "병", dept: "제분", hidden: false },
+      { name: "최광백", band: "병", dept: "제분", hidden: false },
+      { name: "성대경", band: "병", dept: "제분", hidden: false },
+      { name: "탁영수", band: "병", dept: "제분", hidden: false },
+      { name: "장진학", band: "병", dept: "제분", hidden: false },
+      { name: "공민규", band: "병", dept: "제분", hidden: false },
+      { name: "장종준", band: "병", dept: "정선", hidden: false },
+      { name: "박종현", band: "병", dept: "정선", hidden: false },
+      { name: "이정배", band: "병", dept: "정선", hidden: false },
 
-      { name: "정경원", band: "갑", dept: "대포장" },
-      { name: "이원석", band: "갑", dept: "대포장" },
-      { name: "황민수", band: "갑", dept: "대포장" },
-      { name: "강현묵", band: "갑", dept: "대포장" },
-      { name: "이철민", band: "갑", dept: "대포장" },
-      { name: "백명현", band: "갑", dept: "품질관리" },
-      { name: "방성준", band: "갑", dept: "소포장" },
-      { name: "이현우", band: "갑", dept: "소포장" },
-      { name: "김현학", band: "갑", dept: "소포장" },
+      { name: "정경원", band: "갑", dept: "대포장", hidden: false },
+      { name: "이원석", band: "갑", dept: "대포장", hidden: false },
+      { name: "황민수", band: "갑", dept: "대포장", hidden: false },
+      { name: "강현묵", band: "갑", dept: "대포장", hidden: false },
+      { name: "이철민", band: "갑", dept: "대포장", hidden: false },
+      { name: "백명현", band: "갑", dept: "품질관리", hidden: false },
+      { name: "방성준", band: "갑", dept: "소포장", hidden: false },
+      { name: "이현우", band: "갑", dept: "소포장", hidden: false },
+      { name: "김현학", band: "갑", dept: "소포장", hidden: false },
 
-      { name: "윤재영", band: "을", dept: "대포장" },
-      { name: "허인무", band: "을", dept: "대포장" },
-      { name: "이성민", band: "을", dept: "대포장" },
-      { name: "김민석", band: "을", dept: "대포장" },
-      { name: "추민수", band: "을", dept: "대포장" },
-      { name: "이호연", band: "을", dept: "품질관리" },
-      { name: "최인호", band: "을", dept: "소포장" },
-      { name: "이현수", band: "을", dept: "소포장" },
-      { name: "정영훈", band: "을", dept: "소포장" },
+      { name: "윤재영", band: "을", dept: "대포장", hidden: false },
+      { name: "허인무", band: "을", dept: "대포장", hidden: false },
+      { name: "이성민", band: "을", dept: "대포장", hidden: false },
+      { name: "김민석", band: "을", dept: "대포장", hidden: false },
+      { name: "추민수", band: "을", dept: "대포장", hidden: false },
+      { name: "이호연", band: "을", dept: "품질관리", hidden: false },
+      { name: "최인호", band: "을", dept: "소포장", hidden: false },
+      { name: "이현수", band: "을", dept: "소포장", hidden: false },
+      { name: "정영훈", band: "을", dept: "소포장", hidden: false },
 
-      { name: "문응남", band: "병", dept: "대포장" },
-      { name: "강승훈", band: "병", dept: "대포장" },
-      { name: "이태수", band: "병", dept: "대포장" },
-      { name: "구봉석", band: "병", dept: "대포장" },
-      { name: "백승철", band: "병", dept: "대포장" },
-      { name: "장기호", band: "병", dept: "품질관리" },
-      { name: "백종환", band: "병", dept: "소포장" },
-      { name: "신진식", band: "병", dept: "소포장" },
-      { name: "배상수", band: "병", dept: "소포장" },
+      { name: "문응남", band: "병", dept: "대포장", hidden: false },
+      { name: "강승훈", band: "병", dept: "대포장", hidden: false },
+      { name: "이태수", band: "병", dept: "대포장", hidden: false },
+      { name: "구봉석", band: "병", dept: "대포장", hidden: false },
+      { name: "백승철", band: "병", dept: "대포장", hidden: false },
+      { name: "장기호", band: "병", dept: "품질관리", hidden: false },
+      { name: "백종환", band: "병", dept: "소포장", hidden: false },
+      { name: "신진식", band: "병", dept: "소포장", hidden: false },
+      { name: "배상수", band: "병", dept: "소포장", hidden: false },
 
-      { name: "박영수", band: "갑", dept: "제분" },
-      { name: "박세진", band: "병", dept: "대포장" },
-      { name: "이건호", band: "병", dept: "제분" }
+      { name: "박영수", band: "갑", dept: "제분", hidden: false },
+      { name: "박세진", band: "병", dept: "대포장", hidden: false },
+      { name: "이건호", band: "병", dept: "제분", hidden: false }
     ];
 
     const timeTemplates = {
@@ -634,6 +647,8 @@
       ["병", "갑", "을"]
     ];
 
+    let workersVisible = true;
+
     function load(key, fallback) {
       try {
         const raw = localStorage.getItem(key);
@@ -647,12 +662,23 @@
       localStorage.setItem(key, JSON.stringify(value));
     }
 
+    function normalizeWorkers(workers) {
+      return workers.map(w => ({
+        ...w,
+        hidden: w.hidden === true
+      }));
+    }
+
     function getWorkers() {
-      return load(STORAGE_KEYS.workers, []);
+      return normalizeWorkers(load(STORAGE_KEYS.workers, []));
     }
 
     function setWorkers(workers) {
-      saveData(STORAGE_KEYS.workers, workers);
+      saveData(STORAGE_KEYS.workers, normalizeWorkers(workers));
+    }
+
+    function getActiveWorkers() {
+      return getWorkers().filter(w => !w.hidden);
     }
 
     function getHistory() {
@@ -789,12 +815,12 @@
       if (!workerName) throw new Error("본인 이름을 입력해 주세요.");
       if (!absentName) throw new Error("휴가자 이름을 입력해 주세요.");
 
-      const workers = getWorkers();
+      const workers = getActiveWorkers();
       const worker = workers.find(w => w.name === workerName);
       const absent = workers.find(w => w.name === absentName);
 
-      if (!worker) throw new Error("본인 이름이 인원목록에 없습니다.");
-      if (!absent) throw new Error("휴가자 이름이 인원목록에 없습니다.");
+      if (!worker) throw new Error("본인 이름이 인원목록에 없거나 숨김 상태입니다.");
+      if (!absent) throw new Error("휴가자 이름이 인원목록에 없거나 숨김 상태입니다.");
       if (worker.dept !== absent.dept) throw new Error("같은 부서끼리만 대체 가능합니다.");
 
       const rotation = getRotationForDate(date);
@@ -833,7 +859,7 @@
     }
 
     function renderWorkerList() {
-      const workers = getWorkers().sort((a, b) =>
+      const workers = getActiveWorkers().sort((a, b) =>
         a.dept.localeCompare(b.dept, "ko") || a.name.localeCompare(b.name, "ko")
       );
 
@@ -849,9 +875,16 @@
         a.dept.localeCompare(b.dept, "ko") || a.name.localeCompare(b.name, "ko")
       );
 
-      let html = "<tr><th>성명</th><th>반</th><th>부서</th></tr>";
+      let html = "<tr><th>성명</th><th>반</th><th>부서</th><th>상태</th></tr>";
       workers.forEach(w => {
-        html += `<tr><td>${w.name}</td><td>${w.band}</td><td>${w.dept}</td></tr>`;
+        html += `
+          <tr class="${w.hidden ? "hidden-row" : ""}">
+            <td>${w.name}</td>
+            <td>${w.band}</td>
+            <td>${w.dept}</td>
+            <td>${w.hidden ? "숨김" : "사용중"}</td>
+          </tr>
+        `;
       });
 
       document.getElementById("workerTable").innerHTML = html;
@@ -884,17 +917,7 @@
       summary.textContent = `${date} 조회 결과 ${history.length}건`;
 
       let html = "<tr><th>구분</th><th>성명</th><th>작업내용</th><th>작업시간</th><th>비고</th></tr>";
-      history.forEach((item, index) => {
-        const historyIndex = getHistory().findIndex(h =>
-          h.date === item.date &&
-          h.workerName === item.workerName &&
-          h.absentName === item.absentName &&
-          h.absenceType === item.absenceType &&
-          h.note === item.note &&
-          h.totalWork === item.totalWork &&
-          h.overtime === item.overtime
-        );
-
+      history.forEach(item => {
         html += `
           <tr>
             <td>${item.dept}</td>
@@ -1052,6 +1075,19 @@
       document.getElementById("editNote").value = row.note || "";
     }
 
+    function toggleWorkersVisible() {
+      workersVisible = !workersVisible;
+      document.getElementById("toggleHiddenBtn").textContent = workersVisible ? "숨기기" : "열기";
+      const tableWrap = document.querySelector("#workerTable").closest(".table-wrap");
+      tableWrap.style.display = workersVisible ? "block" : "none";
+    }
+
+    function updateWorkersView() {
+      renderWorkerList();
+      renderWorkerTable();
+      setMessage("workerMessage", "인원관리 변경사항을 업데이트했습니다.", "success");
+    }
+
     document.getElementById("previewBtn").addEventListener("click", () => {
       try {
         const result = calculateWorkResult({
@@ -1112,20 +1148,22 @@
         return;
       }
 
-      workers.push({ name, band, dept });
+      workers.push({ name, band, dept, hidden: false });
       setWorkers(workers);
-
-      renderWorkerList();
-      renderWorkerTable();
-
       document.getElementById("newName").value = "";
-      setMessage("workerMessage", "인원을 추가했습니다.", "success");
+      setMessage("workerMessage", "인원을 추가했습니다. 업데이트를 눌러 반영하세요.", "success");
     });
+
+    document.getElementById("toggleHiddenBtn").addEventListener("click", toggleWorkersVisible);
+    document.getElementById("updateWorkersBtn").addEventListener("click", updateWorkersView);
 
     document.getElementById("resetWorkersBtn").addEventListener("click", () => {
       setWorkers(defaultWorkers);
       renderWorkerList();
       renderWorkerTable();
+      workersVisible = true;
+      document.getElementById("toggleHiddenBtn").textContent = "숨기기";
+      document.querySelector("#workerTable").closest(".table-wrap").style.display = "block";
       setMessage("workerMessage", "기본 인원을 불러왔습니다.", "success");
     });
 
@@ -1181,8 +1219,8 @@
         if (!applicant) throw new Error("신청자를 입력해 주세요.");
         if (!itemName) throw new Error("품목명을 입력해 주세요.");
 
-        const workerExists = getWorkers().some(w => w.name === applicant);
-        if (!workerExists) throw new Error("신청자는 인원관리 목록에 있는 이름만 사용할 수 있습니다.");
+        const workerExists = getActiveWorkers().some(w => w.name === applicant);
+        if (!workerExists) throw new Error("신청자는 현재 사용중인 인원 목록의 이름만 사용할 수 있습니다.");
 
         const imageData = file ? await readFileAsDataURL(file) : "";
 
