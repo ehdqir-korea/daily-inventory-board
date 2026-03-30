@@ -327,7 +327,7 @@
 
     <div class="card">
       <h2>2. 인원관리</h2>
-      <p class="notice">인원 추가는 여기서 바로 가능하고, 수정은 비밀번호 1004 입력 후 삭제만 가능합니다. 업데이트는 현재 저장된 인원 데이터를 화면과 입력목록에 다시 반영합니다.</p>
+      <p class="notice">인원 추가는 여기서 바로 가능하고, 추가된 인원은 연장근무와 구매신청 이름 목록에 즉시 반영됩니다. 수정은 삭제용입니다.</p>
 
       <label for="newName">이름</label>
       <input type="text" id="newName" placeholder="예: 홍길동" />
@@ -501,7 +501,7 @@
         <button type="button" class="close-btn" id="closeWorkerDeleteBtn">닫기</button>
       </div>
 
-      <p class="notice">삭제만 가능합니다. 저장 후 업데이트를 누르면 입력목록과 표에 반영됩니다.</p>
+      <p class="notice">삭제만 가능합니다. 삭제 후에는 연장근무/구매신청 이름 목록에서도 즉시 제외됩니다.</p>
 
       <div id="workerDeleteMessage" class="message"></div>
 
@@ -513,9 +513,9 @@
 
   <script>
     const STORAGE_KEYS = {
-      workers: "overtime_workers_v17",
-      history: "overtime_history_v17",
-      purchases: "purchase_history_v10"
+      workers: "overtime_workers_v18",
+      history: "overtime_history_v18",
+      purchases: "purchase_history_v11"
     };
 
     const EDIT_PASSWORD = "1004";
@@ -1112,8 +1112,13 @@
 
       originalWorkers.splice(idx, 1);
       setWorkers(originalWorkers);
+
       renderWorkerDeleteTable();
+      renderWorkerList();
+      renderWorkerTable();
+
       setMessage("workerDeleteMessage", `${target.name} / ${target.dept} 삭제 완료`, "success");
+      setMessage("workerMessage", `${target.name} / ${target.dept} 삭제 후 반영 완료`, "success");
     }
 
     function getHistoryByDate(date) {
@@ -1225,8 +1230,13 @@
 
       workers.push({ name, band, dept });
       setWorkers(workers);
+
       document.getElementById("newName").value = "";
-      setMessage("workerMessage", "인원을 추가했습니다. 업데이트를 눌러 반영하세요.", "success");
+
+      renderWorkerList();
+      renderWorkerTable();
+
+      setMessage("workerMessage", "인원을 추가했고 이름 목록에도 바로 반영했습니다.", "success");
     });
 
     document.getElementById("toggleWorkerPanelBtn").addEventListener("click", toggleWorkerPanel);
