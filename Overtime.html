@@ -17,6 +17,7 @@
       --success: #16a34a;
       --soft: #eef2ff;
       --overlay: rgba(15, 23, 42, 0.55);
+      --header-gray: #e5e7eb;
     }
 
     * { box-sizing: border-box; }
@@ -200,7 +201,7 @@
     }
 
     th {
-      background: #f8fafc;
+      background: var(--header-gray);
     }
 
     .history-copy-table,
@@ -321,7 +322,7 @@
 
       <label for="absenceType">사유 유형</label>
       <select id="absenceType">
-        <option value="">공백</option>
+        <option value="" selected></option>
         <option value="휴가">휴가</option>
         <option value="연차">연차</option>
         <option value="오전반차">오전반차</option>
@@ -342,13 +343,14 @@
 
     <div class="card">
       <h2>2. 인원관리</h2>
-      <p class="notice">인원 추가는 여기서 바로 가능하고, 추가된 인원은 연장근무와 구매신청 이름 목록에 즉시 반영됩니다. 수정은 삭제용입니다.</p>
+      <p class="notice">인원 리스트는 처음에 숨김 상태입니다. 열기 버튼을 누르면 표시됩니다. 인원 추가는 여기서 바로 가능하고, 추가된 인원은 연장근무와 구매신청 이름 목록에 즉시 반영됩니다. 수정은 삭제용입니다.</p>
 
       <label for="newName">이름</label>
       <input type="text" id="newName" placeholder="예: 홍길동" />
 
       <label for="newBand">반</label>
       <select id="newBand">
+        <option value="없음">없음</option>
         <option value="갑">갑</option>
         <option value="을">을</option>
         <option value="병">병</option>
@@ -367,14 +369,14 @@
 
       <div class="btn-row-4">
         <button class="btn-success" id="addWorkerBtn">인원 추가</button>
-        <button class="btn-secondary" id="toggleWorkerPanelBtn">숨기기</button>
+        <button class="btn-secondary" id="toggleWorkerPanelBtn">열기</button>
         <button class="btn-primary" id="updateWorkersBtn">업데이트</button>
         <button class="btn-secondary" id="openWorkerDeleteBtn">수정</button>
       </div>
 
       <div id="workerMessage" class="message"></div>
 
-      <div class="table-wrap" id="workerTableWrap">
+      <div class="table-wrap" id="workerTableWrap" style="display:none;">
         <table id="workerTable"></table>
       </div>
     </div>
@@ -387,6 +389,18 @@
 
       <label for="historyDate">조회 날짜</label>
       <input type="date" id="historyDate" />
+
+      <label for="historyDept">부서 선택</label>
+      <select id="historyDept">
+        <option value="전체">전체</option>
+        <option value="제분">제분</option>
+        <option value="정선">정선</option>
+        <option value="대포장">대포장</option>
+        <option value="소포장">소포장</option>
+        <option value="품질관리">품질관리</option>
+        <option value="기술">기술</option>
+        <option value="생산2팀">생산2팀</option>
+      </select>
 
       <button class="btn-primary" id="searchHistoryBtn">조회</button>
 
@@ -403,7 +417,7 @@
 
     <div class="card">
       <h2>4. 구매 신청 목록</h2>
-      <p class="notice">구매 신청은 저장된 순서대로 계속 쌓이며, 각 항목의 마감 버튼으로 개별 종료합니다.</p>
+      <p class="notice">구매 신청은 저장된 순서대로 계속 쌓이며, 마감은 비밀번호 1004 입력 후에만 가능합니다.</p>
 
       <div id="purchaseHistorySummary" class="message"></div>
 
@@ -478,6 +492,18 @@
       <label for="editTargetDate">수정 대상 날짜</label>
       <input type="date" id="editTargetDate" />
 
+      <label for="editTargetDept">부서 선택</label>
+      <select id="editTargetDept">
+        <option value="전체">전체</option>
+        <option value="제분">제분</option>
+        <option value="정선">정선</option>
+        <option value="대포장">대포장</option>
+        <option value="소포장">소포장</option>
+        <option value="품질관리">품질관리</option>
+        <option value="기술">기술</option>
+        <option value="생산2팀">생산2팀</option>
+      </select>
+
       <button class="btn-primary" id="loadEditRowsBtn">조회결과 불러오기</button>
 
       <label for="editRowSelect">수정할 항목 선택</label>
@@ -491,7 +517,7 @@
 
       <label for="editAbsenceType">사유 유형</label>
       <select id="editAbsenceType">
-        <option value="">공백</option>
+        <option value=""></option>
         <option value="휴가">휴가</option>
         <option value="연차">연차</option>
         <option value="오전반차">오전반차</option>
@@ -529,9 +555,9 @@
 
   <script>
     const STORAGE_KEYS = {
-      workers: "overtime_workers_v19",
-      history: "overtime_history_v19",
-      purchases: "purchase_history_v12"
+      workers: "overtime_workers_v20",
+      history: "overtime_history_v20",
+      purchases: "purchase_history_v13"
     };
 
     const EDIT_PASSWORD = "1004";
@@ -628,6 +654,8 @@
       { name: "이건호", band: "병", dept: "제분" }
     ];
 
+    const deptOptions = ["전체", "제분", "정선", "대포장", "소포장", "품질관리", "기술", "생산2팀"];
+
     const timeTemplates = {
       default: {
         없음: {
@@ -685,8 +713,9 @@
       ["병", "갑", "을"]
     ];
 
-    let workerPanelOpen = true;
+    let workerPanelOpen = false;
     let passwordAction = "";
+    let pendingPurchaseCloseIndex = null;
 
     function load(key, fallback) {
       try {
@@ -708,7 +737,7 @@
           band: String(w.band || "").trim(),
           dept: String(w.dept || "").trim()
         }))
-        .filter(w => w.name && w.band && w.dept);
+        .filter(w => w.name && w.dept);
     }
 
     function getWorkers() {
@@ -849,6 +878,7 @@
     }
 
     function buildActionText(absentName, absenceType) {
+      if (absentName === "잔업특근") return "잔업특근";
       return `${absentName}${absenceType ? " " + absenceType : ""}대체`;
     }
 
@@ -859,20 +889,45 @@
 
       const workers = getWorkers();
       const worker = workers.find(w => w.name === workerName);
-      const absent = workers.find(w => w.name === absentName);
 
       if (!worker) throw new Error("본인 이름이 인원목록에 없습니다.");
-      if (!absent) throw new Error("휴가자 이름이 인원목록에 없습니다.");
+
+      if (absentName === "잔업특근") {
+        return {
+          date,
+          dayName: getDayName(date),
+          dept: worker.dept,
+          workerName: worker.name,
+          workerBand: worker.band,
+          absentName: "잔업특근",
+          absentBand: "-",
+          absenceType,
+          note,
+          rotation: getRotationForDate(date),
+          workerRole: worker.band === "없음" ? "-" : (getRoleFromBand(getRotationForDate(date), worker.band) || "-"),
+          absentRole: "-",
+          replacementRole: "-",
+          sequenceNo: "-",
+          totalWork: "08:00 ~ 16:00",
+          overtime: "-",
+          overtimeHours: 0,
+          actionText: "잔업특근"
+        };
+      }
+
+      const absent = workers.find(w => w.name === absentName);
+
+      if (!absent) throw new Error('휴가자 이름은 인원목록에 있는 이름만 입력 가능하며, 예외는 "잔업특근"만 가능합니다.');
       if (worker.dept !== absent.dept) throw new Error("같은 부서끼리만 대체 가능합니다.");
 
       const rotation = getRotationForDate(date);
       const dayName = getDayName(date);
 
-      const workerRole = getRoleFromBand(rotation, worker.band);
-      const absentRole = getRoleFromBand(rotation, absent.band);
+      const workerRole = worker.band === "없음" ? null : getRoleFromBand(rotation, worker.band);
+      const absentRole = absent.band === "없음" ? null : getRoleFromBand(rotation, absent.band);
 
       if (!workerRole || !absentRole) {
-        throw new Error("반변경 계산에 실패했습니다.");
+        throw new Error("반변경 계산에 실패했습니다. 반이 '없음'인 경우 일반 대체근무 계산이 불가능합니다.");
       }
 
       const assignment = resolveAssignment(date, absentRole, workerRole, absenceType);
@@ -905,11 +960,12 @@
         a.dept.localeCompare(b.dept, "ko") || a.name.localeCompare(b.name, "ko")
       );
 
+      const extraOptions = `<option value="잔업특근">잔업특근</option>`;
       const list = workers
         .map(w => `<option value="${w.name}">${w.name} (${w.band}/${w.dept})</option>`)
         .join("");
 
-      document.getElementById("workersList").innerHTML = list;
+      document.getElementById("workersList").innerHTML = list + extraOptions;
     }
 
     function renderWorkerTable() {
@@ -922,7 +978,7 @@
         html += `
           <tr>
             <td style="text-align:center;"><div>${w.name}</div></td>
-            <td style="text-align:center;"><div>${w.band}</div></td>
+            <td style="text-align:center;"><div>${w.band || "-"}</div></td>
             <td style="text-align:center;"><div>${w.dept}</div></td>
           </tr>
         `;
@@ -941,7 +997,7 @@
         html += `
           <tr>
             <td style="text-align:center;"><div>${w.name}</div></td>
-            <td style="text-align:center;"><div>${w.band}</div></td>
+            <td style="text-align:center;"><div>${w.band || "-"}</div></td>
             <td style="text-align:center;"><div>${w.dept}</div></td>
             <td style="text-align:center;"><div><button class="btn-danger" onclick="deleteWorkerBySortedIndex(${idx})">삭제</button></div></td>
           </tr>
@@ -965,17 +1021,20 @@
         <div><b>대체 역할</b>: ${result.replacementRole}</div>
         <div><b>근무순번</b>: ${result.sequenceNo ?? "-"}</div>
         <div><b>총근무</b>: ${result.totalWork}</div>
-        <div><b>연장근무시간</b>: ${result.overtime} (${result.overtimeHours}시간)</div>
+        <div><b>연장근무시간</b>: ${result.overtime}${result.overtimeHours ? ` (${result.overtimeHours}시간)` : ""}</div>
         <div><b>비고</b>: ${result.note || "-"}</div>
       `;
     }
 
-    function renderHistory(date) {
-      const history = getHistory().filter(x => x.date === date);
-      const summary = document.getElementById("historySummary");
+    function renderHistory(date, deptFilter = "전체") {
+      let history = getHistory().filter(x => x.date === date);
+      if (deptFilter !== "전체") {
+        history = history.filter(x => x.dept === deptFilter);
+      }
 
+      const summary = document.getElementById("historySummary");
       summary.className = "message";
-      summary.textContent = `${date} 조회 결과 ${history.length}건`;
+      summary.textContent = `${date} / ${deptFilter} 조회 결과 ${history.length}건`;
 
       let html = `
         <tr>
@@ -1028,7 +1087,7 @@
             <td>${linkHtml}</td>
             <td>${imgHtml}</td>
             <td>${item.note || "-"}</td>
-            <td><button class="btn-danger" onclick="closePurchaseItem(${index})">마감</button></td>
+            <td><button class="btn-danger" onclick="requestPurchaseClose(${index})">마감</button></td>
           </tr>
         `;
       });
@@ -1061,11 +1120,13 @@
     function closePasswordModal() {
       document.getElementById("passwordModal").classList.remove("show");
       passwordAction = "";
+      pendingPurchaseCloseIndex = null;
     }
 
     function openEditHistoryModal() {
       document.getElementById("editHistoryModal").classList.add("show");
       document.getElementById("editTargetDate").value = document.getElementById("historyDate").value || formatDate(new Date());
+      document.getElementById("editTargetDept").value = document.getElementById("historyDept").value || "전체";
       document.getElementById("editRowSelect").innerHTML = '<option value="">선택</option>';
       document.getElementById("editWorkerName").value = "";
       document.getElementById("editAbsentName").value = "";
@@ -1123,6 +1184,11 @@
       renderPurchaseHistory();
     }
 
+    function requestPurchaseClose(index) {
+      pendingPurchaseCloseIndex = index;
+      openPasswordModal("구매신청 마감 인증", "purchase-close");
+    }
+
     function deleteWorkerBySortedIndex(sortedIndex) {
       const sortedWorkers = getWorkers().sort((a, b) =>
         a.dept.localeCompare(b.dept, "ko") || a.name.localeCompare(b.name, "ko")
@@ -1150,14 +1216,19 @@
       setMessage("workerMessage", `${target.name} / ${target.dept} 삭제 후 반영 완료`, "success");
     }
 
-    function getHistoryByDate(date) {
-      return getHistory()
+    function getHistoryByDate(date, deptFilter = "전체") {
+      let rows = getHistory()
         .map((item, index) => ({ ...item, __index: index }))
         .filter(item => item.date === date);
+
+      if (deptFilter !== "전체") {
+        rows = rows.filter(item => item.dept === deptFilter);
+      }
+      return rows;
     }
 
-    function populateEditRows(date) {
-      const rows = getHistoryByDate(date);
+    function populateEditRows(date, deptFilter = "전체") {
+      const rows = getHistoryByDate(date, deptFilter);
       const select = document.getElementById("editRowSelect");
 
       let html = '<option value="">선택</option>';
@@ -1167,9 +1238,9 @@
       select.innerHTML = html;
 
       if (rows.length === 0) {
-        setMessage("editHistoryMessage", "해당 날짜의 조회결과가 없습니다.", "error");
+        setMessage("editHistoryMessage", "해당 조건의 조회결과가 없습니다.", "error");
       } else {
-        setMessage("editHistoryMessage", `${rows.length}건을 불러왔습니다.`, "success");
+        setMessage("editHistoryMessage", `${deptFilter} / ${rows.length}건을 불러왔습니다.`, "success");
       }
     }
 
@@ -1233,7 +1304,7 @@
         setMessage("calcMessage", "계산 후 저장했습니다.", "success");
 
         if (document.getElementById("historyDate").value === result.date) {
-          renderHistory(result.date);
+          renderHistory(result.date, document.getElementById("historyDept").value);
         }
       } catch (e) {
         document.getElementById("calcResult").style.display = "none";
@@ -1277,11 +1348,12 @@
 
     document.getElementById("searchHistoryBtn").addEventListener("click", () => {
       const date = document.getElementById("historyDate").value;
+      const dept = document.getElementById("historyDept").value;
       if (!date) {
         setMessage("historySummary", "조회 날짜를 입력해 주세요.", "error");
         return;
       }
-      renderHistory(date);
+      renderHistory(date, dept);
     });
 
     document.getElementById("openPurchaseBtn").addEventListener("click", () => {
@@ -1365,12 +1437,17 @@
       }
 
       const action = passwordAction;
+      const purchaseIndex = pendingPurchaseCloseIndex;
       closePasswordModal();
 
       if (action === "history-edit") {
         openEditHistoryModal();
       } else if (action === "worker-delete") {
         openWorkerDeleteModal();
+      } else if (action === "purchase-close") {
+        if (purchaseIndex !== null) {
+          closePurchaseItem(purchaseIndex);
+        }
       }
     });
 
@@ -1379,11 +1456,12 @@
 
     document.getElementById("loadEditRowsBtn").addEventListener("click", () => {
       const date = document.getElementById("editTargetDate").value;
+      const dept = document.getElementById("editTargetDept").value;
       if (!date) {
         setMessage("editHistoryMessage", "수정 대상 날짜를 입력해 주세요.", "error");
         return;
       }
-      populateEditRows(date);
+      populateEditRows(date, dept);
     });
 
     document.getElementById("editRowSelect").addEventListener("change", (e) => {
@@ -1413,12 +1491,13 @@
         history[Number(selectedIndex)] = recalculated;
         setHistory(history);
 
-        populateEditRows(date);
+        const dept = document.getElementById("editTargetDept").value;
+        populateEditRows(date, dept);
         document.getElementById("editRowSelect").value = String(selectedIndex);
         fillEditFormByIndex(String(selectedIndex));
 
         if (document.getElementById("historyDate").value === date) {
-          renderHistory(date);
+          renderHistory(date, document.getElementById("historyDept").value);
         }
 
         setMessage("editHistoryMessage", "조회결과를 수정했습니다.", "success");
@@ -1438,14 +1517,15 @@
         history.splice(Number(selectedIndex), 1);
         setHistory(history);
 
-        populateEditRows(date);
+        const dept = document.getElementById("editTargetDept").value;
+        populateEditRows(date, dept);
         document.getElementById("editWorkerName").value = "";
         document.getElementById("editAbsentName").value = "";
         document.getElementById("editAbsenceType").value = "";
         document.getElementById("editNote").value = "";
 
         if (document.getElementById("historyDate").value === date) {
-          renderHistory(date);
+          renderHistory(date, document.getElementById("historyDept").value);
         }
 
         setMessage("editHistoryMessage", "선택 항목을 삭제했습니다.", "success");
@@ -1483,8 +1563,11 @@
       document.getElementById("workDate").value = today;
       document.getElementById("historyDate").value = today;
       document.getElementById("purchaseDate").value = today;
+      document.getElementById("historyDept").value = "전체";
+      document.getElementById("workerTableWrap").style.display = "none";
+      document.getElementById("toggleWorkerPanelBtn").textContent = "열기";
 
-      renderHistory(today);
+      renderHistory(today, "전체");
       renderPurchaseHistory();
     }
 
