@@ -187,6 +187,7 @@
       min-width: 820px;
       font-size: 14px;
       background: #fff;
+      text-align: center;
     }
 
     th, td {
@@ -200,6 +201,19 @@
 
     th {
       background: #f8fafc;
+    }
+
+    .history-copy-table,
+    .history-copy-table th,
+    .history-copy-table td {
+      text-align: center !important;
+      vertical-align: middle !important;
+    }
+
+    .history-copy-table th > div,
+    .history-copy-table td > div {
+      text-align: center !important;
+      margin: 0 auto;
     }
 
     .modal {
@@ -307,6 +321,7 @@
 
       <label for="absenceType">사유 유형</label>
       <select id="absenceType">
+        <option value="">공백</option>
         <option value="휴가">휴가</option>
         <option value="연차">연차</option>
         <option value="오전반차">오전반차</option>
@@ -378,7 +393,7 @@
       <div id="historySummary" class="message"></div>
 
       <div class="table-wrap">
-        <table id="historyTable"></table>
+        <table id="historyTable" class="history-copy-table"></table>
       </div>
     </div>
 
@@ -476,6 +491,7 @@
 
       <label for="editAbsenceType">사유 유형</label>
       <select id="editAbsenceType">
+        <option value="">공백</option>
         <option value="휴가">휴가</option>
         <option value="연차">연차</option>
         <option value="오전반차">오전반차</option>
@@ -513,9 +529,9 @@
 
   <script>
     const STORAGE_KEYS = {
-      workers: "overtime_workers_v18",
-      history: "overtime_history_v18",
-      purchases: "purchase_history_v11"
+      workers: "overtime_workers_v19",
+      history: "overtime_history_v19",
+      purchases: "purchase_history_v12"
     };
 
     const EDIT_PASSWORD = "1004";
@@ -832,6 +848,10 @@
       return row;
     }
 
+    function buildActionText(absentName, absenceType) {
+      return `${absentName}${absenceType ? " " + absenceType : ""}대체`;
+    }
+
     function calculateWorkResult({ date, workerName, absentName, absenceType, note }) {
       if (!date) throw new Error("날짜를 입력해 주세요.");
       if (!workerName) throw new Error("본인 이름을 입력해 주세요.");
@@ -876,7 +896,7 @@
         totalWork: tpl.total,
         overtime: tpl.overtime,
         overtimeHours: tpl.overtimeHours,
-        actionText: `${absent.name} ${absenceType}대체`
+        actionText: buildActionText(absent.name, absenceType)
       };
     }
 
@@ -897,13 +917,13 @@
         a.dept.localeCompare(b.dept, "ko") || a.name.localeCompare(b.name, "ko")
       );
 
-      let html = "<tr><th>성명</th><th>반</th><th>부서</th></tr>";
+      let html = "<tr><th style='text-align:center;'>성명</th><th style='text-align:center;'>반</th><th style='text-align:center;'>부서</th></tr>";
       workers.forEach(w => {
         html += `
           <tr>
-            <td>${w.name}</td>
-            <td>${w.band}</td>
-            <td>${w.dept}</td>
+            <td style="text-align:center;"><div>${w.name}</div></td>
+            <td style="text-align:center;"><div>${w.band}</div></td>
+            <td style="text-align:center;"><div>${w.dept}</div></td>
           </tr>
         `;
       });
@@ -916,14 +936,14 @@
         a.dept.localeCompare(b.dept, "ko") || a.name.localeCompare(b.name, "ko")
       );
 
-      let html = "<tr><th>성명</th><th>반</th><th>부서</th><th>삭제</th></tr>";
+      let html = "<tr><th style='text-align:center;'>성명</th><th style='text-align:center;'>반</th><th style='text-align:center;'>부서</th><th style='text-align:center;'>삭제</th></tr>";
       workers.forEach((w, idx) => {
         html += `
           <tr>
-            <td>${w.name}</td>
-            <td>${w.band}</td>
-            <td>${w.dept}</td>
-            <td><button class="btn-danger" onclick="deleteWorkerBySortedIndex(${idx})">삭제</button></td>
+            <td style="text-align:center;"><div>${w.name}</div></td>
+            <td style="text-align:center;"><div>${w.band}</div></td>
+            <td style="text-align:center;"><div>${w.dept}</div></td>
+            <td style="text-align:center;"><div><button class="btn-danger" onclick="deleteWorkerBySortedIndex(${idx})">삭제</button></div></td>
           </tr>
         `;
       });
@@ -957,15 +977,24 @@
       summary.className = "message";
       summary.textContent = `${date} 조회 결과 ${history.length}건`;
 
-      let html = "<tr><th>구분</th><th>성명</th><th>작업내용</th><th>작업시간</th><th>비고</th></tr>";
+      let html = `
+        <tr>
+          <th style="text-align:center;">구분</th>
+          <th style="text-align:center;">성명</th>
+          <th style="text-align:center;">작업내용</th>
+          <th style="text-align:center;">작업시간</th>
+          <th style="text-align:center;">비고</th>
+        </tr>
+      `;
+
       history.forEach(item => {
         html += `
           <tr>
-            <td>${item.dept}</td>
-            <td>${item.workerName}</td>
-            <td>${item.actionText}</td>
-            <td>총근무: ${item.totalWork}<br>연장: ${item.overtime}</td>
-            <td>${item.note || "-"}</td>
+            <td style="text-align:center;"><div>${item.dept}</div></td>
+            <td style="text-align:center;"><div>${item.workerName}</div></td>
+            <td style="text-align:center;"><div>${item.actionText}</div></td>
+            <td style="text-align:center;"><div>총근무: ${item.totalWork}<br>연장: ${item.overtime}</div></td>
+            <td style="text-align:center;"><div>${item.note || "-"}</div></td>
           </tr>
         `;
       });
@@ -1040,7 +1069,7 @@
       document.getElementById("editRowSelect").innerHTML = '<option value="">선택</option>';
       document.getElementById("editWorkerName").value = "";
       document.getElementById("editAbsentName").value = "";
-      document.getElementById("editAbsenceType").value = "휴가";
+      document.getElementById("editAbsenceType").value = "";
       document.getElementById("editNote").value = "";
       setMessage("editHistoryMessage", "", "success");
     }
@@ -1152,7 +1181,7 @@
 
       document.getElementById("editWorkerName").value = row.workerName;
       document.getElementById("editAbsentName").value = row.absentName;
-      document.getElementById("editAbsenceType").value = row.absenceType;
+      document.getElementById("editAbsenceType").value = row.absenceType || "";
       document.getElementById("editNote").value = row.note || "";
     }
 
@@ -1412,7 +1441,7 @@
         populateEditRows(date);
         document.getElementById("editWorkerName").value = "";
         document.getElementById("editAbsentName").value = "";
-        document.getElementById("editAbsenceType").value = "휴가";
+        document.getElementById("editAbsenceType").value = "";
         document.getElementById("editNote").value = "";
 
         if (document.getElementById("historyDate").value === date) {
