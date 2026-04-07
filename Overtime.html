@@ -30,7 +30,7 @@
     }
 
     .container {
-      max-width: 980px;
+      max-width: 1100px;
       margin: 0 auto;
       padding: 16px;
     }
@@ -140,6 +140,13 @@
       margin-top: 8px;
     }
 
+    .btn-row-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
     .btn-row-4 {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr 1fr;
@@ -185,7 +192,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 820px;
+      min-width: 980px;
       font-size: 14px;
       background: #fff;
       text-align: center;
@@ -233,7 +240,7 @@
     }
 
     .modal-content {
-      width: min(760px, 100%);
+      width: min(860px, 100%);
       max-height: 92vh;
       overflow-y: auto;
       background: #fff;
@@ -289,10 +296,16 @@
       margin: 0 auto;
     }
 
+    .field-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
     @media (max-width: 640px) {
       .container { padding: 12px; }
       .card { padding: 14px; }
-      .btn-row, .btn-row-4 { grid-template-columns: 1fr; }
+      .btn-row, .btn-row-3, .btn-row-4, .field-grid-2 { grid-template-columns: 1fr; }
       .subtitle, .notice { font-size: 12px; }
       table { min-width: 760px; font-size: 13px; }
       .modal-content { padding: 14px; }
@@ -304,10 +317,53 @@
 <body>
   <div class="container">
     <h1>연장근무 관리</h1>
-    <p class="subtitle">날짜, 본인 이름, 휴가자 이름을 입력하면 반변경에 따라 작업시간과 연장시간을 계산합니다.</p>
+    <p class="subtitle">휴가 상신, 연장근무 입력, 인원관리, 연장근무 히스토리, 구매신청을 한 화면에서 관리합니다.</p>
 
+    <!-- 1. 휴가 상신 -->
     <div class="card">
-      <h2>1. 연장근무 입력</h2>
+      <div class="section-header">
+        <h2>1. 휴가 상신</h2>
+        <button class="btn-secondary inline-btn" id="openEditLeaveBtn">수정</button>
+      </div>
+
+      <label for="leaveDate">신청일자</label>
+      <input type="date" id="leaveDate" />
+
+      <label for="leaveName">이름</label>
+      <input list="workersList" id="leaveName" placeholder="이름 입력 또는 선택" />
+
+      <label for="leaveType">사유 유형</label>
+      <select id="leaveType">
+        <option value="" selected></option>
+        <option value="휴가">휴가</option>
+        <option value="연차">연차</option>
+        <option value="오전반차">오전반차</option>
+        <option value="오후반차">오후반차</option>
+      </select>
+
+      <label for="leaveNote">비고</label>
+      <input type="text" id="leaveNote" placeholder="예: 개인사유, 병원, 가정사" />
+
+      <label for="leaveFile">첨부파일</label>
+      <input type="file" id="leaveFile" accept="image/*" />
+      <div id="leaveFileName" class="preview-file"></div>
+      <img id="leavePreview" class="thumb" alt="휴가 첨부 미리보기" />
+
+      <div class="btn-row">
+        <button class="btn-primary" id="saveLeaveBtn">저장</button>
+        <button class="btn-secondary" id="searchLeaveBtn">조회</button>
+      </div>
+
+      <div id="leaveMessage" class="message"></div>
+
+      <div class="table-wrap">
+        <table id="leaveTable"></table>
+      </div>
+    </div>
+
+    <!-- 2. 연장근무 입력 -->
+    <div class="card">
+      <h2>2. 연장근무 입력</h2>
 
       <label for="workDate">날짜</label>
       <input type="date" id="workDate" />
@@ -332,6 +388,11 @@
       <label for="note">비고</label>
       <input type="text" id="note" placeholder="예: 현장 요청, 제분, 설비대응" />
 
+      <label for="workFile">첨부파일</label>
+      <input type="file" id="workFile" accept="image/*" />
+      <div id="workFileName" class="preview-file"></div>
+      <img id="workPreview" class="thumb" alt="연장근무 첨부 미리보기" />
+
       <div class="btn-row">
         <button class="btn-primary" id="previewBtn">계산</button>
         <button class="btn-secondary" id="saveBtn">계산 후 저장</button>
@@ -341,9 +402,10 @@
       <div id="calcResult" class="result-box" style="display:none;"></div>
     </div>
 
+    <!-- 3. 인원관리 -->
     <div class="card">
-      <h2>2. 인원관리</h2>
-      <p class="notice">인원 리스트는 처음에 숨김 상태입니다. 열기 버튼을 누르면 표시됩니다. 인원 추가는 여기서 바로 가능하고, 추가된 인원은 연장근무와 구매신청 이름 목록에 즉시 반영됩니다. 수정은 삭제용입니다.</p>
+      <h2>3. 인원관리</h2>
+      <p class="notice">인원 리스트는 처음에 숨김 상태입니다. 열기 버튼을 누르면 표시됩니다. 추가/삭제된 인원은 휴가 상신, 연장근무, 구매신청 이름 목록에 즉시 반영됩니다.</p>
 
       <label for="newName">이름</label>
       <input type="text" id="newName" placeholder="예: 홍길동" />
@@ -381,9 +443,10 @@
       </div>
     </div>
 
+    <!-- 4. 연장근무 히스토리 -->
     <div class="card">
       <div class="section-header">
-        <h2>3. 일자별 연장근무 히스토리 조회</h2>
+        <h2>4. 일자별 연장근무 히스토리 조회</h2>
         <button class="btn-secondary inline-btn" id="openEditHistoryBtn">수정</button>
       </div>
 
@@ -415,8 +478,9 @@
       <button class="btn-primary" id="openPurchaseBtn">구매 신청 열기</button>
     </div>
 
+    <!-- 5. 구매 신청 -->
     <div class="card">
-      <h2>4. 구매 신청 목록</h2>
+      <h2>5. 구매 신청 목록</h2>
       <p class="notice">구매 신청은 저장된 순서대로 계속 쌓이며, 마감은 비밀번호 1004 입력 후에만 가능합니다.</p>
 
       <div id="purchaseHistorySummary" class="message"></div>
@@ -427,6 +491,7 @@
     </div>
   </div>
 
+  <!-- 구매 신청 모달 -->
   <div class="modal" id="purchaseModal">
     <div class="modal-content">
       <div class="modal-header">
@@ -463,6 +528,7 @@
     </div>
   </div>
 
+  <!-- 공통 비밀번호 모달 -->
   <div class="modal" id="passwordModal">
     <div class="modal-content">
       <div class="modal-header">
@@ -482,6 +548,7 @@
     </div>
   </div>
 
+  <!-- 연장근무 수정 모달 -->
   <div class="modal" id="editHistoryModal">
     <div class="modal-content">
       <div class="modal-header">
@@ -527,6 +594,20 @@
       <label for="editNote">비고</label>
       <input type="text" id="editNote" placeholder="비고 입력" />
 
+      <div class="field-grid-2">
+        <div>
+          <label for="editManualTotalWork">총근무 (수기 수정)</label>
+          <input type="text" id="editManualTotalWork" placeholder="예: 07:00 ~ 19:00" />
+        </div>
+        <div>
+          <label for="editManualOvertime">연장근무시간 (수기 수정)</label>
+          <input type="text" id="editManualOvertime" placeholder="예: 15:00 ~ 19:00" />
+        </div>
+      </div>
+
+      <label for="editManualOvertimeHours">연장시간(숫자, 수기 수정)</label>
+      <input type="number" step="0.5" id="editManualOvertimeHours" placeholder="예: 4 또는 3.5" />
+
       <div class="btn-row">
         <button class="btn-primary" id="saveEditHistoryBtn">수정 저장</button>
         <button class="btn-danger" id="deleteEditHistoryBtn">선택 항목 삭제</button>
@@ -536,6 +617,55 @@
     </div>
   </div>
 
+  <!-- 휴가 상신 수정 모달 -->
+  <div class="modal" id="editLeaveModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>휴가 상신 수정</h2>
+        <button type="button" class="close-btn" id="closeEditLeaveBtn">닫기</button>
+      </div>
+
+      <label for="editLeaveTargetDate">조회 날짜</label>
+      <input type="date" id="editLeaveTargetDate" />
+
+      <button class="btn-primary" id="loadEditLeaveRowsBtn">조회결과 불러오기</button>
+
+      <label for="editLeaveRowSelect">수정할 항목 선택</label>
+      <select id="editLeaveRowSelect"></select>
+
+      <label for="editLeaveDate">신청일자</label>
+      <input type="date" id="editLeaveDate" />
+
+      <label for="editLeaveName">이름</label>
+      <input list="workersList" id="editLeaveName" placeholder="이름 입력 또는 선택" />
+
+      <label for="editLeaveType">사유 유형</label>
+      <select id="editLeaveType">
+        <option value=""></option>
+        <option value="휴가">휴가</option>
+        <option value="연차">연차</option>
+        <option value="오전반차">오전반차</option>
+        <option value="오후반차">오후반차</option>
+      </select>
+
+      <label for="editLeaveNote">비고</label>
+      <input type="text" id="editLeaveNote" placeholder="비고 입력" />
+
+      <label for="editLeaveFile">첨부파일 변경</label>
+      <input type="file" id="editLeaveFile" accept="image/*" />
+      <div id="editLeaveFileName" class="preview-file"></div>
+      <img id="editLeavePreview" class="thumb" alt="휴가 수정 첨부 미리보기" />
+
+      <div class="btn-row">
+        <button class="btn-primary" id="saveEditLeaveBtn">수정 저장</button>
+        <button class="btn-danger" id="deleteEditLeaveBtn">선택 항목 삭제</button>
+      </div>
+
+      <div id="editLeaveMessage" class="message"></div>
+    </div>
+  </div>
+
+  <!-- 인원 삭제 모달 -->
   <div class="modal" id="workerDeleteModal">
     <div class="modal-content">
       <div class="modal-header">
@@ -543,7 +673,7 @@
         <button type="button" class="close-btn" id="closeWorkerDeleteBtn">닫기</button>
       </div>
 
-      <p class="notice">삭제만 가능합니다. 삭제 후에는 연장근무/구매신청 이름 목록에서도 즉시 제외됩니다.</p>
+      <p class="notice">삭제만 가능합니다. 삭제 후에는 휴가 상신/연장근무/구매신청 이름 목록에서도 즉시 제외됩니다.</p>
 
       <div id="workerDeleteMessage" class="message"></div>
 
@@ -557,7 +687,8 @@
     const STORAGE_KEYS = {
       workers: "overtime_workers_v20",
       history: "overtime_history_v20",
-      purchases: "purchase_history_v13"
+      purchases: "purchase_history_v13",
+      leave: "leave_history_v1"
     };
 
     const EDIT_PASSWORD = "1004";
@@ -654,8 +785,6 @@
       { name: "이건호", band: "병", dept: "제분" }
     ];
 
-    const deptOptions = ["전체", "제분", "정선", "대포장", "소포장", "품질관리", "기술", "생산2팀"];
-
     const timeTemplates = {
       default: {
         없음: {
@@ -713,6 +842,9 @@
       ["병", "갑", "을"]
     ];
 
+    const BASE_YEAR = 2025;
+    const BASE_YEAR_FIRST_SUNDAY_PATTERN_INDEX = 1; // 2025 첫 일요일(1/5) 패턴 = 을/병/갑
+
     let workerPanelOpen = false;
     let passwordAction = "";
     let pendingPurchaseCloseIndex = null;
@@ -764,6 +896,14 @@
       saveData(STORAGE_KEYS.purchases, items);
     }
 
+    function getLeave() {
+      return load(STORAGE_KEYS.leave, []);
+    }
+
+    function setLeave(items) {
+      saveData(STORAGE_KEYS.leave, items);
+    }
+
     function parseDate(dateStr) {
       const [y, m, d] = dateStr.split("-").map(Number);
       return new Date(y, m - 1, d);
@@ -781,24 +921,51 @@
       return ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
     }
 
-    function getWeekNumMonday(dateStr) {
-      const date = parseDate(dateStr);
-      const year = date.getFullYear();
+    function getFirstSundayOfYear(year) {
       const jan1 = new Date(year, 0, 1);
-      const jan1Day = jan1.getDay();
-      const mondayBasedJan1 = jan1Day === 0 ? 7 : jan1Day;
-      const diffDays = Math.floor((date - jan1) / 86400000);
-      return Math.floor((diffDays + mondayBasedJan1 - 1) / 7) + 1;
+      const day = jan1.getDay();
+      const offset = (7 - day) % 7;
+      return new Date(year, 0, 1 + offset);
+    }
+
+    function getYearStartPatternIndex(year) {
+      if (year === BASE_YEAR) {
+        return BASE_YEAR_FIRST_SUNDAY_PATTERN_INDEX;
+      }
+      if (year > BASE_YEAR) {
+        const prevLast = getLastPatternIndexOfYear(year - 1);
+        return (prevLast + 1) % 3;
+      }
+      const prevStart = getYearStartPatternIndex(year + 1);
+      return ((prevStart - 1) % 3 + 3) % 3;
+    }
+
+    function getLastPatternIndexOfYear(year) {
+      const firstSunday = getFirstSundayOfYear(year);
+      const lastDay = new Date(year, 11, 31);
+      if (lastDay < firstSunday) {
+        return getLastPatternIndexOfYear(year - 1);
+      }
+      const diffDays = Math.floor((lastDay - firstSunday) / 86400000);
+      const weeksSince = Math.floor(diffDays / 7);
+      return (getYearStartPatternIndex(year) + weeksSince) % 3;
     }
 
     function getRotationForDate(dateStr) {
-      const year = parseDate(dateStr).getFullYear();
-      const baseYear = 2026;
-      const startPatternIndex = ((year - baseYear) % 3 + 3) % 3;
-      const weekNum = getWeekNumMonday(dateStr);
-      const patternIndex = (startPatternIndex + weekNum) % 3;
-      const pattern = rotationPatterns[patternIndex];
+      const date = parseDate(dateStr);
+      const year = date.getFullYear();
+      const firstSunday = getFirstSundayOfYear(year);
 
+      let patternIndex;
+      if (date < firstSunday) {
+        patternIndex = getLastPatternIndexOfYear(year - 1);
+      } else {
+        const diffDays = Math.floor((date - firstSunday) / 86400000);
+        const weeksSince = Math.floor(diffDays / 7);
+        patternIndex = (getYearStartPatternIndex(year) + weeksSince) % 3;
+      }
+
+      const pattern = rotationPatterns[patternIndex];
       return {
         조근: pattern[0],
         중근: pattern[1],
@@ -813,90 +980,43 @@
       return null;
     }
 
-function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
-  const dayName = getDayName(dateStr);
+    function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
+      const dayName = getDayName(dateStr);
+      const isMonday = dayName === "월";
 
-  // 반차는 그대로 유지
-  if (absenceType === "오전반차" || absenceType === "오후반차") {
-    return {
-      targetRole: absentRole,
-      sequenceNo: null
-    };
-  }
-
-  // 동일 역할 방지 (안전장치)
-  if (absentRole === workerRole) {
-    throw new Error("같은 역할끼리는 대체할 수 없습니다.");
-  }
-
-  const isMonday = dayName === "월";
-
-  // =========================
-  // 🔥 1. 조근 결원
-  // =========================
-  if (absentRole === "조근") {
-
-    if (isMonday) {
-      if (workerRole === "중근") {
-        return { targetRole: "조근", sequenceNo: 1 };
-      }
-      if (workerRole === "야근") {
-        return { targetRole: "조근", sequenceNo: 2 };
-      }
-    } else {
-      if (workerRole === "야근") {
-        return { targetRole: "조근", sequenceNo: 1 };
-      }
-      if (workerRole === "중근") {
-        return { targetRole: "조근", sequenceNo: 2 };
-      }
-    }
-  }
-
-  // =========================
-  // 🔥 2. 중근 결원
-  // =========================
-  if (absentRole === "중근") {
-
-    if (workerRole === "조근") {
-      return { targetRole: "중근", sequenceNo: 1 };
-    }
-    if (workerRole === "야근") {
-      return { targetRole: "중근", sequenceNo: 2 };
-    }
-  }
-
-  // =========================
-  // 🔥 3. 야근 결원 (핵심 수정)
-  // =========================
-  if (absentRole === "야근") {
-
-    // 🚨 월요일은 무조건 연쇄 대체
-    if (isMonday) {
-
-      if (workerRole === "중근") {
-        return { targetRole: "야근", sequenceNo: 2 };
+      if (absenceType === "오전반차" || absenceType === "오후반차") {
+        return {
+          targetRole: absentRole,
+          sequenceNo: null
+        };
       }
 
-      if (workerRole === "조근") {
-        return { targetRole: "중근", sequenceNo: 1 };
+      if (absentRole === workerRole) {
+        throw new Error("같은 역할끼리는 대체할 수 없습니다.");
       }
 
-      throw new Error("월요일 야근 대체 규칙 오류");
-    }
+      if (absentRole === "조근") {
+        if (isMonday) {
+          if (workerRole === "중근") return { targetRole: "조근", sequenceNo: 1 };
+          if (workerRole === "야근") return { targetRole: "조근", sequenceNo: 2 };
+        } else {
+          if (workerRole === "야근") return { targetRole: "조근", sequenceNo: 1 };
+          if (workerRole === "중근") return { targetRole: "조근", sequenceNo: 2 };
+        }
+      }
 
-    // 일반 요일도 동일하게 유지 (연쇄 구조 유지)
-    if (workerRole === "중근") {
-      return { targetRole: "야근", sequenceNo: 2 };
-    }
+      if (absentRole === "중근") {
+        if (workerRole === "조근") return { targetRole: "중근", sequenceNo: 1 };
+        if (workerRole === "야근") return { targetRole: "중근", sequenceNo: 2 };
+      }
 
-    if (workerRole === "조근") {
-      return { targetRole: "중근", sequenceNo: 1 };
-    }
-  }
+      if (absentRole === "야근") {
+        if (workerRole === "조근") return { targetRole: "중근", sequenceNo: 1 };
+        if (workerRole === "중근") return { targetRole: "야근", sequenceNo: 2 };
+      }
 
-  throw new Error("대체근무 조합을 찾을 수 없습니다.");
-}
+      throw new Error("대체근무 조합을 찾을 수 없습니다.");
+    }
 
     function getTimeTemplate(dateStr, absenceType, targetRole, sequenceNo) {
       const dayName = getDayName(dateStr);
@@ -918,7 +1038,7 @@ function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
       return `${absentName}${absenceType ? " " + absenceType : ""}대체`;
     }
 
-    function calculateWorkResult({ date, workerName, absentName, absenceType, note }) {
+    function calculateWorkResult({ date, workerName, absentName, absenceType, note, imageData = "" }) {
       if (!date) throw new Error("날짜를 입력해 주세요.");
       if (!workerName) throw new Error("본인 이름을 입력해 주세요.");
       if (!absentName) throw new Error("휴가자 이름을 입력해 주세요.");
@@ -929,6 +1049,7 @@ function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
       if (!worker) throw new Error("본인 이름이 인원목록에 없습니다.");
 
       if (absentName === "잔업특근") {
+        const rotation = getRotationForDate(date);
         return {
           date,
           dayName: getDayName(date),
@@ -939,8 +1060,9 @@ function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
           absentBand: "-",
           absenceType,
           note,
-          rotation: getRotationForDate(date),
-          workerRole: worker.band === "없음" ? "-" : (getRoleFromBand(getRotationForDate(date), worker.band) || "-"),
+          imageData,
+          rotation,
+          workerRole: worker.band === "없음" ? "-" : (getRoleFromBand(rotation, worker.band) || "-"),
           absentRole: "-",
           replacementRole: "-",
           sequenceNo: "-",
@@ -979,6 +1101,7 @@ function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
         absentBand: absent.band,
         absenceType,
         note,
+        imageData,
         rotation,
         workerRole,
         absentRole,
@@ -989,6 +1112,45 @@ function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
         overtimeHours: tpl.overtimeHours,
         actionText: buildActionText(absent.name, absenceType)
       };
+    }
+
+    function setMessage(targetId, message, type) {
+      const el = document.getElementById(targetId);
+      el.textContent = message;
+      el.className = `message ${type}`;
+    }
+
+    function readFileAsDataURL(file) {
+      return new Promise((resolve, reject) => {
+        if (!file) {
+          resolve("");
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function setFilePreview(fileInputId, previewId, fileNameId) {
+      const input = document.getElementById(fileInputId);
+      const preview = document.getElementById(previewId);
+      const fileName = document.getElementById(fileNameId);
+
+      input.addEventListener("change", async (e) => {
+        const file = e.target.files[0];
+        if (!file) {
+          if (fileName) fileName.textContent = "";
+          preview.src = "";
+          preview.style.display = "none";
+          return;
+        }
+        if (fileName) fileName.textContent = `선택 파일: ${file.name}`;
+        const dataUrl = await readFileAsDataURL(file);
+        preview.src = dataUrl;
+        preview.style.display = "block";
+      });
     }
 
     function renderWorkerList() {
@@ -1009,13 +1171,13 @@ function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
         a.dept.localeCompare(b.dept, "ko") || a.name.localeCompare(b.name, "ko")
       );
 
-      let html = "<tr><th style='text-align:center;'>성명</th><th style='text-align:center;'>반</th><th style='text-align:center;'>부서</th></tr>";
+      let html = "<tr><th>성명</th><th>반</th><th>부서</th></tr>";
       workers.forEach(w => {
         html += `
           <tr>
-            <td style="text-align:center;"><div>${w.name}</div></td>
-            <td style="text-align:center;"><div>${w.band || "-"}</div></td>
-            <td style="text-align:center;"><div>${w.dept}</div></td>
+            <td><div>${w.name}</div></td>
+            <td><div>${w.band || "-"}</div></td>
+            <td><div>${w.dept}</div></td>
           </tr>
         `;
       });
@@ -1028,14 +1190,14 @@ function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
         a.dept.localeCompare(b.dept, "ko") || a.name.localeCompare(b.name, "ko")
       );
 
-      let html = "<tr><th style='text-align:center;'>성명</th><th style='text-align:center;'>반</th><th style='text-align:center;'>부서</th><th style='text-align:center;'>삭제</th></tr>";
+      let html = "<tr><th>성명</th><th>반</th><th>부서</th><th>삭제</th></tr>";
       workers.forEach((w, idx) => {
         html += `
           <tr>
-            <td style="text-align:center;"><div>${w.name}</div></td>
-            <td style="text-align:center;"><div>${w.band || "-"}</div></td>
-            <td style="text-align:center;"><div>${w.dept}</div></td>
-            <td style="text-align:center;"><div><button class="btn-danger" onclick="deleteWorkerBySortedIndex(${idx})">삭제</button></div></td>
+            <td><div>${w.name}</div></td>
+            <td><div>${w.band || "-"}</div></td>
+            <td><div>${w.dept}</div></td>
+            <td><div><button class="btn-danger" onclick="deleteWorkerBySortedIndex(${idx})">삭제</button></div></td>
           </tr>
         `;
       });
@@ -1057,9 +1219,41 @@ function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
         <div><b>대체 역할</b>: ${result.replacementRole}</div>
         <div><b>근무순번</b>: ${result.sequenceNo ?? "-"}</div>
         <div><b>총근무</b>: ${result.totalWork}</div>
-        <div><b>연장근무시간</b>: ${result.overtime}${result.overtimeHours ? ` (${result.overtimeHours}시간)` : ""}</div>
+        <div><b>연장근무시간</b>: ${result.overtime}${result.overtimeHours || result.overtimeHours === 0 ? ` (${result.overtimeHours}시간)` : ""}</div>
         <div><b>비고</b>: ${result.note || "-"}</div>
+        <div><b>첨부파일</b>: ${result.imageData ? `<br><img src="${result.imageData}" class="purchase-img" alt="첨부">` : "-"}</div>
       `;
+    }
+
+    function renderLeaveTable(date) {
+      let rows = getLeave();
+      if (date) {
+        rows = rows.filter(x => x.date === date);
+      }
+
+      let html = `
+        <tr>
+          <th>신청일자</th>
+          <th>이름</th>
+          <th>사유</th>
+          <th>비고</th>
+          <th>첨부파일</th>
+        </tr>
+      `;
+
+      rows.forEach(item => {
+        html += `
+          <tr>
+            <td>${item.date}</td>
+            <td>${item.name}</td>
+            <td>${item.type || "-"}</td>
+            <td>${item.note || "-"}</td>
+            <td>${item.imageData ? `<img src="${item.imageData}" class="purchase-img" alt="첨부">` : "-"}</td>
+          </tr>
+        `;
+      });
+
+      document.getElementById("leaveTable").innerHTML = html;
     }
 
     function renderHistory(date, deptFilter = "전체") {
@@ -1074,22 +1268,24 @@ function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
 
       let html = `
         <tr>
-          <th style="text-align:center;">구분</th>
-          <th style="text-align:center;">성명</th>
-          <th style="text-align:center;">작업내용</th>
-          <th style="text-align:center;">작업시간</th>
-          <th style="text-align:center;">비고</th>
+          <th>구분</th>
+          <th>성명</th>
+          <th>작업내용</th>
+          <th>작업시간</th>
+          <th>비고</th>
+          <th>첨부파일</th>
         </tr>
       `;
 
       history.forEach(item => {
         html += `
           <tr>
-            <td style="text-align:center;"><div>${item.dept}</div></td>
-            <td style="text-align:center;"><div>${item.workerName}</div></td>
-            <td style="text-align:center;"><div>${item.actionText}</div></td>
-            <td style="text-align:center;"><div>총근무: ${item.totalWork}<br>연장: ${item.overtime}</div></td>
-            <td style="text-align:center;"><div>${item.note || "-"}</div></td>
+            <td><div>${item.dept}</div></td>
+            <td><div>${item.workerName}</div></td>
+            <td><div>${item.actionText}</div></td>
+            <td><div>총근무: ${item.totalWork}<br>연장: ${item.overtime}${item.overtimeHours || item.overtimeHours === 0 ? `<br>(${item.overtimeHours}시간)` : ""}</div></td>
+            <td><div>${item.note || "-"}</div></td>
+            <td><div>${item.imageData ? `<img src="${item.imageData}" class="purchase-img" alt="첨부">` : "-"}</div></td>
           </tr>
         `;
       });
@@ -1131,12 +1327,6 @@ function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
       document.getElementById("purchaseHistoryTable").innerHTML = html;
     }
 
-    function setMessage(targetId, message, type) {
-      const el = document.getElementById(targetId);
-      el.textContent = message;
-      el.className = `message ${type}`;
-    }
-
     function openPurchaseModal() {
       document.getElementById("purchaseModal").classList.add("show");
     }
@@ -1168,11 +1358,33 @@ function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
       document.getElementById("editAbsentName").value = "";
       document.getElementById("editAbsenceType").value = "";
       document.getElementById("editNote").value = "";
+      document.getElementById("editManualTotalWork").value = "";
+      document.getElementById("editManualOvertime").value = "";
+      document.getElementById("editManualOvertimeHours").value = "";
       setMessage("editHistoryMessage", "", "success");
     }
 
     function closeEditHistoryModal() {
       document.getElementById("editHistoryModal").classList.remove("show");
+    }
+
+    function openEditLeaveModal() {
+      document.getElementById("editLeaveModal").classList.add("show");
+      document.getElementById("editLeaveTargetDate").value = document.getElementById("leaveDate").value || formatDate(new Date());
+      document.getElementById("editLeaveRowSelect").innerHTML = '<option value="">선택</option>';
+      document.getElementById("editLeaveDate").value = "";
+      document.getElementById("editLeaveName").value = "";
+      document.getElementById("editLeaveType").value = "";
+      document.getElementById("editLeaveNote").value = "";
+      document.getElementById("editLeaveFile").value = "";
+      document.getElementById("editLeaveFileName").textContent = "";
+      document.getElementById("editLeavePreview").src = "";
+      document.getElementById("editLeavePreview").style.display = "none";
+      setMessage("editLeaveMessage", "", "success");
+    }
+
+    function closeEditLeaveModal() {
+      document.getElementById("editLeaveModal").classList.remove("show");
     }
 
     function openWorkerDeleteModal() {
@@ -1198,19 +1410,6 @@ function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
       preview.style.display = "none";
       document.getElementById("purchaseMessage").textContent = "";
       document.getElementById("purchaseMessage").className = "message";
-    }
-
-    function readFileAsDataURL(file) {
-      return new Promise((resolve, reject) => {
-        if (!file) {
-          resolve("");
-          return;
-        }
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
     }
 
     function closePurchaseItem(index) {
@@ -1290,6 +1489,54 @@ function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
       document.getElementById("editAbsentName").value = row.absentName;
       document.getElementById("editAbsenceType").value = row.absenceType || "";
       document.getElementById("editNote").value = row.note || "";
+      document.getElementById("editManualTotalWork").value = row.totalWork || "";
+      document.getElementById("editManualOvertime").value = row.overtime || "";
+      document.getElementById("editManualOvertimeHours").value = row.overtimeHours ?? "";
+    }
+
+    function getLeaveByDate(date) {
+      return getLeave()
+        .map((item, index) => ({ ...item, __index: index }))
+        .filter(item => item.date === date);
+    }
+
+    function populateEditLeaveRows(date) {
+      const rows = getLeaveByDate(date);
+      const select = document.getElementById("editLeaveRowSelect");
+
+      let html = '<option value="">선택</option>';
+      rows.forEach(row => {
+        html += `<option value="${row.__index}">${row.date} / ${row.name} / ${row.type || "-"}</option>`;
+      });
+      select.innerHTML = html;
+
+      if (rows.length === 0) {
+        setMessage("editLeaveMessage", "해당 날짜의 휴가 상신 내역이 없습니다.", "error");
+      } else {
+        setMessage("editLeaveMessage", `${rows.length}건을 불러왔습니다.`, "success");
+      }
+    }
+
+    function fillEditLeaveFormByIndex(index) {
+      if (index === "") return;
+      const rows = getLeave();
+      const row = rows[Number(index)];
+      if (!row) return;
+
+      document.getElementById("editLeaveDate").value = row.date || "";
+      document.getElementById("editLeaveName").value = row.name || "";
+      document.getElementById("editLeaveType").value = row.type || "";
+      document.getElementById("editLeaveNote").value = row.note || "";
+      document.getElementById("editLeaveFile").value = "";
+      document.getElementById("editLeaveFileName").textContent = row.imageData ? "기존 첨부파일 있음" : "";
+      const preview = document.getElementById("editLeavePreview");
+      if (row.imageData) {
+        preview.src = row.imageData;
+        preview.style.display = "block";
+      } else {
+        preview.src = "";
+        preview.style.display = "none";
+      }
     }
 
     function toggleWorkerPanel() {
@@ -1304,14 +1551,56 @@ function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
       setMessage("workerMessage", "현재 저장된 인원 데이터를 반영했습니다.", "success");
     }
 
-    document.getElementById("previewBtn").addEventListener("click", () => {
+    document.getElementById("saveLeaveBtn").addEventListener("click", async () => {
       try {
+        const date = document.getElementById("leaveDate").value;
+        const name = document.getElementById("leaveName").value.trim();
+        const type = document.getElementById("leaveType").value;
+        const note = document.getElementById("leaveNote").value.trim();
+        const file = document.getElementById("leaveFile").files[0];
+
+        if (!date) throw new Error("신청일자를 입력해 주세요.");
+        if (!name) throw new Error("이름을 입력해 주세요.");
+        if (!type) throw new Error("사유 유형을 선택해 주세요.");
+
+        const workerExists = getWorkers().some(w => w.name === name);
+        if (!workerExists) throw new Error("이름은 인원관리 목록에 있는 이름만 사용할 수 있습니다.");
+
+        const imageData = file ? await readFileAsDataURL(file) : "";
+
+        const rows = getLeave();
+        rows.push({ date, name, type, note, imageData });
+        setLeave(rows);
+
+        renderLeaveTable(date);
+        setMessage("leaveMessage", "휴가 상신을 저장했습니다.", "success");
+      } catch (e) {
+        setMessage("leaveMessage", e.message, "error");
+      }
+    });
+
+    document.getElementById("searchLeaveBtn").addEventListener("click", () => {
+      const date = document.getElementById("leaveDate").value;
+      if (!date) {
+        setMessage("leaveMessage", "조회할 날짜를 입력해 주세요.", "error");
+        return;
+      }
+      renderLeaveTable(date);
+      setMessage("leaveMessage", "조회가 완료되었습니다.", "success");
+    });
+
+    document.getElementById("previewBtn").addEventListener("click", async () => {
+      try {
+        const file = document.getElementById("workFile").files[0];
+        const imageData = file ? await readFileAsDataURL(file) : "";
+
         const result = calculateWorkResult({
           date: document.getElementById("workDate").value,
           workerName: document.getElementById("workerName").value.trim(),
           absentName: document.getElementById("absentName").value.trim(),
           absenceType: document.getElementById("absenceType").value,
-          note: document.getElementById("note").value.trim()
+          note: document.getElementById("note").value.trim(),
+          imageData
         });
 
         renderCalcResult(result);
@@ -1322,14 +1611,18 @@ function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
       }
     });
 
-    document.getElementById("saveBtn").addEventListener("click", () => {
+    document.getElementById("saveBtn").addEventListener("click", async () => {
       try {
+        const file = document.getElementById("workFile").files[0];
+        const imageData = file ? await readFileAsDataURL(file) : "";
+
         const result = calculateWorkResult({
           date: document.getElementById("workDate").value,
           workerName: document.getElementById("workerName").value.trim(),
           absentName: document.getElementById("absentName").value.trim(),
           absenceType: document.getElementById("absenceType").value,
-          note: document.getElementById("note").value.trim()
+          note: document.getElementById("note").value.trim(),
+          imageData
         });
 
         const history = getHistory();
@@ -1392,35 +1685,9 @@ function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
       renderHistory(date, dept);
     });
 
-    document.getElementById("openPurchaseBtn").addEventListener("click", () => {
-      openPurchaseModal();
-    });
-
-    document.getElementById("closePurchaseBtn").addEventListener("click", () => {
-      closePurchaseModal();
-    });
-
-    document.getElementById("clearPurchaseBtn").addEventListener("click", () => {
-      clearPurchaseForm();
-    });
-
-    document.getElementById("purchaseImage").addEventListener("change", async (e) => {
-      const file = e.target.files[0];
-      const preview = document.getElementById("purchasePreview");
-      const fileName = document.getElementById("purchaseFileName");
-
-      if (!file) {
-        fileName.textContent = "";
-        preview.src = "";
-        preview.style.display = "none";
-        return;
-      }
-
-      fileName.textContent = `선택 파일: ${file.name}`;
-      const dataUrl = await readFileAsDataURL(file);
-      preview.src = dataUrl;
-      preview.style.display = "block";
-    });
+    document.getElementById("openPurchaseBtn").addEventListener("click", openPurchaseModal);
+    document.getElementById("closePurchaseBtn").addEventListener("click", closePurchaseModal);
+    document.getElementById("clearPurchaseBtn").addEventListener("click", clearPurchaseForm);
 
     document.getElementById("savePurchaseBtn").addEventListener("click", async () => {
       try {
@@ -1462,6 +1729,10 @@ function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
       openPasswordModal("조회결과 수정 인증", "history-edit");
     });
 
+    document.getElementById("openEditLeaveBtn").addEventListener("click", () => {
+      openPasswordModal("휴가 상신 수정 인증", "leave-edit");
+    });
+
     document.getElementById("closePasswordBtn").addEventListener("click", closePasswordModal);
     document.getElementById("cancelPasswordBtn").addEventListener("click", closePasswordModal);
 
@@ -1484,10 +1755,13 @@ function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
         if (purchaseIndex !== null) {
           closePurchaseItem(purchaseIndex);
         }
+      } else if (action === "leave-edit") {
+        openEditLeaveModal();
       }
     });
 
     document.getElementById("closeEditHistoryBtn").addEventListener("click", closeEditHistoryModal);
+    document.getElementById("closeEditLeaveBtn").addEventListener("click", closeEditLeaveModal);
     document.getElementById("closeWorkerDeleteBtn").addEventListener("click", closeWorkerDeleteModal);
 
     document.getElementById("loadEditRowsBtn").addEventListener("click", () => {
@@ -1504,7 +1778,7 @@ function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
       fillEditFormByIndex(e.target.value);
     });
 
-    document.getElementById("saveEditHistoryBtn").addEventListener("click", () => {
+    document.getElementById("saveEditHistoryBtn").addEventListener("click", async () => {
       try {
         const selectedIndex = document.getElementById("editRowSelect").value;
         if (selectedIndex === "") throw new Error("수정할 항목을 선택해 주세요.");
@@ -1515,15 +1789,27 @@ function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
         const absenceType = document.getElementById("editAbsenceType").value;
         const note = document.getElementById("editNote").value.trim();
 
+        const history = getHistory();
+        const oldRow = history[Number(selectedIndex)];
+        if (!oldRow) throw new Error("대상 데이터를 찾을 수 없습니다.");
+
         const recalculated = calculateWorkResult({
           date,
           workerName,
           absentName,
           absenceType,
-          note
+          note,
+          imageData: oldRow.imageData || ""
         });
 
-        const history = getHistory();
+        const manualTotalWork = document.getElementById("editManualTotalWork").value.trim();
+        const manualOvertime = document.getElementById("editManualOvertime").value.trim();
+        const manualOvertimeHours = document.getElementById("editManualOvertimeHours").value.trim();
+
+        if (manualTotalWork) recalculated.totalWork = manualTotalWork;
+        if (manualOvertime) recalculated.overtime = manualOvertime;
+        if (manualOvertimeHours !== "") recalculated.overtimeHours = Number(manualOvertimeHours);
+
         history[Number(selectedIndex)] = recalculated;
         setHistory(history);
 
@@ -1559,6 +1845,9 @@ function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
         document.getElementById("editAbsentName").value = "";
         document.getElementById("editAbsenceType").value = "";
         document.getElementById("editNote").value = "";
+        document.getElementById("editManualTotalWork").value = "";
+        document.getElementById("editManualOvertime").value = "";
+        document.getElementById("editManualOvertimeHours").value = "";
 
         if (document.getElementById("historyDate").value === date) {
           renderHistory(date, document.getElementById("historyDept").value);
@@ -1567,6 +1856,97 @@ function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
         setMessage("editHistoryMessage", "선택 항목을 삭제했습니다.", "success");
       } catch (e) {
         setMessage("editHistoryMessage", e.message, "error");
+      }
+    });
+
+    document.getElementById("loadEditLeaveRowsBtn").addEventListener("click", () => {
+      const date = document.getElementById("editLeaveTargetDate").value;
+      if (!date) {
+        setMessage("editLeaveMessage", "조회 날짜를 입력해 주세요.", "error");
+        return;
+      }
+      populateEditLeaveRows(date);
+    });
+
+    document.getElementById("editLeaveRowSelect").addEventListener("change", (e) => {
+      fillEditLeaveFormByIndex(e.target.value);
+    });
+
+    document.getElementById("saveEditLeaveBtn").addEventListener("click", async () => {
+      try {
+        const selectedIndex = document.getElementById("editLeaveRowSelect").value;
+        if (selectedIndex === "") throw new Error("수정할 항목을 선택해 주세요.");
+
+        const date = document.getElementById("editLeaveDate").value;
+        const name = document.getElementById("editLeaveName").value.trim();
+        const type = document.getElementById("editLeaveType").value;
+        const note = document.getElementById("editLeaveNote").value.trim();
+        const file = document.getElementById("editLeaveFile").files[0];
+
+        if (!date) throw new Error("신청일자를 입력해 주세요.");
+        if (!name) throw new Error("이름을 입력해 주세요.");
+        if (!type) throw new Error("사유 유형을 선택해 주세요.");
+
+        const workerExists = getWorkers().some(w => w.name === name);
+        if (!workerExists) throw new Error("이름은 인원관리 목록에 있는 이름만 사용할 수 있습니다.");
+
+        const rows = getLeave();
+        const oldRow = rows[Number(selectedIndex)];
+        if (!oldRow) throw new Error("대상 데이터를 찾을 수 없습니다.");
+
+        const imageData = file ? await readFileAsDataURL(file) : (oldRow.imageData || "");
+
+        rows[Number(selectedIndex)] = {
+          date,
+          name,
+          type,
+          note,
+          imageData
+        };
+        setLeave(rows);
+
+        populateEditLeaveRows(document.getElementById("editLeaveTargetDate").value);
+        document.getElementById("editLeaveRowSelect").value = String(selectedIndex);
+        fillEditLeaveFormByIndex(String(selectedIndex));
+
+        if (document.getElementById("leaveDate").value === date) {
+          renderLeaveTable(date);
+        }
+
+        setMessage("editLeaveMessage", "휴가 상신 내역을 수정했습니다.", "success");
+      } catch (e) {
+        setMessage("editLeaveMessage", e.message, "error");
+      }
+    });
+
+    document.getElementById("deleteEditLeaveBtn").addEventListener("click", () => {
+      try {
+        const selectedIndex = document.getElementById("editLeaveRowSelect").value;
+        const targetDate = document.getElementById("editLeaveTargetDate").value;
+
+        if (selectedIndex === "") throw new Error("삭제할 항목을 선택해 주세요.");
+
+        const rows = getLeave();
+        rows.splice(Number(selectedIndex), 1);
+        setLeave(rows);
+
+        populateEditLeaveRows(targetDate);
+        document.getElementById("editLeaveDate").value = "";
+        document.getElementById("editLeaveName").value = "";
+        document.getElementById("editLeaveType").value = "";
+        document.getElementById("editLeaveNote").value = "";
+        document.getElementById("editLeaveFile").value = "";
+        document.getElementById("editLeaveFileName").textContent = "";
+        document.getElementById("editLeavePreview").src = "";
+        document.getElementById("editLeavePreview").style.display = "none";
+
+        if (document.getElementById("leaveDate").value === targetDate) {
+          renderLeaveTable(targetDate);
+        }
+
+        setMessage("editLeaveMessage", "선택 항목을 삭제했습니다.", "success");
+      } catch (e) {
+        setMessage("editLeaveMessage", e.message, "error");
       }
     });
 
@@ -1580,6 +1960,10 @@ function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
 
     document.getElementById("editHistoryModal").addEventListener("click", (e) => {
       if (e.target.id === "editHistoryModal") closeEditHistoryModal();
+    });
+
+    document.getElementById("editLeaveModal").addEventListener("click", (e) => {
+      if (e.target.id === "editLeaveModal") closeEditLeaveModal();
     });
 
     document.getElementById("workerDeleteModal").addEventListener("click", (e) => {
@@ -1596,16 +1980,22 @@ function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
       renderWorkerTable();
 
       const today = formatDate(new Date());
+      document.getElementById("leaveDate").value = today;
       document.getElementById("workDate").value = today;
       document.getElementById("historyDate").value = today;
       document.getElementById("purchaseDate").value = today;
-      document.getElementById("historyDept").value = "전체";
       document.getElementById("workerTableWrap").style.display = "none";
       document.getElementById("toggleWorkerPanelBtn").textContent = "열기";
 
+      renderLeaveTable(today);
       renderHistory(today, "전체");
       renderPurchaseHistory();
     }
+
+    setFilePreview("leaveFile", "leavePreview", "leaveFileName");
+    setFilePreview("workFile", "workPreview", "workFileName");
+    setFilePreview("purchaseImage", "purchasePreview", "purchaseFileName");
+    setFilePreview("editLeaveFile", "editLeavePreview", "editLeaveFileName");
 
     init();
   </script>
