@@ -1235,6 +1235,7 @@
 let html = `
   <tr>
     <th>신청일자</th>
+    <th>상신일시</th>
     <th>이름</th>
     <th>사유</th>
     <th>비고</th>
@@ -1247,6 +1248,7 @@ rows.forEach((item, index) => {
   html += `
     <tr>
       <td>${item.date}</td>
+      <td>${item.submittedAt || "-"}</td>
       <td>${item.name}</td>
       <td>${item.type || "-"}</td>
       <td>${item.note || "-"}</td>
@@ -1590,7 +1592,14 @@ function requestLeaveClose(index) {
         const imageData = file ? await readFileAsDataURL(file) : "";
 
         const rows = getLeave();
-        rows.push({ date, name, type, note, imageData });
+        rows.push({
+  date,
+  name,
+  type,
+  note,
+  imageData,
+  submittedAt: new Date().toLocaleString("ko-KR", { hour12: false })
+});
         setLeave(rows);
 
         renderLeaveTable(date);
@@ -1922,13 +1931,14 @@ function requestLeaveClose(index) {
 
         const imageData = file ? await readFileAsDataURL(file) : (oldRow.imageData || "");
 
-        rows[Number(selectedIndex)] = {
-          date,
-          name,
-          type,
-          note,
-          imageData
-        };
+rows[Number(selectedIndex)] = {
+  date,
+  name,
+  type,
+  note,
+  imageData,
+  submittedAt: oldRow.submittedAt || new Date().toLocaleString("ko-KR", { hour12: false })
+};
         setLeave(rows);
 
         populateEditLeaveRows(document.getElementById("editLeaveTargetDate").value);
