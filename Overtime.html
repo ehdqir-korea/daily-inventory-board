@@ -1232,15 +1232,16 @@
         rows = rows.filter(x => x.date === date);
       }
 
-      let html = `
-        <tr>
-          <th>신청일자</th>
-          <th>이름</th>
-          <th>사유</th>
-          <th>비고</th>
-          <th>첨부파일</th>
-        </tr>
-      `;
+let html = `
+  <tr>
+    <th>신청일자</th>
+    <th>이름</th>
+    <th>사유</th>
+    <th>비고</th>
+    <th>첨부파일</th>
+    <th>처리</th>
+  </tr>
+`;
 
 rows.forEach((item, index) => {
   html += `
