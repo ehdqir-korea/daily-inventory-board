@@ -623,7 +623,7 @@
 
       { name: "방성준", band: "갑", dept: "소포장" },
       { name: "이현우", band: "갑", dept: "소포장" },
-      { name: "김현학", band: "갑", dept: "소포장" },
+      { name: "김현학", band: "병", dept: "소포장" },
 
       { name: "윤재영", band: "을", dept: "대포장" },
       { name: "허인무", band: "을", dept: "대포장" },
@@ -647,7 +647,7 @@
 
       { name: "백종환", band: "병", dept: "소포장" },
       { name: "신진식", band: "병", dept: "소포장" },
-      { name: "배상수", band: "병", dept: "소포장" },
+      { name: "배상수", band: "갑", dept: "소포장" },
 
       { name: "박영수", band: "갑", dept: "제분" },
       { name: "박세진", band: "병", dept: "대포장" },
@@ -813,54 +813,90 @@
       return null;
     }
 
-    function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
-      const dayName = getDayName(dateStr);
+function resolveAssignment(dateStr, absentRole, workerRole, absenceType) {
+  const dayName = getDayName(dateStr);
 
-      if (absenceType === "오전반차" || absenceType === "오후반차") {
-        return {
-          targetRole: absentRole,
-          sequenceNo: null
-        };
+  // 반차는 그대로 유지
+  if (absenceType === "오전반차" || absenceType === "오후반차") {
+    return {
+      targetRole: absentRole,
+      sequenceNo: null
+    };
+  }
+
+  // 동일 역할 방지 (안전장치)
+  if (absentRole === workerRole) {
+    throw new Error("같은 역할끼리는 대체할 수 없습니다.");
+  }
+
+  const isMonday = dayName === "월";
+
+  // =========================
+  // 🔥 1. 조근 결원
+  // =========================
+  if (absentRole === "조근") {
+
+    if (isMonday) {
+      if (workerRole === "중근") {
+        return { targetRole: "조근", sequenceNo: 1 };
       }
-
-      if (absentRole === "조근") {
-        if (dayName === "월") {
-          if (workerRole === "중근") {
-            return { targetRole: "조근", sequenceNo: 1 };
-          }
-          if (workerRole === "야근") {
-            return { targetRole: "조근", sequenceNo: 2 };
-          }
-        } else {
-          if (workerRole === "야근") {
-            return { targetRole: "조근", sequenceNo: 1 };
-          }
-          if (workerRole === "중근") {
-            return { targetRole: "조근", sequenceNo: 2 };
-          }
-        }
+      if (workerRole === "야근") {
+        return { targetRole: "조근", sequenceNo: 2 };
       }
-
-      if (absentRole === "중근") {
-        if (workerRole === "조근") {
-          return { targetRole: "중근", sequenceNo: 1 };
-        }
-        if (workerRole === "야근") {
-          return { targetRole: "중근", sequenceNo: 2 };
-        }
+    } else {
+      if (workerRole === "야근") {
+        return { targetRole: "조근", sequenceNo: 1 };
       }
-
-      if (absentRole === "야근") {
-        if (workerRole === "조근") {
-          return { targetRole: "중근", sequenceNo: 1 };
-        }
-        if (workerRole === "중근") {
-          return { targetRole: "야근", sequenceNo: 2 };
-        }
+      if (workerRole === "중근") {
+        return { targetRole: "조근", sequenceNo: 2 };
       }
-
-      throw new Error("대체근무 조합을 찾을 수 없습니다.");
     }
+  }
+
+  // =========================
+  // 🔥 2. 중근 결원
+  // =========================
+  if (absentRole === "중근") {
+
+    if (workerRole === "조근") {
+      return { targetRole: "중근", sequenceNo: 1 };
+    }
+    if (workerRole === "야근") {
+      return { targetRole: "중근", sequenceNo: 2 };
+    }
+  }
+
+  // =========================
+  // 🔥 3. 야근 결원 (핵심 수정)
+  // =========================
+  if (absentRole === "야근") {
+
+    // 🚨 월요일은 무조건 연쇄 대체
+    if (isMonday) {
+
+      if (workerRole === "중근") {
+        return { targetRole: "야근", sequenceNo: 2 };
+      }
+
+      if (workerRole === "조근") {
+        return { targetRole: "중근", sequenceNo: 1 };
+      }
+
+      throw new Error("월요일 야근 대체 규칙 오류");
+    }
+
+    // 일반 요일도 동일하게 유지 (연쇄 구조 유지)
+    if (workerRole === "중근") {
+      return { targetRole: "야근", sequenceNo: 2 };
+    }
+
+    if (workerRole === "조근") {
+      return { targetRole: "중근", sequenceNo: 1 };
+    }
+  }
+
+  throw new Error("대체근무 조합을 찾을 수 없습니다.");
+}
 
     function getTimeTemplate(dateStr, absenceType, targetRole, sequenceNo) {
       const dayName = getDayName(dateStr);
