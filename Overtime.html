@@ -848,6 +848,7 @@
     let workerPanelOpen = false;
     let passwordAction = "";
     let pendingPurchaseCloseIndex = null;
+    let pendingLeaveCloseIndex = null;
 
     function load(key, fallback) {
       try {
@@ -1241,17 +1242,18 @@
         </tr>
       `;
 
-      rows.forEach(item => {
-        html += `
-          <tr>
-            <td>${item.date}</td>
-            <td>${item.name}</td>
-            <td>${item.type || "-"}</td>
-            <td>${item.note || "-"}</td>
-            <td>${item.imageData ? `<img src="${item.imageData}" class="purchase-img" alt="첨부">` : "-"}</td>
-          </tr>
-        `;
-      });
+rows.forEach((item, index) => {
+  html += `
+    <tr>
+      <td>${item.date}</td>
+      <td>${item.name}</td>
+      <td>${item.type || "-"}</td>
+      <td>${item.note || "-"}</td>
+      <td>${item.imageData ? `<img src="${item.imageData}" class="purchase-img" alt="첨부">` : "-"}</td>
+      <td><button class="btn-danger" onclick="requestLeaveClose(${index})">마감</button></td>
+    </tr>
+  `;
+});
 
       document.getElementById("leaveTable").innerHTML = html;
     }
@@ -1343,11 +1345,12 @@
       setMessage("passwordMessage", "", "success");
     }
 
-    function closePasswordModal() {
-      document.getElementById("passwordModal").classList.remove("show");
-      passwordAction = "";
-      pendingPurchaseCloseIndex = null;
-    }
+function closePasswordModal() {
+  document.getElementById("passwordModal").classList.remove("show");
+  passwordAction = "";
+  pendingPurchaseCloseIndex = null;
+  pendingLeaveCloseIndex = null;
+}
 
     function openEditHistoryModal() {
       document.getElementById("editHistoryModal").classList.add("show");
@@ -1412,6 +1415,23 @@
       document.getElementById("purchaseMessage").className = "message";
     }
 
+    function closeLeaveItem(index) {
+  const items = getLeave();
+  items.splice(index, 1);
+  setLeave(items);
+
+  const currentDate = document.getElementById("leaveDate").value;
+  if (currentDate) {
+    renderLeaveTable(currentDate);
+  } else {
+    renderLeaveTable("");
+  }
+}
+
+function requestLeaveClose(index) {
+  pendingLeaveCloseIndex = index;
+  openPasswordModal("휴가 상신 마감 인증", "leave-close");
+}
     function closePurchaseItem(index) {
       const items = getPurchases();
       items.splice(index, 1);
@@ -1736,29 +1756,34 @@
     document.getElementById("closePasswordBtn").addEventListener("click", closePasswordModal);
     document.getElementById("cancelPasswordBtn").addEventListener("click", closePasswordModal);
 
-    document.getElementById("confirmPasswordBtn").addEventListener("click", () => {
-      const pw = document.getElementById("editPassword").value;
-      if (pw !== EDIT_PASSWORD) {
-        setMessage("passwordMessage", "비밀번호가 일치하지 않습니다.", "error");
-        return;
-      }
+   document.getElementById("confirmPasswordBtn").addEventListener("click", () => {
+  const pw = document.getElementById("editPassword").value;
+  if (pw !== EDIT_PASSWORD) {
+    setMessage("passwordMessage", "비밀번호가 일치하지 않습니다.", "error");
+    return;
+  }
 
-      const action = passwordAction;
-      const purchaseIndex = pendingPurchaseCloseIndex;
-      closePasswordModal();
+  const action = passwordAction;
+  const purchaseIndex = pendingPurchaseCloseIndex;
+  const leaveIndex = pendingLeaveCloseIndex;
+  closePasswordModal();
 
-      if (action === "history-edit") {
-        openEditHistoryModal();
-      } else if (action === "worker-delete") {
-        openWorkerDeleteModal();
-      } else if (action === "purchase-close") {
-        if (purchaseIndex !== null) {
-          closePurchaseItem(purchaseIndex);
-        }
-      } else if (action === "leave-edit") {
-        openEditLeaveModal();
-      }
-    });
+  if (action === "history-edit") {
+    openEditHistoryModal();
+  } else if (action === "worker-delete") {
+    openWorkerDeleteModal();
+  } else if (action === "purchase-close") {
+    if (purchaseIndex !== null) {
+      closePurchaseItem(purchaseIndex);
+    }
+  } else if (action === "leave-edit") {
+    openEditLeaveModal();
+  } else if (action === "leave-close") {
+    if (leaveIndex !== null) {
+      closeLeaveItem(leaveIndex);
+    }
+  }
+});
 
     document.getElementById("closeEditHistoryBtn").addEventListener("click", closeEditHistoryModal);
     document.getElementById("closeEditLeaveBtn").addEventListener("click", closeEditLeaveModal);
