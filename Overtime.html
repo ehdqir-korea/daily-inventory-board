@@ -625,10 +625,52 @@
         <button type="button" class="close-btn" id="closeEditLeaveBtn">닫기</button>
       </div>
 
-      <label for="editLeaveTargetDate">조회 날짜</label>
-      <input type="date" id="editLeaveTargetDate" />
+<label for="editLeaveTargetDate">조회 날짜</label>
+<input type="date" id="editLeaveTargetDate" />
 
-      <button class="btn-primary" id="loadEditLeaveRowsBtn">조회결과 불러오기</button>
+<label for="leaveSearchDept">조회 부서</label>
+<select id="leaveSearchDept">
+  <option value="전체">전체</option>
+  <option value="제분">제분</option>
+  <option value="정선">정선</option>
+  <option value="대포장">대포장</option>
+  <option value="소포장">소포장</option>
+  <option value="품질관리">품질관리</option>
+  <option value="기술">기술</option>
+  <option value="생산2팀">생산2팀</option>
+</select>
+
+<label for="leaveSearchBand">조회 반</label>
+<select id="leaveSearchBand">
+  <option value="전체">전체</option>
+  <option value="갑">갑</option>
+  <option value="을">을</option>
+  <option value="병">병</option>
+  <option value="없음">없음</option>
+</select>
+
+<label for="editLeaveSearchDept">조회 부서</label>
+<select id="editLeaveSearchDept">
+  <option value="전체">전체</option>
+  <option value="제분">제분</option>
+  <option value="정선">정선</option>
+  <option value="대포장">대포장</option>
+  <option value="소포장">소포장</option>
+  <option value="품질관리">품질관리</option>
+  <option value="기술">기술</option>
+  <option value="생산2팀">생산2팀</option>
+</select>
+
+<label for="editLeaveSearchBand">조회 반</label>
+<select id="editLeaveSearchBand">
+  <option value="전체">전체</option>
+  <option value="갑">갑</option>
+  <option value="을">을</option>
+  <option value="병">병</option>
+  <option value="없음">없음</option>
+</select>
+
+<button class="btn-primary" id="loadEditLeaveRowsBtn">조회결과 불러오기</button>
 
       <label for="editLeaveRowSelect">수정할 항목 선택</label>
       <select id="editLeaveRowSelect"></select>
@@ -1224,40 +1266,44 @@
       `;
     }
 
-    function renderLeaveTable(date) {
-      let rows = getLeave();
-      if (date) {
-        rows = rows.filter(x => x.date === date);
-      }
+function renderLeaveTable(date) {
+  const deptFilter = document.getElementById("leaveSearchDept").value || "전체";
+  const bandFilter = document.getElementById("leaveSearchBand").value || "전체";
 
-let html = `
-  <tr>
-    <th>신청일자</th>
-    <th>상신일시</th>
-    <th>이름</th>
-    <th>사유</th>
-    <th>비고</th>
-    <th>첨부파일</th>
-    <th>처리</th>
-  </tr>
-`;
+  const rows = getLeaveRows(date, deptFilter, bandFilter);
 
-rows.forEach((item, index) => {
-  html += `
+  let html = `
     <tr>
-      <td>${item.date}</td>
-      <td>${item.submittedAt || "-"}</td>
-      <td>${item.name}</td>
-      <td>${item.type || "-"}</td>
-      <td>${item.note || "-"}</td>
-      <td>${item.imageData ? `<img src="${item.imageData}" class="purchase-img" alt="첨부">` : "-"}</td>
-      <td><button class="btn-danger" onclick="requestLeaveClose(${index})">마감</button></td>
+      <th>신청일자</th>
+      <th>상신일시</th>
+      <th>부서</th>
+      <th>반</th>
+      <th>이름</th>
+      <th>사유</th>
+      <th>비고</th>
+      <th>첨부파일</th>
+      <th>처리</th>
     </tr>
   `;
-});
 
-      document.getElementById("leaveTable").innerHTML = html;
-    }
+  rows.forEach((item) => {
+    html += `
+      <tr>
+        <td>${item.date}</td>
+        <td>${item.submittedAt || "-"}</td>
+        <td>${item.dept || "-"}</td>
+        <td>${item.band || "-"}</td>
+        <td>${item.name}</td>
+        <td>${item.type || "-"}</td>
+        <td>${item.note || "-"}</td>
+        <td>${item.imageData ? `<img src="${item.imageData}" class="purchase-img" alt="첨부">` : "-"}</td>
+        <td><button class="btn-danger" onclick="requestLeaveClose(${item.__index})">마감</button></td>
+      </tr>
+    `;
+  });
+
+  document.getElementById("leaveTable").innerHTML = html;
+}
 
     function renderHistory(date, deptFilter = "전체") {
       let history = getHistory().filter(x => x.date === date);
@@ -1353,20 +1399,24 @@ function closePasswordModal() {
   pendingLeaveCloseIndex = null;
 }
 
-    function openEditHistoryModal() {
-      document.getElementById("editHistoryModal").classList.add("show");
-      document.getElementById("editTargetDate").value = document.getElementById("historyDate").value || formatDate(new Date());
-      document.getElementById("editTargetDept").value = document.getElementById("historyDept").value || "전체";
-      document.getElementById("editRowSelect").innerHTML = '<option value="">선택</option>';
-      document.getElementById("editWorkerName").value = "";
-      document.getElementById("editAbsentName").value = "";
-      document.getElementById("editAbsenceType").value = "";
-      document.getElementById("editNote").value = "";
-      document.getElementById("editManualTotalWork").value = "";
-      document.getElementById("editManualOvertime").value = "";
-      document.getElementById("editManualOvertimeHours").value = "";
-      setMessage("editHistoryMessage", "", "success");
-    }
+function openEditLeaveModal() {
+  document.getElementById("editLeaveModal").classList.add("show");
+  document.getElementById("editLeaveTargetDate").value = document.getElementById("leaveDate").value || formatDate(new Date());
+  document.getElementById("editLeaveSearchDept").value = "전체";
+  document.getElementById("editLeaveSearchBand").value = "전체";
+  document.getElementById("editLeaveRowSelect").innerHTML = '<option value="">선택</option>';
+  document.getElementById("editLeaveDate").value = "";
+  document.getElementById("editLeaveName").value = "";
+  document.getElementById("editLeaveDept").value = "";
+  document.getElementById("editLeaveBand").value = "";
+  document.getElementById("editLeaveType").value = "";
+  document.getElementById("editLeaveNote").value = "";
+  document.getElementById("editLeaveFile").value = "";
+  document.getElementById("editLeaveFileName").textContent = "";
+  document.getElementById("editLeavePreview").src = "";
+  document.getElementById("editLeavePreview").style.display = "none";
+  setMessage("editLeaveMessage", "", "success");
+}
 
     function closeEditHistoryModal() {
       document.getElementById("editHistoryModal").classList.remove("show");
@@ -1515,28 +1565,41 @@ function requestLeaveClose(index) {
       document.getElementById("editManualOvertimeHours").value = row.overtimeHours ?? "";
     }
 
-    function getLeaveByDate(date) {
-      return getLeave()
-        .map((item, index) => ({ ...item, __index: index }))
-        .filter(item => item.date === date);
-    }
+function getLeaveRows(date = "", deptFilter = "전체", bandFilter = "전체") {
+  let rows = getLeave()
+    .map((item, index) => ({ ...item, __index: index }));
 
-    function populateEditLeaveRows(date) {
-      const rows = getLeaveByDate(date);
-      const select = document.getElementById("editLeaveRowSelect");
+  if (date) {
+    rows = rows.filter(item => item.date === date);
+  }
 
-      let html = '<option value="">선택</option>';
-      rows.forEach(row => {
-        html += `<option value="${row.__index}">${row.date} / ${row.name} / ${row.type || "-"}</option>`;
-      });
-      select.innerHTML = html;
+  if (deptFilter !== "전체") {
+    rows = rows.filter(item => item.dept === deptFilter);
+  }
 
-      if (rows.length === 0) {
-        setMessage("editLeaveMessage", "해당 날짜의 휴가 상신 내역이 없습니다.", "error");
-      } else {
-        setMessage("editLeaveMessage", `${rows.length}건을 불러왔습니다.`, "success");
-      }
-    }
+  if (bandFilter !== "전체") {
+    rows = rows.filter(item => item.band === bandFilter);
+  }
+
+  return rows;
+}
+
+function populateEditLeaveRows(date, deptFilter = "전체", bandFilter = "전체") {
+  const rows = getLeaveRows(date, deptFilter, bandFilter);
+  const select = document.getElementById("editLeaveRowSelect");
+
+  let html = '<option value="">선택</option>';
+  rows.forEach(row => {
+    html += `<option value="${row.__index}">${row.date} / ${row.dept || "-"} / ${row.band || "-"} / ${row.name} / ${row.type || "-"}</option>`;
+  });
+  select.innerHTML = html;
+
+  if (rows.length === 0) {
+    setMessage("editLeaveMessage", "해당 조건의 휴가 상신 내역이 없습니다.", "error");
+  } else {
+    setMessage("editLeaveMessage", `${rows.length}건을 불러왔습니다.`, "success");
+  }
+}
 
     function fillEditLeaveFormByIndex(index) {
       if (index === "") return;
@@ -1607,15 +1670,15 @@ function requestLeaveClose(index) {
       }
     });
 
-    document.getElementById("searchLeaveBtn").addEventListener("click", () => {
-      const date = document.getElementById("leaveDate").value;
-      if (!date) {
-        setMessage("leaveMessage", "조회할 날짜를 입력해 주세요.", "error");
-        return;
-      }
-      renderLeaveTable(date);
-      setMessage("leaveMessage", "조회가 완료되었습니다.", "success");
-    });
+document.getElementById("searchLeaveBtn").addEventListener("click", () => {
+  const date = document.getElementById("leaveDate").value;
+  if (!date) {
+    setMessage("leaveMessage", "조회할 날짜를 입력해 주세요.", "error");
+    return;
+  }
+  renderLeaveTable(date);
+  setMessage("leaveMessage", "조회가 완료되었습니다.", "success");
+});
 
     document.getElementById("previewBtn").addEventListener("click", async () => {
       try {
@@ -1892,14 +1955,18 @@ function requestLeaveClose(index) {
       }
     });
 
-    document.getElementById("loadEditLeaveRowsBtn").addEventListener("click", () => {
-      const date = document.getElementById("editLeaveTargetDate").value;
-      if (!date) {
-        setMessage("editLeaveMessage", "조회 날짜를 입력해 주세요.", "error");
-        return;
-      }
-      populateEditLeaveRows(date);
-    });
+document.getElementById("loadEditLeaveRowsBtn").addEventListener("click", () => {
+  const date = document.getElementById("editLeaveTargetDate").value;
+  const dept = document.getElementById("editLeaveSearchDept").value;
+  const band = document.getElementById("editLeaveSearchBand").value;
+
+  if (!date) {
+    setMessage("editLeaveMessage", "조회 날짜를 입력해 주세요.", "error");
+    return;
+  }
+
+  populateEditLeaveRows(date, dept, band);
+});
 
     document.getElementById("editLeaveRowSelect").addEventListener("change", (e) => {
       fillEditLeaveFormByIndex(e.target.value);
@@ -1939,7 +2006,11 @@ rows[Number(selectedIndex)] = {
 };
         setLeave(rows);
 
-        populateEditLeaveRows(document.getElementById("editLeaveTargetDate").value);
+        populateEditLeaveRows(
+  document.getElementById("editLeaveTargetDate").value,
+  document.getElementById("editLeaveSearchDept").value,
+  document.getElementById("editLeaveSearchBand").value
+);
         document.getElementById("editLeaveRowSelect").value = String(selectedIndex);
         fillEditLeaveFormByIndex(String(selectedIndex));
 
@@ -1964,7 +2035,11 @@ rows[Number(selectedIndex)] = {
         rows.splice(Number(selectedIndex), 1);
         setLeave(rows);
 
-        populateEditLeaveRows(targetDate);
+        populateEditLeaveRows(
+  targetDate,
+  document.getElementById("editLeaveSearchDept").value,
+  document.getElementById("editLeaveSearchBand").value
+);
         document.getElementById("editLeaveDate").value = "";
         document.getElementById("editLeaveName").value = "";
         document.getElementById("editLeaveType").value = "";
