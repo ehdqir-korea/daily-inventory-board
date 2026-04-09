@@ -329,11 +329,33 @@
       <label for="leaveDate">신청일자</label>
       <input type="date" id="leaveDate" />
 
-      <label for="leaveName">이름</label>
-      <input list="workersList" id="leaveName" placeholder="이름 입력 또는 선택" />
+<label for="leaveName">이름</label>
+<input list="workersList" id="leaveName" placeholder="이름 입력 또는 선택" />
 
-      <label for="leaveType">사유 유형</label>
-      <select id="leaveType">
+<label for="leaveDept">부서</label>
+<select id="leaveDept">
+  <option value="">선택</option>
+  <option value="제분">제분</option>
+  <option value="정선">정선</option>
+  <option value="대포장">대포장</option>
+  <option value="소포장">소포장</option>
+  <option value="품질관리">품질관리</option>
+  <option value="기술">기술</option>
+  <option value="생산2팀">생산2팀</option>
+</select>
+
+<label for="leaveBand">반</label>
+<select id="leaveBand">
+  <option value="">선택</option>
+  <option value="갑">갑</option>
+  <option value="을">을</option>
+  <option value="병">병</option>
+  <option value="없음">없음</option>
+</select>
+
+<label for="leaveType">사유 유형</label>
+<select id="leaveType">
+  
         <option value="" selected></option>
         <option value="휴가">휴가</option>
         <option value="연차">연차</option>
@@ -344,15 +366,36 @@
       <label for="leaveNote">비고</label>
       <input type="text" id="leaveNote" placeholder="예: 개인사유, 병원, 가정사" />
 
-      <label for="leaveFile">첨부파일</label>
-      <input type="file" id="leaveFile" accept="image/*" />
-      <div id="leaveFileName" class="preview-file"></div>
-      <img id="leavePreview" class="thumb" alt="휴가 첨부 미리보기" />
+<label for="leaveFile">첨부파일</label>
+<input type="file" id="leaveFile" accept="image/*" />
+<div id="leaveFileName" class="preview-file"></div>
+<img id="leavePreview" class="thumb" alt="휴가 첨부 미리보기" />
 
-      <div class="btn-row">
-        <button class="btn-primary" id="saveLeaveBtn">저장</button>
-        <button class="btn-secondary" id="searchLeaveBtn">조회</button>
-      </div>
+<label for="leaveSearchDept">조회 부서</label>
+<select id="leaveSearchDept">
+  <option value="전체">전체</option>
+  <option value="제분">제분</option>
+  <option value="정선">정선</option>
+  <option value="대포장">대포장</option>
+  <option value="소포장">소포장</option>
+  <option value="품질관리">품질관리</option>
+  <option value="기술">기술</option>
+  <option value="생산2팀">생산2팀</option>
+</select>
+
+<label for="leaveSearchBand">조회 반</label>
+<select id="leaveSearchBand">
+  <option value="전체">전체</option>
+  <option value="갑">갑</option>
+  <option value="을">을</option>
+  <option value="병">병</option>
+  <option value="없음">없음</option>
+</select>
+
+<div class="btn-row">
+  <button class="btn-primary" id="saveLeaveBtn">저장</button>
+  <button class="btn-secondary" id="searchLeaveBtn">조회</button>
+</div>
 
       <div id="leaveMessage" class="message"></div>
 
@@ -628,26 +671,8 @@
 <label for="editLeaveTargetDate">조회 날짜</label>
 <input type="date" id="editLeaveTargetDate" />
 
-<label for="leaveSearchDept">조회 부서</label>
-<select id="leaveSearchDept">
-  <option value="전체">전체</option>
-  <option value="제분">제분</option>
-  <option value="정선">정선</option>
-  <option value="대포장">대포장</option>
-  <option value="소포장">소포장</option>
-  <option value="품질관리">품질관리</option>
-  <option value="기술">기술</option>
-  <option value="생산2팀">생산2팀</option>
-</select>
-
-<label for="leaveSearchBand">조회 반</label>
-<select id="leaveSearchBand">
-  <option value="전체">전체</option>
-  <option value="갑">갑</option>
-  <option value="을">을</option>
-  <option value="병">병</option>
-  <option value="없음">없음</option>
-</select>
+<label for="editLeaveTargetDate">조회 날짜</label>
+<input type="date" id="editLeaveTargetDate" />
 
 <label for="editLeaveSearchDept">조회 부서</label>
 <select id="editLeaveSearchDept">
@@ -678,11 +703,32 @@
       <label for="editLeaveDate">신청일자</label>
       <input type="date" id="editLeaveDate" />
 
-      <label for="editLeaveName">이름</label>
-      <input list="workersList" id="editLeaveName" placeholder="이름 입력 또는 선택" />
+<label for="editLeaveName">이름</label>
+<input list="workersList" id="editLeaveName" placeholder="이름 입력 또는 선택" />
 
-      <label for="editLeaveType">사유 유형</label>
-      <select id="editLeaveType">
+<label for="editLeaveDept">부서</label>
+<select id="editLeaveDept">
+  <option value="">선택</option>
+  <option value="제분">제분</option>
+  <option value="정선">정선</option>
+  <option value="대포장">대포장</option>
+  <option value="소포장">소포장</option>
+  <option value="품질관리">품질관리</option>
+  <option value="기술">기술</option>
+  <option value="생산2팀">생산2팀</option>
+</select>
+
+<label for="editLeaveBand">반</label>
+<select id="editLeaveBand">
+  <option value="">선택</option>
+  <option value="갑">갑</option>
+  <option value="을">을</option>
+  <option value="병">병</option>
+  <option value="없음">없음</option>
+</select>
+
+<label for="editLeaveType">사유 유형</label>
+<select id="editLeaveType">
         <option value=""></option>
         <option value="휴가">휴가</option>
         <option value="연차">연차</option>
@@ -1422,21 +1468,6 @@ function openEditLeaveModal() {
       document.getElementById("editHistoryModal").classList.remove("show");
     }
 
-    function openEditLeaveModal() {
-      document.getElementById("editLeaveModal").classList.add("show");
-      document.getElementById("editLeaveTargetDate").value = document.getElementById("leaveDate").value || formatDate(new Date());
-      document.getElementById("editLeaveRowSelect").innerHTML = '<option value="">선택</option>';
-      document.getElementById("editLeaveDate").value = "";
-      document.getElementById("editLeaveName").value = "";
-      document.getElementById("editLeaveType").value = "";
-      document.getElementById("editLeaveNote").value = "";
-      document.getElementById("editLeaveFile").value = "";
-      document.getElementById("editLeaveFileName").textContent = "";
-      document.getElementById("editLeavePreview").src = "";
-      document.getElementById("editLeavePreview").style.display = "none";
-      setMessage("editLeaveMessage", "", "success");
-    }
-
     function closeEditLeaveModal() {
       document.getElementById("editLeaveModal").classList.remove("show");
     }
@@ -1601,16 +1632,18 @@ function populateEditLeaveRows(date, deptFilter = "전체", bandFilter = "전체
   }
 }
 
-    function fillEditLeaveFormByIndex(index) {
-      if (index === "") return;
-      const rows = getLeave();
-      const row = rows[Number(index)];
-      if (!row) return;
+function fillEditLeaveFormByIndex(index) {
+  if (index === "") return;
+  const rows = getLeave();
+  const row = rows[Number(index)];
+  if (!row) return;
 
-      document.getElementById("editLeaveDate").value = row.date || "";
-      document.getElementById("editLeaveName").value = row.name || "";
-      document.getElementById("editLeaveType").value = row.type || "";
-      document.getElementById("editLeaveNote").value = row.note || "";
+  document.getElementById("editLeaveDate").value = row.date || "";
+  document.getElementById("editLeaveName").value = row.name || "";
+  document.getElementById("editLeaveDept").value = row.dept || "";
+  document.getElementById("editLeaveBand").value = row.band || "";
+  document.getElementById("editLeaveType").value = row.type || "";
+  document.getElementById("editLeaveNote").value = row.note || "";
       document.getElementById("editLeaveFile").value = "";
       document.getElementById("editLeaveFileName").textContent = row.imageData ? "기존 첨부파일 있음" : "";
       const preview = document.getElementById("editLeavePreview");
@@ -1635,31 +1668,45 @@ function populateEditLeaveRows(date, deptFilter = "전체", bandFilter = "전체
       setMessage("workerMessage", "현재 저장된 인원 데이터를 반영했습니다.", "success");
     }
 
-    document.getElementById("saveLeaveBtn").addEventListener("click", async () => {
-      try {
-        const date = document.getElementById("leaveDate").value;
-        const name = document.getElementById("leaveName").value.trim();
-        const type = document.getElementById("leaveType").value;
-        const note = document.getElementById("leaveNote").value.trim();
-        const file = document.getElementById("leaveFile").files[0];
+document.getElementById("saveLeaveBtn").addEventListener("click", async () => {
+  try {
+    const date = document.getElementById("leaveDate").value;
+    const name = document.getElementById("leaveName").value.trim();
+    const dept = document.getElementById("leaveDept").value;
+    const band = document.getElementById("leaveBand").value;
+    const type = document.getElementById("leaveType").value;
+    const note = document.getElementById("leaveNote").value.trim();
+    const file = document.getElementById("leaveFile").files[0];
 
-        if (!date) throw new Error("신청일자를 입력해 주세요.");
-        if (!name) throw new Error("이름을 입력해 주세요.");
-        if (!type) throw new Error("사유 유형을 선택해 주세요.");
+    if (!date) throw new Error("신청일자를 입력해 주세요.");
+    if (!name) throw new Error("이름을 입력해 주세요.");
+    if (!dept) throw new Error("부서를 선택해 주세요.");
+    if (!band) throw new Error("반을 선택해 주세요.");
+    if (!type) throw new Error("사유 유형을 선택해 주세요.");
 
-        const workerExists = getWorkers().some(w => w.name === name);
-        if (!workerExists) throw new Error("이름은 인원관리 목록에 있는 이름만 사용할 수 있습니다.");
+    const workerExists = getWorkers().some(w => w.name === name);
+    if (!workerExists) throw new Error("이름은 인원관리 목록에 있는 이름만 사용할 수 있습니다.");
 
-        const imageData = file ? await readFileAsDataURL(file) : "";
+    const imageData = file ? await readFileAsDataURL(file) : "";
 
-        const rows = getLeave();
-        rows.push({
-  date,
-  name,
-  type,
-  note,
-  imageData,
-  submittedAt: new Date().toLocaleString("ko-KR", { hour12: false })
+    const rows = getLeave();
+    rows.push({
+      date,
+      name,
+      dept,
+      band,
+      type,
+      note,
+      imageData,
+      submittedAt: new Date().toLocaleString("ko-KR", { hour12: false })
+    });
+    setLeave(rows);
+
+    renderLeaveTable(date);
+    setMessage("leaveMessage", "휴가 상신을 저장했습니다.", "success");
+  } catch (e) {
+    setMessage("leaveMessage", e.message, "error");
+  }
 });
         setLeave(rows);
 
@@ -1678,6 +1725,36 @@ document.getElementById("searchLeaveBtn").addEventListener("click", () => {
   }
   renderLeaveTable(date);
   setMessage("leaveMessage", "조회가 완료되었습니다.", "success");
+});
+
+    function fillLeaveWorkerInfoByName(name) {
+  const worker = getWorkers().find(w => w.name === name);
+  if (!worker) return;
+
+  document.getElementById("leaveDept").value = worker.dept || "";
+  document.getElementById("leaveBand").value = worker.band || "";
+}
+
+function fillEditLeaveWorkerInfoByName(name) {
+  const worker = getWorkers().find(w => w.name === name);
+  if (!worker) return;
+
+  document.getElementById("editLeaveDept").value = worker.dept || "";
+  document.getElementById("editLeaveBand").value = worker.band || "";
+}
+
+    document.getElementById("leaveName").addEventListener("change", (e) => {
+  fillLeaveWorkerInfoByName(e.target.value.trim());
+});
+document.getElementById("leaveName").addEventListener("input", (e) => {
+  fillLeaveWorkerInfoByName(e.target.value.trim());
+});
+
+document.getElementById("editLeaveName").addEventListener("change", (e) => {
+  fillEditLeaveWorkerInfoByName(e.target.value.trim());
+});
+document.getElementById("editLeaveName").addEventListener("input", (e) => {
+  fillEditLeaveWorkerInfoByName(e.target.value.trim());
 });
 
     document.getElementById("previewBtn").addEventListener("click", async () => {
@@ -1839,6 +1916,21 @@ document.getElementById("searchLeaveBtn").addEventListener("click", () => {
   const leaveIndex = pendingLeaveCloseIndex;
   closePasswordModal();
 
+     function openEditHistoryModal() {
+  document.getElementById("editHistoryModal").classList.add("show");
+  document.getElementById("editTargetDate").value = document.getElementById("historyDate").value || formatDate(new Date());
+  document.getElementById("editTargetDept").value = document.getElementById("historyDept").value || "전체";
+  document.getElementById("editRowSelect").innerHTML = '<option value="">선택</option>';
+  document.getElementById("editWorkerName").value = "";
+  document.getElementById("editAbsentName").value = "";
+  document.getElementById("editAbsenceType").value = "";
+  document.getElementById("editNote").value = "";
+  document.getElementById("editManualTotalWork").value = "";
+  document.getElementById("editManualOvertime").value = "";
+  document.getElementById("editManualOvertimeHours").value = "";
+  setMessage("editHistoryMessage", "", "success");
+}
+
   if (action === "history-edit") {
     openEditHistoryModal();
   } else if (action === "worker-delete") {
@@ -1968,43 +2060,45 @@ document.getElementById("loadEditLeaveRowsBtn").addEventListener("click", () => 
   populateEditLeaveRows(date, dept, band);
 });
 
-    document.getElementById("editLeaveRowSelect").addEventListener("change", (e) => {
-      fillEditLeaveFormByIndex(e.target.value);
-    });
+document.getElementById("saveEditLeaveBtn").addEventListener("click", async () => {
+  try {
+    const selectedIndex = document.getElementById("editLeaveRowSelect").value;
+    if (selectedIndex === "") throw new Error("수정할 항목을 선택해 주세요.");
 
-    document.getElementById("saveEditLeaveBtn").addEventListener("click", async () => {
-      try {
-        const selectedIndex = document.getElementById("editLeaveRowSelect").value;
-        if (selectedIndex === "") throw new Error("수정할 항목을 선택해 주세요.");
+    const date = document.getElementById("editLeaveDate").value;
+    const name = document.getElementById("editLeaveName").value.trim();
+    const dept = document.getElementById("editLeaveDept").value;
+    const band = document.getElementById("editLeaveBand").value;
+    const type = document.getElementById("editLeaveType").value;
+    const note = document.getElementById("editLeaveNote").value.trim();
+    const file = document.getElementById("editLeaveFile").files[0];
 
-        const date = document.getElementById("editLeaveDate").value;
-        const name = document.getElementById("editLeaveName").value.trim();
-        const type = document.getElementById("editLeaveType").value;
-        const note = document.getElementById("editLeaveNote").value.trim();
-        const file = document.getElementById("editLeaveFile").files[0];
+    if (!date) throw new Error("신청일자를 입력해 주세요.");
+    if (!name) throw new Error("이름을 입력해 주세요.");
+    if (!dept) throw new Error("부서를 선택해 주세요.");
+    if (!band) throw new Error("반을 선택해 주세요.");
+    if (!type) throw new Error("사유 유형을 선택해 주세요.");
 
-        if (!date) throw new Error("신청일자를 입력해 주세요.");
-        if (!name) throw new Error("이름을 입력해 주세요.");
-        if (!type) throw new Error("사유 유형을 선택해 주세요.");
+    const workerExists = getWorkers().some(w => w.name === name);
+    if (!workerExists) throw new Error("이름은 인원관리 목록에 있는 이름만 사용할 수 있습니다.");
 
-        const workerExists = getWorkers().some(w => w.name === name);
-        if (!workerExists) throw new Error("이름은 인원관리 목록에 있는 이름만 사용할 수 있습니다.");
+    const rows = getLeave();
+    const oldRow = rows[Number(selectedIndex)];
+    if (!oldRow) throw new Error("대상 데이터를 찾을 수 없습니다.");
 
-        const rows = getLeave();
-        const oldRow = rows[Number(selectedIndex)];
-        if (!oldRow) throw new Error("대상 데이터를 찾을 수 없습니다.");
+    const imageData = file ? await readFileAsDataURL(file) : (oldRow.imageData || "");
 
-        const imageData = file ? await readFileAsDataURL(file) : (oldRow.imageData || "");
-
-rows[Number(selectedIndex)] = {
-  date,
-  name,
-  type,
-  note,
-  imageData,
-  submittedAt: oldRow.submittedAt || new Date().toLocaleString("ko-KR", { hour12: false })
-};
-        setLeave(rows);
+    rows[Number(selectedIndex)] = {
+      date,
+      name,
+      dept,
+      band,
+      type,
+      note,
+      imageData,
+      submittedAt: oldRow.submittedAt || new Date().toLocaleString("ko-KR", { hour12: false })
+    };
+    setLeave(rows);
 
         populateEditLeaveRows(
   document.getElementById("editLeaveTargetDate").value,
