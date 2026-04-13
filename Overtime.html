@@ -1,4 +1,13 @@
 <!DOCTYPE html>
+<!--
+[전체 코드 블록분리 주석본]
+- 현재 코드 기준 유지
+- 근무 계산 엔진 포함
+- 초기 인원 목록 포함
+- 휴가/연장/구매/수정/마감 포함
+- 모바일 이름 입력 개선 포함
+- 모바일 조회 카드형 표시 포함
+-->
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
@@ -7,9 +16,9 @@
   <style>
     /* =========================
        [A] 공통 스타일 / 모바일 대응
-       - 카드 레이아웃
-       - 표/모바일 카드형 동시 지원
-       - 모바일에서는 가로 스크롤 대신 카드형 조회
+       - 카드형 레이아웃
+       - 표 + 모바일 카드형 조회 동시 지원
+       - 모바일 이름입력 시 datalist 비활성화 전제
        ========================= */
     :root{
       --bg:#f5f7fb; --card:#fff; --line:#d9dee8; --text:#1f2937; --muted:#6b7280;
@@ -81,9 +90,8 @@
 
     <!-- =========================
          [B] 1. 휴가 상신 UI 블록
-         - 휴가 저장 / 조회
-         - 부서/반 저장
-         - 첨부파일, 상신일시, 마감 처리
+         - 휴가 저장 / 조회 / 수정 / 마감
+         - 부서/반/사유/첨부파일/상신일시 관리
          ========================= -->
     <div class="card">
       <div class="section-header">
@@ -148,9 +156,8 @@
 
     <!-- =========================
          [C] 2. 연장근무 입력 UI 블록
-         - 본인 / 휴가자 입력
-         - 사유유형 / 비고 / 첨부파일
-         - 계산 / 저장
+         - 날짜/본인/휴가자/사유/비고/첨부파일 입력
+         - 계산 / 계산 후 저장
          ========================= -->
     <div class="card">
       <h2>2. 연장근무 입력</h2>
@@ -192,7 +199,7 @@
     <!-- =========================
          [D] 3. 인원관리 UI 블록
          - 인원 마스터 추가 / 조회 / 삭제
-         - 휴가/연장/구매 이름 입력 소스
+         - 모든 이름 입력 기능의 기준 데이터
          ========================= -->
     <div class="card">
       <h2>3. 인원관리</h2>
@@ -219,10 +226,10 @@
     </div>
 
     <!-- =========================
-         [E] 4. 연장근무 히스토리 UI 블록
-         - 날짜/부서 조회
-         - 모바일 카드형 조회
-         - 수정 모달 진입
+         [E] 4. 연장근무 히스토리 조회 UI 블록
+         - 날짜/부서별 조회
+         - 모바일 카드형 표시
+         - 수정 모달 연결
          ========================= -->
     <div class="card">
       <div class="section-header">
@@ -248,13 +255,13 @@
 
     <!-- =========================
          [F] 5. 구매 신청 목록 UI 블록
-         - 저장 누적
+         - 구매 신청 누적 저장
          - 비밀번호 마감
          - 모바일 카드형 조회
          ========================= -->
     <div class="card">
       <h2>5. 구매 신청 목록</h2>
-      <p class="notice">구매 신청은 저장된 순서대로 계속 쌓입니다. 제품입고 시 김남혁 사원에게 연락 및 마감요청.</p>
+      <p class="notice">구매 신청은 저장된 순서대로 계속 쌓이며, 마감은 비밀번호 1004 입력 후에만 가능합니다.</p>
       <div id="purchaseHistorySummary" class="message"></div>
       <div class="scroll-hint">PC에서는 표, 모바일에서는 카드형으로 표시됩니다.</div>
       <div class="table-wrap desktop-table"><table id="purchaseHistoryTable"></table></div>
@@ -354,9 +361,6 @@
   </div>
 
   <script>
-    // =========================
-    // [G] 저장 키 / 공통 상수
-    // =========================
     const STORAGE_KEYS = { workers:"overtime_workers_v20", history:"overtime_history_v20", purchases:"purchase_history_v13", leave:"leave_history_v1" };
     const EDIT_PASSWORD = "1004";
     const IS_MOBILE = window.matchMedia("(max-width: 767px)").matches;
@@ -364,13 +368,10 @@
     const defaultWorkers = JSON.parse(document.getElementById('workersList') ? '[]' : '[]'); // placeholder
   </script>
   <script>
+    // =========================
+    // [G] 저장 키 / 공통 상수 / 초기 데이터 주입 블록
+    // =========================
     // default workers inserted separately to keep file smaller in generation
-    // =========================
-    // [H] 초기 데이터 / 시간표 / 반변경 패턴
-    // - DEFAULT_WORKERS_DATA: 인원 마스터 초기값
-    // - timeTemplates: 일반일/월요일/반차 시간표
-    // - rotationPatterns: 갑/을/병 반변경 패턴
-    // =========================
     const DEFAULT_WORKERS_DATA = [{"name": "박영수", "band": "갑", "dept": "제분"}, {"name": "유흥선", "band": "갑", "dept": "제분"}, {"name": "최남호", "band": "갑", "dept": "제분"}, {"name": "정순철", "band": "갑", "dept": "제분"}, {"name": "오세빈", "band": "갑", "dept": "제분"}, {"name": "박재록", "band": "갑", "dept": "제분"}, {"name": "박승기", "band": "갑", "dept": "제분"}, {"name": "장준연", "band": "갑", "dept": "제분"}, {"name": "김영주", "band": "갑", "dept": "제분"}, {"name": "한동홍", "band": "갑", "dept": "제분"}, {"name": "원종민", "band": "갑", "dept": "제분"}, {"name": "고경한", "band": "갑", "dept": "제분"}, {"name": "이승길", "band": "갑", "dept": "정선"}, {"name": "신형태", "band": "갑", "dept": "정선"}, {"name": "박시환", "band": "갑", "dept": "정선"}, {"name": "김수철", "band": "을", "dept": "제분"}, {"name": "김인수", "band": "을", "dept": "제분"}, {"name": "김수현", "band": "을", "dept": "제분"}, {"name": "송희열", "band": "을", "dept": "제분"}, {"name": "서기원", "band": "을", "dept": "제분"}, {"name": "박희복", "band": "을", "dept": "제분"}, {"name": "신승곤", "band": "을", "dept": "제분"}, {"name": "윤현철", "band": "을", "dept": "제분"}, {"name": "김민기", "band": "을", "dept": "제분"}, {"name": "임준수", "band": "을", "dept": "제분"}, {"name": "김정민", "band": "을", "dept": "제분"}, {"name": "방정환", "band": "을", "dept": "제분"}, {"name": "구희철", "band": "을", "dept": "정선"}, {"name": "문창조", "band": "을", "dept": "정선"}, {"name": "박태원", "band": "을", "dept": "정선"}, {"name": "박우진", "band": "병", "dept": "제분"}, {"name": "유인선", "band": "병", "dept": "제분"}, {"name": "하영기", "band": "병", "dept": "제분"}, {"name": "이영렬", "band": "병", "dept": "제분"}, {"name": "이건호", "band": "병", "dept": "제분"}, {"name": "구봉춘", "band": "병", "dept": "제분"}, {"name": "종용선", "band": "병", "dept": "제분"}, {"name": "최광백", "band": "병", "dept": "제분"}, {"name": "성대경", "band": "병", "dept": "제분"}, {"name": "탁영수", "band": "병", "dept": "제분"}, {"name": "장진학", "band": "병", "dept": "제분"}, {"name": "공민규", "band": "병", "dept": "제분"}, {"name": "장종준", "band": "병", "dept": "정선"}, {"name": "박종현", "band": "병", "dept": "정선"}, {"name": "이정배", "band": "병", "dept": "정선"}, {"name": "정경원", "band": "갑", "dept": "대포장"}, {"name": "이원석", "band": "갑", "dept": "대포장"}, {"name": "황민수", "band": "갑", "dept": "대포장"}, {"name": "강현묵", "band": "갑", "dept": "대포장"}, {"name": "이철민", "band": "갑", "dept": "대포장"}, {"name": "백명현", "band": "갑", "dept": "품질관리"}, {"name": "방성준", "band": "갑", "dept": "소포장"}, {"name": "이현우", "band": "갑", "dept": "소포장"}, {"name": "배상수", "band": "갑", "dept": "소포장"}, {"name": "윤재영", "band": "을", "dept": "대포장"}, {"name": "허인무", "band": "을", "dept": "대포장"}, {"name": "이성민", "band": "을", "dept": "대포장"}, {"name": "김민석", "band": "을", "dept": "대포장"}, {"name": "추민수", "band": "을", "dept": "대포장"}, {"name": "이호연", "band": "을", "dept": "품질관리"}, {"name": "최인호", "band": "을", "dept": "소포장"}, {"name": "이현수", "band": "을", "dept": "소포장"}, {"name": "정영훈", "band": "을", "dept": "소포장"}, {"name": "문응남", "band": "병", "dept": "대포장"}, {"name": "강승훈", "band": "병", "dept": "대포장"}, {"name": "이태수", "band": "병", "dept": "대포장"}, {"name": "구봉석", "band": "병", "dept": "대포장"}, {"name": "박세진", "band": "병", "dept": "대포장"}, {"name": "장기호", "band": "병", "dept": "품질관리"}, {"name": "백종환", "band": "병", "dept": "소포장"}, {"name": "신진식", "band": "병", "dept": "소포장"}, {"name": "김현학", "band": "병", "dept": "소포장"}];
     const timeTemplates = {"default": {"없음": {"조근": {"1": {"total": "전일 22:00 ~ 10:00", "overtime": "07:00 ~ 10:00", "overtimeHours": 3}, "2": {"total": "10:00 ~ 22:00", "overtime": "10:00 ~ 15:00", "overtimeHours": 5}}, "중근": {"1": {"total": "07:00 ~ 19:00", "overtime": "15:00 ~ 19:00", "overtimeHours": 4}, "2": {"total": "19:00 ~ 익일07:00", "overtime": "19:00 ~ 22:00", "overtimeHours": 3}}, "야근": {"1": {"total": "07:00 ~ 19:00", "overtime": "15:00 ~ 19:00", "overtimeHours": 4}, "2": {"total": "19:00 ~ 익일07:00", "overtime": "익일 02:00 ~ 익일 07:00", "overtimeHours": 5}}}, "오전반차": {"조근": {"total": "전일 22:00 ~ 10:00", "overtime": "07:00 ~ 10:00", "overtimeHours": 3}, "중근": {"total": "07:00 ~ 18:30", "overtime": "15:00 ~ 18:30", "overtimeHours": 3.5}}, "오후반차": {"조근": {"total": "11:00 ~ 22:00", "overtime": "11:00 ~ 15:00", "overtimeHours": 4}, "중근": {"total": "18:30 ~ 익일07:00", "overtime": "18:30 ~ 22:00", "overtimeHours": 3.5}}}, "monday": {"없음": {"조근": {"1": {"total": "07:00 ~ 19:00", "overtime": "14:00 ~ 19:00", "overtimeHours": 5}, "2": {"total": "19:00 ~ 익일07:00", "overtime": "19:00 ~ 22:00", "overtimeHours": 3}}, "중근": {"1": {"total": "07:00 ~ 19:00", "overtime": "15:00 ~ 19:00", "overtimeHours": 4}, "2": {"total": "19:00 ~ 익일07:00", "overtime": "19:00 ~ 22:00", "overtimeHours": 3}}, "야근": {"1": {"total": "07:00 ~ 19:00", "overtime": "14:00 ~ 19:00", "overtimeHours": 5}, "2": {"total": "19:00 ~ 익일07:00", "overtime": "익일 02:00 ~ 익일 07:00", "overtimeHours": 5}}}, "오전반차": {"조근": {"total": "전일 22:00 ~ 10:00", "overtime": "07:00 ~ 10:00", "overtimeHours": 3}, "중근": {"total": "07:00 ~ 18:30", "overtime": "15:00 ~ 18:30", "overtimeHours": 3.5}}, "오후반차": {"조근": {"total": "11:00 ~ 22:00", "overtime": "11:00 ~ 15:00", "overtimeHours": 4}, "중근": {"total": "18:30 ~ 익일07:00", "overtime": "18:30 ~ 22:00", "overtimeHours": 3.5}}}};
     const rotationPatterns = [["갑", "을", "병"], ["을", "병", "갑"], ["병", "갑", "을"]];
@@ -383,7 +384,7 @@
     let pendingLeaveCloseIndex = null;
 
     // =========================
-    // [I] 저장/로드 공통 함수
+    // [H] 저장/로드 공통 함수 블록
     // - localStorage read/write
     // - workers / history / leave / purchases 접근 함수
     // =========================
@@ -400,10 +401,10 @@
     function setLeave(v){ saveData(STORAGE_KEYS.leave, v); }
 
     // =========================
-    // [J] 반변경 엔진
+    // [I] 반변경 엔진 블록
     // - 날짜 파싱
-    // - 연도 시작 패턴 계산
-    // - 연말연초 포함 날짜별 조/중/야 반 계산
+    // - 첫 일요일 기준 패턴 계산
+    // - 연말연초 이어지는 주 포함 반변경 계산
     // =========================
     function parseDate(dateStr){ const [y,m,d]=dateStr.split("-").map(Number); return new Date(y,m-1,d); }
     function formatDate(date){ return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`; }
@@ -431,7 +432,7 @@
     function getRoleFromBand(rotation, band){ if(rotation.조근===band) return "조근"; if(rotation.중근===band) return "중근"; if(rotation.야근===band) return "야근"; return null; }
 
     // =========================
-    // [K] 대체근무 판정 엔진
+    // [J] 대체근무 판정 엔진 블록
     // - 월요일 특수 규칙
     // - 반차 규칙
     // - 결원 역할 / 대체자 역할에 따라 targetRole, sequenceNo 결정
@@ -462,9 +463,9 @@
     }
 
     // =========================
-    // [L] 시간표 적용 엔진
-    // - 월요일/일반일 시간표 분기
-    // - 반차 시간표 분기
+    // [K] 시간표 적용 엔진 블록
+    // - 월요일 / 일반일 시간표 선택
+    // - 오전반차 / 오후반차 시간표 선택
     // =========================
     function getTimeTemplate(dateStr, absenceType, targetRole, sequenceNo){
       const templateSet = getDayName(dateStr)==="월" ? timeTemplates.monday : timeTemplates.default;
@@ -484,7 +485,7 @@
     }
 
     // =========================
-    // [M] 최종 근무 계산 엔진
+    // [L] 최종 근무 계산 엔진 블록
     // - 부서 제약 확인
     // - 반변경 계산
     // - 역할 계산
@@ -532,6 +533,11 @@
       });
     }
 
+    // =========================
+    // [M] 입력 편의 / 모바일 입력 제어 블록
+    // - 모바일에서는 datalist 비활성화
+    // - PC에서는 workersList 연결
+    // =========================
     function enableDesktopDatalistOnly(){
       document.querySelectorAll('[data-worker-input="true"]').forEach(input=>{
         if(IS_MOBILE){ input.removeAttribute("list"); input.setAttribute("autocomplete","off"); }
@@ -543,7 +549,7 @@
     // [N] 렌더링 블록
     // - 이름 목록
     // - 인원표
-    // - 휴가/히스토리/구매 목록
+    // - 휴가/히스토리/구매 조회 렌더링
     // - 모바일 카드형 렌더링 포함
     // =========================
     function renderWorkerList(){
@@ -839,21 +845,54 @@
       }
     });
 
-    document.getElementById("saveBtn").addEventListener("click", async ()=>{
-      try{
-        const file=document.getElementById("workFile").files[0];
-        const imageData=file ? await readFileAsDataURL(file) : "";
-        const result=calculateWorkResult({date:document.getElementById("workDate").value, workerName:document.getElementById("workerName").value.trim(), absentName:document.getElementById("absentName").value.trim(), absenceType:document.getElementById("absenceType").value, note:document.getElementById("note").value.trim(), imageData});
-        const history=getHistory(); history.push(result); setHistory(history);
-        renderCalcResult(result);
-        setMessage("calcMessage","계산 후 저장했습니다.","success");
-        if(document.getElementById("historyDate").value===result.date) renderHistory(result.date, document.getElementById("historyDept").value);
-      }catch(e){
-        document.getElementById("calcResult").style.display="none";
-        setMessage("calcMessage", e.message, "error");
-      }
+document.getElementById("saveBtn").addEventListener("click", async ()=>{
+  try{
+    const file=document.getElementById("workFile").files[0];
+    const imageData=file ? await readFileAsDataURL(file) : "";
+
+    const inputDate = document.getElementById("workDate").value;
+    const inputWorkerName = document.getElementById("workerName").value.trim();
+    const inputAbsentName = document.getElementById("absentName").value.trim();
+    const inputAbsenceType = document.getElementById("absenceType").value;
+    const inputNote = document.getElementById("note").value.trim();
+
+    const result=calculateWorkResult({
+      date: inputDate,
+      workerName: inputWorkerName,
+      absentName: inputAbsentName,
+      absenceType: inputAbsenceType,
+      note: inputNote,
+      imageData
     });
 
+    const history=getHistory();
+
+    const isDuplicate = history.some(item =>
+      item.date === result.date &&
+      item.workerName === result.workerName &&
+      item.absentName === result.absentName &&
+      item.absenceType === result.absenceType
+    );
+
+    if (isDuplicate) {
+      throw new Error("이미 저장된 연장근무입니다.");
+    }
+
+    history.push(result);
+    setHistory(history);
+
+    renderCalcResult(result);
+    setMessage("calcMessage","계산 후 저장했습니다.","success");
+
+    if(document.getElementById("historyDate").value===result.date) {
+      renderHistory(result.date, document.getElementById("historyDept").value);
+    }
+
+  }catch(e){
+    document.getElementById("calcResult").style.display="none";
+    setMessage("calcMessage", e.message, "error");
+  }
+});
     document.getElementById("addWorkerBtn").addEventListener("click", ()=>{
       const name=document.getElementById("newName").value.trim();
       const band=document.getElementById("newBand").value;
