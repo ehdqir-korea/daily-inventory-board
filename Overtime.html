@@ -182,7 +182,39 @@
     </div>
 
     <div class="card">
-      <h2>3. 인원관리</h2>
+      <div class="section-header">
+        <h2>3. 일자별 연장근무 히스토리 조회</h2>
+        <button class="btn-secondary inline-btn" id="openEditHistoryBtn">수정</button>
+      </div>
+
+      <label for="historyDate">조회 날짜</label><input type="date" id="historyDate" />
+      <label for="historyDept">부서 선택</label>
+      <select id="historyDept">
+        <option value="전체">전체</option><option value="제분">제분</option><option value="정선">정선</option><option value="대포장">대포장</option>
+        <option value="소포장">소포장</option><option value="품질관리">품질관리</option><option value="기술">기술</option><option value="생산2팀">생산2팀</option>
+      </select>
+      <button class="btn-primary" id="searchHistoryBtn">조회</button>
+
+      <div id="historySummary" class="message"></div>
+      <div class="scroll-hint">PC에서는 표, 모바일에서는 카드형으로 표시됩니다.</div>
+      <div class="table-wrap desktop-table"><table id="historyTable"></table></div>
+      <div id="historyMobileList" class="mobile-list"></div>
+    </div>
+
+    <div class="single-btn"><button class="btn-primary" id="openPurchaseBtn">구매 신청 열기</button></div>
+
+    <div class="card">
+      <h2>4. 구매 신청 목록</h2>
+      <p class="notice">구매 신청은 저장된 순서대로 계속 쌓이며, 마감은 비밀번호 1004 입력 후에만 가능합니다.</p>
+      <div id="purchaseHistorySummary" class="message"></div>
+      <div class="scroll-hint">PC에서는 표, 모바일에서는 카드형으로 표시됩니다.</div>
+      <div class="table-wrap desktop-table"><table id="purchaseHistoryTable"></table></div>
+      <div id="purchaseMobileList" class="mobile-list"></div>
+    </div>
+  </div> <!-- 구매신청 끝 -->
+
+   <div class="card">
+      <h2>5. 인원관리</h2>
       <p class="notice">인원 리스트는 처음에 숨김 상태입니다. 열기 버튼을 누르면 표시됩니다. 추가/삭제된 인원은 휴가 상신, 연장근무, 구매신청 이름 목록에 즉시 반영됩니다.</p>
 
       <label for="newName">이름</label><input type="text" id="newName" placeholder="예: 홍길동" />
@@ -205,37 +237,6 @@
       <div class="table-wrap" id="workerTableWrap" style="display:none;"><table id="workerTable"></table></div>
     </div>
 
-    <div class="card">
-      <div class="section-header">
-        <h2>4. 일자별 연장근무 히스토리 조회</h2>
-        <button class="btn-secondary inline-btn" id="openEditHistoryBtn">수정</button>
-      </div>
-
-      <label for="historyDate">조회 날짜</label><input type="date" id="historyDate" />
-      <label for="historyDept">부서 선택</label>
-      <select id="historyDept">
-        <option value="전체">전체</option><option value="제분">제분</option><option value="정선">정선</option><option value="대포장">대포장</option>
-        <option value="소포장">소포장</option><option value="품질관리">품질관리</option><option value="기술">기술</option><option value="생산2팀">생산2팀</option>
-      </select>
-      <button class="btn-primary" id="searchHistoryBtn">조회</button>
-
-      <div id="historySummary" class="message"></div>
-      <div class="scroll-hint">PC에서는 표, 모바일에서는 카드형으로 표시됩니다.</div>
-      <div class="table-wrap desktop-table"><table id="historyTable"></table></div>
-      <div id="historyMobileList" class="mobile-list"></div>
-    </div>
-
-    <div class="single-btn"><button class="btn-primary" id="openPurchaseBtn">구매 신청 열기</button></div>
-
-    <div class="card">
-      <h2>5. 구매 신청 목록</h2>
-      <p class="notice">구매 신청은 저장된 순서대로 계속 쌓이며, 마감은 비밀번호 1004 입력 후에만 가능합니다.</p>
-      <div id="purchaseHistorySummary" class="message"></div>
-      <div class="scroll-hint">PC에서는 표, 모바일에서는 카드형으로 표시됩니다.</div>
-      <div class="table-wrap desktop-table"><table id="purchaseHistoryTable"></table></div>
-      <div id="purchaseMobileList" class="mobile-list"></div>
-    </div>
-  </div>
 
   <div class="modal" id="purchaseModal">
     <div class="modal-content">
