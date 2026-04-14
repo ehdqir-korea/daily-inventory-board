@@ -1,14 +1,10 @@
 <!DOCTYPE html>
 <!--
-[전체 코드 블록분리 주석본 - 최종]
-- 현재 정리본 기준 유지
-- 반변경 / 월요일 / 대체근무 / 반차 / 부서제약 로직 포함
-- 초기 인원 목록 포함
-- 휴가 기간(시작일~종료일) 저장/조회 추가
-- 휴가/연장/구매/수정/마감 포함
-- 모바일 이름 입력 개선 포함
-- 모바일 조회 카드형 표시 포함
-- 연장근무 저장 중복 방지 포함
+[전체 코드 TXT]
+- 조회기준일 필드 제거
+- 휴가 조회는 leaveStartDate(조회일자) 기준으로 기간 포함 검색
+- 기간 휴가(startDate ~ endDate) 로직 유지
+- 모바일 개선 / 중복저장 방지 / 잔업특근 8시간 반영 버전
 -->
 <html lang="ko">
 <head>
@@ -16,12 +12,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>연장근무 관리</title>
   <style>
-    /* =========================
-       [A] 공통 스타일 / 모바일 대응
-       - 카드형 레이아웃
-       - 표 + 모바일 카드형 조회 동시 지원
-       - 모바일 이름입력 시 datalist 비활성화
-       ========================= */
     :root{
       --bg:#f5f7fb; --card:#fff; --line:#d9dee8; --text:#1f2937; --muted:#6b7280;
       --primary:#2563eb; --primary-dark:#1d4ed8; --danger:#dc2626; --success:#16a34a;
@@ -90,20 +80,11 @@
     <h1>연장근무 관리</h1>
     <p class="subtitle">휴가 상신, 연장근무 입력, 인원관리, 연장근무 히스토리, 구매신청을 한 화면에서 관리합니다.</p>
 
-    <!-- =========================
-         [B] 1. 휴가 상신 UI 블록
-         - 휴가 기간(시작일~종료일) 저장
-         - 조회 기준일로 기간 포함 여부 조회
-         - 수정 / 마감 / 첨부파일 / 상신일시 포함
-         ========================= -->
     <div class="card">
       <div class="section-header">
         <h2>1. 휴가 상신</h2>
         <button class="btn-secondary inline-btn" id="openEditLeaveBtn">수정</button>
       </div>
-
-      <label for="leaveQueryDate">조회 기준일</label>
-      <input type="date" id="leaveQueryDate" />
 
       <label for="leaveStartDate">휴가 시작일</label>
       <input type="date" id="leaveStartDate" />
@@ -163,12 +144,6 @@
       <div id="leaveMobileList" class="mobile-list"></div>
     </div>
 
-    <!-- =========================
-         [C] 2. 연장근무 입력 UI 블록
-         - 날짜/본인/휴가자/사유/비고/첨부파일 입력
-         - 계산 / 계산 후 저장
-         - 동일 데이터 중복 저장 방지 포함
-         ========================= -->
     <div class="card">
       <h2>2. 연장근무 입력</h2>
 
@@ -206,11 +181,6 @@
       <div id="calcResult" class="result-box" style="display:none;"></div>
     </div>
 
-    <!-- =========================
-         [D] 3. 인원관리 UI 블록
-         - 인원 마스터 추가 / 조회 / 삭제
-         - 모든 이름 입력 기능의 기준 데이터
-         ========================= -->
     <div class="card">
       <h2>3. 인원관리</h2>
       <p class="notice">인원 리스트는 처음에 숨김 상태입니다. 열기 버튼을 누르면 표시됩니다. 추가/삭제된 인원은 휴가 상신, 연장근무, 구매신청 이름 목록에 즉시 반영됩니다.</p>
@@ -235,12 +205,6 @@
       <div class="table-wrap" id="workerTableWrap" style="display:none;"><table id="workerTable"></table></div>
     </div>
 
-    <!-- =========================
-         [E] 4. 연장근무 히스토리 조회 UI 블록
-         - 날짜/부서별 조회
-         - 모바일 카드형 표시
-         - 수정 모달 연결
-         ========================= -->
     <div class="card">
       <div class="section-header">
         <h2>4. 일자별 연장근무 히스토리 조회</h2>
@@ -263,12 +227,6 @@
 
     <div class="single-btn"><button class="btn-primary" id="openPurchaseBtn">구매 신청 열기</button></div>
 
-    <!-- =========================
-         [F] 5. 구매 신청 목록 UI 블록
-         - 구매 신청 누적 저장
-         - 비밀번호 마감
-         - 모바일 카드형 조회
-         ========================= -->
     <div class="card">
       <h2>5. 구매 신청 목록</h2>
       <p class="notice">구매 신청은 저장된 순서대로 계속 쌓이며, 마감은 비밀번호 1004 입력 후에만 가능합니다.</p>
@@ -372,12 +330,6 @@
   </div>
 
   <script>
-    // =========================
-    // [G] 저장 키 / 공통 상수
-    // - localStorage 키
-    // - 공통 비밀번호
-    // - 모바일 여부 판별
-    // =========================
     const STORAGE_KEYS = { workers:"overtime_workers_v20", history:"overtime_history_v20", purchases:"purchase_history_v13", leave:"leave_history_v1" };
     const EDIT_PASSWORD = "1004";
     const IS_MOBILE = window.matchMedia("(max-width: 767px)").matches;
@@ -385,12 +337,6 @@
     const defaultWorkers = JSON.parse(document.getElementById('workersList') ? '[]' : '[]'); // placeholder
   </script>
   <script>
-    // =========================
-    // [H] 초기 데이터 / 시간표 / 반변경 패턴
-    // - DEFAULT_WORKERS_DATA: 인원 마스터 초기값
-    // - timeTemplates: 일반일/월요일/반차 시간표
-    // - rotationPatterns: 갑/을/병 반변경 순환 패턴
-    // =========================
     // default workers inserted separately to keep file smaller in generation
     const DEFAULT_WORKERS_DATA = [{"name": "박영수", "band": "갑", "dept": "제분"}, {"name": "유흥선", "band": "갑", "dept": "제분"}, {"name": "최남호", "band": "갑", "dept": "제분"}, {"name": "정순철", "band": "갑", "dept": "제분"}, {"name": "오세빈", "band": "갑", "dept": "제분"}, {"name": "박재록", "band": "갑", "dept": "제분"}, {"name": "박승기", "band": "갑", "dept": "제분"}, {"name": "장준연", "band": "갑", "dept": "제분"}, {"name": "김영주", "band": "갑", "dept": "제분"}, {"name": "한동홍", "band": "갑", "dept": "제분"}, {"name": "원종민", "band": "갑", "dept": "제분"}, {"name": "고경한", "band": "갑", "dept": "제분"}, {"name": "이승길", "band": "갑", "dept": "정선"}, {"name": "신형태", "band": "갑", "dept": "정선"}, {"name": "박시환", "band": "갑", "dept": "정선"}, {"name": "김수철", "band": "을", "dept": "제분"}, {"name": "김인수", "band": "을", "dept": "제분"}, {"name": "김수현", "band": "을", "dept": "제분"}, {"name": "송희열", "band": "을", "dept": "제분"}, {"name": "서기원", "band": "을", "dept": "제분"}, {"name": "박희복", "band": "을", "dept": "제분"}, {"name": "신승곤", "band": "을", "dept": "제분"}, {"name": "윤현철", "band": "을", "dept": "제분"}, {"name": "김민기", "band": "을", "dept": "제분"}, {"name": "임준수", "band": "을", "dept": "제분"}, {"name": "김정민", "band": "을", "dept": "제분"}, {"name": "방정환", "band": "을", "dept": "제분"}, {"name": "구희철", "band": "을", "dept": "정선"}, {"name": "문창조", "band": "을", "dept": "정선"}, {"name": "박태원", "band": "을", "dept": "정선"}, {"name": "박우진", "band": "병", "dept": "제분"}, {"name": "유인선", "band": "병", "dept": "제분"}, {"name": "하영기", "band": "병", "dept": "제분"}, {"name": "이영렬", "band": "병", "dept": "제분"}, {"name": "이건호", "band": "병", "dept": "제분"}, {"name": "구봉춘", "band": "병", "dept": "제분"}, {"name": "종용선", "band": "병", "dept": "제분"}, {"name": "최광백", "band": "병", "dept": "제분"}, {"name": "성대경", "band": "병", "dept": "제분"}, {"name": "탁영수", "band": "병", "dept": "제분"}, {"name": "장진학", "band": "병", "dept": "제분"}, {"name": "공민규", "band": "병", "dept": "제분"}, {"name": "장종준", "band": "병", "dept": "정선"}, {"name": "박종현", "band": "병", "dept": "정선"}, {"name": "이정배", "band": "병", "dept": "정선"}, {"name": "정경원", "band": "갑", "dept": "대포장"}, {"name": "이원석", "band": "갑", "dept": "대포장"}, {"name": "황민수", "band": "갑", "dept": "대포장"}, {"name": "강현묵", "band": "갑", "dept": "대포장"}, {"name": "이철민", "band": "갑", "dept": "대포장"}, {"name": "백명현", "band": "갑", "dept": "품질관리"}, {"name": "방성준", "band": "갑", "dept": "소포장"}, {"name": "이현우", "band": "갑", "dept": "소포장"}, {"name": "배상수", "band": "갑", "dept": "소포장"}, {"name": "윤재영", "band": "을", "dept": "대포장"}, {"name": "허인무", "band": "을", "dept": "대포장"}, {"name": "이성민", "band": "을", "dept": "대포장"}, {"name": "김민석", "band": "을", "dept": "대포장"}, {"name": "추민수", "band": "을", "dept": "대포장"}, {"name": "이호연", "band": "을", "dept": "품질관리"}, {"name": "최인호", "band": "을", "dept": "소포장"}, {"name": "이현수", "band": "을", "dept": "소포장"}, {"name": "정영훈", "band": "을", "dept": "소포장"}, {"name": "문응남", "band": "병", "dept": "대포장"}, {"name": "강승훈", "band": "병", "dept": "대포장"}, {"name": "이태수", "band": "병", "dept": "대포장"}, {"name": "구봉석", "band": "병", "dept": "대포장"}, {"name": "박세진", "band": "병", "dept": "대포장"}, {"name": "장기호", "band": "병", "dept": "품질관리"}, {"name": "백종환", "band": "병", "dept": "소포장"}, {"name": "신진식", "band": "병", "dept": "소포장"}, {"name": "김현학", "band": "병", "dept": "소포장"}];
     const timeTemplates = {"default": {"없음": {"조근": {"1": {"total": "전일 22:00 ~ 10:00", "overtime": "07:00 ~ 10:00", "overtimeHours": 3}, "2": {"total": "10:00 ~ 22:00", "overtime": "10:00 ~ 15:00", "overtimeHours": 5}}, "중근": {"1": {"total": "07:00 ~ 19:00", "overtime": "15:00 ~ 19:00", "overtimeHours": 4}, "2": {"total": "19:00 ~ 익일07:00", "overtime": "19:00 ~ 22:00", "overtimeHours": 3}}, "야근": {"1": {"total": "07:00 ~ 19:00", "overtime": "15:00 ~ 19:00", "overtimeHours": 4}, "2": {"total": "19:00 ~ 익일07:00", "overtime": "익일 02:00 ~ 익일 07:00", "overtimeHours": 5}}}, "오전반차": {"조근": {"total": "전일 22:00 ~ 10:00", "overtime": "07:00 ~ 10:00", "overtimeHours": 3}, "중근": {"total": "07:00 ~ 18:30", "overtime": "15:00 ~ 18:30", "overtimeHours": 3.5}}, "오후반차": {"조근": {"total": "11:00 ~ 22:00", "overtime": "11:00 ~ 15:00", "overtimeHours": 4}, "중근": {"total": "18:30 ~ 익일07:00", "overtime": "18:30 ~ 22:00", "overtimeHours": 3.5}}}, "monday": {"없음": {"조근": {"1": {"total": "07:00 ~ 19:00", "overtime": "14:00 ~ 19:00", "overtimeHours": 5}, "2": {"total": "19:00 ~ 익일07:00", "overtime": "19:00 ~ 22:00", "overtimeHours": 3}}, "중근": {"1": {"total": "07:00 ~ 19:00", "overtime": "15:00 ~ 19:00", "overtimeHours": 4}, "2": {"total": "19:00 ~ 익일07:00", "overtime": "19:00 ~ 22:00", "overtimeHours": 3}}, "야근": {"1": {"total": "07:00 ~ 19:00", "overtime": "14:00 ~ 19:00", "overtimeHours": 5}, "2": {"total": "19:00 ~ 익일07:00", "overtime": "익일 02:00 ~ 익일 07:00", "overtimeHours": 5}}}, "오전반차": {"조근": {"total": "전일 22:00 ~ 10:00", "overtime": "07:00 ~ 10:00", "overtimeHours": 3}, "중근": {"total": "07:00 ~ 18:30", "overtime": "15:00 ~ 18:30", "overtimeHours": 3.5}}, "오후반차": {"조근": {"total": "11:00 ~ 22:00", "overtime": "11:00 ~ 15:00", "overtimeHours": 4}, "중근": {"total": "18:30 ~ 익일07:00", "overtime": "18:30 ~ 22:00", "overtimeHours": 3.5}}}};
@@ -403,11 +349,6 @@
     let pendingPurchaseCloseIndex = null;
     let pendingLeaveCloseIndex = null;
 
-    // =========================
-    // [I] 저장/로드 공통 함수 블록
-    // - localStorage read/write
-    // - workers / history / leave / purchases 접근 함수
-    // =========================
     function load(key, fallback){ try{ const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }catch{ return fallback; } }
     function saveData(key, value){ localStorage.setItem(key, JSON.stringify(value)); }
     function normalizeWorkers(workers){ return workers.map(w=>({name:String(w.name||"").trim(),band:String(w.band||"").trim(),dept:String(w.dept||"").trim()})).filter(w=>w.name&&w.dept); }
@@ -420,12 +361,6 @@
     function getLeave(){ return load(STORAGE_KEYS.leave, []); }
     function setLeave(v){ saveData(STORAGE_KEYS.leave, v); }
 
-    // =========================
-    // [J] 반변경 엔진 블록
-    // - 날짜 파싱
-    // - 첫 일요일 기준 패턴 계산
-    // - 연말연초 이어지는 주 포함 반변경 계산
-    // =========================
     function parseDate(dateStr){ const [y,m,d]=dateStr.split("-").map(Number); return new Date(y,m-1,d); }
     function formatDate(date){ return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`; }
     function getDayName(dateStr){ const d=parseDate(dateStr); return ["일","월","화","수","목","금","토"][d.getDay()]; }
@@ -468,12 +403,6 @@
       return (end - start) / 60;
     }
 
-    // =========================
-    // [K] 대체근무 판정 엔진 블록
-    // - 월요일 특수 규칙
-    // - 반차 규칙
-    // - 결원 역할 / 대체자 역할에 따라 targetRole, sequenceNo 결정
-    // =========================
     function resolveAssignment(dateStr, absentRole, workerRole, absenceType){
       const isMonday=getDayName(dateStr)==="월";
       if(absenceType==="오전반차"||absenceType==="오후반차") return {targetRole:absentRole, sequenceNo:null};
@@ -499,11 +428,6 @@
       throw new Error("대체근무 조합을 찾을 수 없습니다.");
     }
 
-    // =========================
-    // [L] 시간표 적용 엔진 블록
-    // - 월요일 / 일반일 시간표 선택
-    // - 오전반차 / 오후반차 시간표 선택
-    // =========================
     function getTimeTemplate(dateStr, absenceType, targetRole, sequenceNo){
       const templateSet = getDayName(dateStr)==="월" ? timeTemplates.monday : timeTemplates.default;
       if(absenceType==="오전반차"||absenceType==="오후반차"){
@@ -521,15 +445,6 @@
       return `${absentName}${absenceType ? " "+absenceType : ""}대체`;
     }
 
-    // =========================
-    // [M] 최종 근무 계산 엔진 블록
-    // - 부서 제약 확인
-    // - 반변경 계산
-    // - 역할 계산
-    // - 대체근무 판정
-    // - 총근무 / 연장 / 작업내용 생성
-    // - 잔업특근은 총근무 기준으로 8시간 자동 계산
-    // =========================
     function calculateWorkResult({date, workerName, absentName, absenceType, note, imageData=""}){
       if(!date) throw new Error("날짜를 입력해 주세요.");
       if(!workerName) throw new Error("본인 이름을 입력해 주세요.");
@@ -572,11 +487,6 @@
       });
     }
 
-    // =========================
-    // [N] 입력 편의 / 모바일 입력 제어 블록
-    // - 모바일에서는 datalist 비활성화
-    // - PC에서는 workersList 연결
-    // =========================
     function enableDesktopDatalistOnly(){
       document.querySelectorAll('[data-worker-input="true"]').forEach(input=>{
         if(IS_MOBILE){ input.removeAttribute("list"); input.setAttribute("autocomplete","off"); }
@@ -584,13 +494,6 @@
       });
     }
 
-    // =========================
-    // [O] 렌더링 블록
-    // - 이름 목록
-    // - 인원표
-    // - 휴가/히스토리/구매 조회 렌더링
-    // - 모바일 카드형 렌더링 포함
-    // =========================
     function renderWorkerList(){
       const workers=getWorkers().sort((a,b)=>a.dept.localeCompare(b.dept,"ko")||a.name.localeCompare(b.name,"ko"));
       const extraOptions='<option value="잔업특근">잔업특근</option>';
@@ -630,13 +533,13 @@
         <div><b>첨부파일</b>: ${result.imageData ? `<br><img src="${result.imageData}" class="purchase-img" alt="첨부">` : "-"}</div>`;
     }
 
-    function getLeaveRows(queryDate="", deptFilter="전체", bandFilter="전체"){
+    function getLeaveRows(date="", deptFilter="전체", bandFilter="전체"){
       let rows=getLeave().map((item,index)=>({...item,__index:index}));
-      if(queryDate){
+      if(date){
         rows=rows.filter(item=>{
           const start=item.startDate || item.date || "";
           const end=item.endDate || item.date || start;
-          return start <= queryDate && queryDate <= end;
+          return start <= date && date <= end;
         });
       }
       if(deptFilter!=="전체") rows=rows.filter(item=>item.dept===deptFilter);
@@ -644,24 +547,24 @@
       return rows;
     }
 
-    function renderLeaveTable(queryDate){
+    function renderLeaveTable(date){
       const deptFilter=document.getElementById("leaveSearchDept").value || "전체";
       const bandFilter=document.getElementById("leaveSearchBand").value || "전체";
-      const rows=getLeaveRows(queryDate, deptFilter, bandFilter);
+      const rows=getLeaveRows(date, deptFilter, bandFilter);
 
-      let html=`<tr><th>조회기준일</th><th>휴가기간</th><th>상신일시</th><th>부서</th><th>반</th><th>이름</th><th>사유</th><th>비고</th><th>첨부파일</th><th>처리</th></tr>`;
+      let html=`<tr><th>휴가기간</th><th>상신일시</th><th>부서</th><th>반</th><th>이름</th><th>사유</th><th>비고</th><th>첨부파일</th><th>처리</th></tr>`;
       rows.forEach(item=>{
         const start=item.startDate || item.date || "";
         const end=item.endDate || item.date || start;
         const period = start === end ? start : `${start} ~ ${end}`;
-        html += `<tr><td>${queryDate || "-"}</td><td>${period}</td><td>${item.submittedAt||"-"}</td><td>${item.dept||"-"}</td><td>${item.band||"-"}</td><td>${item.name}</td><td>${item.type||"-"}</td><td>${item.note||"-"}</td><td>${item.imageData?`<img src="${item.imageData}" class="purchase-img" alt="첨부">`:"-"}</td><td><button class="btn-danger" onclick="requestLeaveClose(${item.__index})">마감</button></td></tr>`;
+        html += `<tr><td>${period}</td><td>${item.submittedAt||"-"}</td><td>${item.dept||"-"}</td><td>${item.band||"-"}</td><td>${item.name}</td><td>${item.type||"-"}</td><td>${item.note||"-"}</td><td>${item.imageData?`<img src="${item.imageData}" class="purchase-img" alt="첨부">`:"-"}</td><td><button class="btn-danger" onclick="requestLeaveClose(${item.__index})">마감</button></td></tr>`;
       });
       document.getElementById("leaveTable").innerHTML=html;
       document.getElementById("leaveMobileList").innerHTML = rows.map(item=>{
         const start=item.startDate || item.date || "";
         const end=item.endDate || item.date || start;
         const period = start === end ? start : `${start} ~ ${end}`;
-        return `<div class="mobile-item"><div class="title">${item.name} / ${item.type||"-"}</div><div class="row">조회기준일: ${queryDate || "-"}</div><div class="row">휴가기간: ${period}</div><div class="row">상신일시: ${item.submittedAt||"-"}</div><div class="row">부서/반: ${item.dept||"-"} / ${item.band||"-"}</div><div class="row">비고: ${item.note||"-"}</div><div class="row">첨부파일: ${item.imageData?`<img src="${item.imageData}" class="purchase-img" alt="첨부">`:"-"}</div><div class="mobile-actions"><button class="btn-danger" onclick="requestLeaveClose(${item.__index})">마감</button></div></div>`;
+        return `<div class="mobile-item"><div class="title">${item.name} / ${item.type||"-"}</div><div class="row">휴가기간: ${period}</div><div class="row">상신일시: ${item.submittedAt||"-"}</div><div class="row">부서/반: ${item.dept||"-"} / ${item.band||"-"}</div><div class="row">비고: ${item.note||"-"}</div><div class="row">첨부파일: ${item.imageData?`<img src="${item.imageData}" class="purchase-img" alt="첨부">`:"-"}</div><div class="mobile-actions"><button class="btn-danger" onclick="requestLeaveClose(${item.__index})">마감</button></div></div>`;
       }).join("");
     }
 
@@ -694,11 +597,6 @@
       document.getElementById("purchaseMobileList").innerHTML = items.map((item,index)=>`<div class="mobile-item"><div class="title">${item.itemName}</div><div class="row">신청일: ${item.date}</div><div class="row">신청자: ${item.applicant}</div><div class="row">링크: ${item.link?`<a href="${item.link}" target="_blank" rel="noopener noreferrer">${item.link}</a>`:"-"}</div><div class="row">사진: ${item.imageData?`<img src="${item.imageData}" class="purchase-img" alt="구매 이미지">`:"-"}</div><div class="row">비고: ${item.note||"-"}</div><div class="mobile-actions"><button class="btn-danger" onclick="requestPurchaseClose(${index})">마감</button></div></div>`).join("");
     }
 
-    // =========================
-    // [P] 모달 / 비밀번호 / 마감 처리 블록
-    // - 구매 / 휴가 / 히스토리 수정 모달
-    // - 비밀번호 확인 후 분기 처리
-    // =========================
     function openPurchaseModal(){ document.getElementById("purchaseModal").classList.add("show"); }
     function closePurchaseModal(){ document.getElementById("purchaseModal").classList.remove("show"); }
     function openPasswordModal(titleText, actionName){ passwordAction=actionName; document.getElementById("passwordModalTitle").textContent=titleText; document.getElementById("passwordModal").classList.add("show"); document.getElementById("editPassword").value=""; setMessage("passwordMessage","", "success"); }
@@ -722,7 +620,7 @@
 
     function openEditLeaveModal(){
       document.getElementById("editLeaveModal").classList.add("show");
-      document.getElementById("editLeaveTargetDate").value=document.getElementById("leaveQueryDate").value || formatDate(new Date());
+      document.getElementById("editLeaveTargetDate").value=document.getElementById("leaveStartDate").value || formatDate(new Date());
       document.getElementById("editLeaveSearchDept").value="전체";
       document.getElementById("editLeaveSearchBand").value="전체";
       document.getElementById("editLeaveRowSelect").innerHTML='<option value="">선택</option>';
@@ -758,7 +656,7 @@
       document.getElementById("purchaseMessage").className="message";
     }
 
-    function closeLeaveItem(index){ const items=getLeave(); items.splice(index,1); setLeave(items); renderLeaveTable(document.getElementById("leaveQueryDate").value || ""); }
+    function closeLeaveItem(index){ const items=getLeave(); items.splice(index,1); setLeave(items); renderLeaveTable(document.getElementById("leaveStartDate").value || ""); }
     function requestLeaveClose(index){ pendingLeaveCloseIndex=index; openPasswordModal("휴가 상신 마감 인증","leave-close"); }
     function closePurchaseItem(index){ const items=getPurchases(); items.splice(index,1); setPurchases(items); renderPurchaseHistory(); }
     function requestPurchaseClose(index){ pendingPurchaseCloseIndex=index; openPasswordModal("구매신청 마감 인증","purchase-close"); }
@@ -775,11 +673,6 @@
       setMessage("workerMessage",`${target.name} / ${target.dept} 삭제 후 반영 완료`,"success");
     }
 
-    // =========================
-    // [Q] 수정용 조회 보조 함수 블록
-    // - history / leave __index 기반 조회
-    // - 수정 폼 채우기
-    // =========================
     function getHistoryByDate(date, deptFilter="전체"){
       let rows=getHistory().map((item,index)=>({...item,__index:index})).filter(item=>item.date===date);
       if(deptFilter!=="전체") rows=rows.filter(item=>item.dept===deptFilter);
@@ -845,10 +738,6 @@
     function fillLeaveWorkerInfoByName(name){ const worker=getWorkers().find(w=>w.name===name); if(!worker) return; document.getElementById("leaveDept").value=worker.dept || ""; document.getElementById("leaveBand").value=worker.band || ""; }
     function fillEditLeaveWorkerInfoByName(name){ const worker=getWorkers().find(w=>w.name===name); if(!worker) return; document.getElementById("editLeaveDept").value=worker.dept || ""; document.getElementById("editLeaveBand").value=worker.band || ""; }
 
-    // =========================
-    // [R] 이벤트 바인딩 블록
-    // - 저장 / 조회 / 수정 / 삭제 / 마감 버튼 연결
-    // =========================
     document.getElementById("saveLeaveBtn").addEventListener("click", async ()=>{
       try{
         const queryDate=document.getElementById("leaveQueryDate").value;
@@ -861,7 +750,7 @@
         const note=document.getElementById("leaveNote").value.trim();
         const file=document.getElementById("leaveFile").files[0];
 
-        if(!queryDate) throw new Error("조회 기준일을 입력해 주세요.");
+        if(!queryDate) throw new Error("조회일자을 입력해 주세요.");
         if(!startDate) throw new Error("휴가 시작일을 입력해 주세요.");
         if(!endDate) throw new Error("휴가 종료일을 입력해 주세요.");
         if(endDate < startDate) throw new Error("휴가 종료일은 시작일보다 빠를 수 없습니다.");
@@ -1132,19 +1021,12 @@
     document.getElementById("editLeaveModal").addEventListener("click", e=>{ if(e.target.id==="editLeaveModal") closeEditLeaveModal(); });
     document.getElementById("workerDeleteModal").addEventListener("click", e=>{ if(e.target.id==="workerDeleteModal") closeWorkerDeleteModal(); });
 
-    // =========================
-    // [S] 초기 실행 블록
-    // - 초기 인원 로드
-    // - 오늘 날짜 세팅
-    // - 첫 화면 렌더링
-    // =========================
     function init(){
       const savedWorkers=getWorkers();
       if(!savedWorkers.length) setWorkers(DEFAULT_WORKERS_DATA);
       renderWorkerList();
       renderWorkerTable();
       const today=formatDate(new Date());
-      document.getElementById("leaveQueryDate").value=today;
       document.getElementById("leaveStartDate").value=today;
       document.getElementById("leaveEndDate").value=today;
       document.getElementById("workDate").value=today;
