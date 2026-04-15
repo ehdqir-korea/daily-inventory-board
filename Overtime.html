@@ -741,7 +741,7 @@
 
     document.getElementById("saveLeaveBtn").addEventListener("click", async ()=>{
       try{
-        const queryDate=document.getElementById("leaveQueryDate").value;
+        const queryDate=document.getElementById("leaveStartDate").value;
         const startDate=document.getElementById("leaveStartDate").value;
         const endDate=document.getElementById("leaveEndDate").value;
         const name=document.getElementById("leaveName").value.trim();
@@ -771,7 +771,7 @@
     });
 
     document.getElementById("searchLeaveBtn").addEventListener("click", ()=>{
-      const queryDate=document.getElementById("leaveQueryDate").value;
+      const queryDate=document.getElementById("leaveStartDate").value;
       if(!queryDate){ setMessage("leaveMessage","조회할 날짜를 입력해 주세요.","error"); return; }
       renderLeaveTable(queryDate);
       setMessage("leaveMessage","조회가 완료되었습니다.","success");
@@ -987,7 +987,7 @@
         populateEditLeaveRows(document.getElementById("editLeaveTargetDate").value, document.getElementById("editLeaveSearchDept").value, document.getElementById("editLeaveSearchBand").value);
         document.getElementById("editLeaveRowSelect").value=String(selectedIndex);
         fillEditLeaveFormByIndex(String(selectedIndex));
-        const currentQueryDate = document.getElementById("leaveQueryDate").value;
+        const currentQueryDate = document.getElementById("leaveStartDate").value;
         if(currentQueryDate && startDate <= currentQueryDate && currentQueryDate <= endDate) renderLeaveTable(currentQueryDate);
         setMessage("editLeaveMessage","휴가 상신 내역을 수정했습니다.","success");
       }catch(e){ setMessage("editLeaveMessage", e.message, "error"); }
@@ -1011,7 +1011,7 @@
         document.getElementById("editLeaveFileName").textContent="";
         document.getElementById("editLeavePreview").src="";
         document.getElementById("editLeavePreview").style.display="none";
-        if(document.getElementById("leaveQueryDate").value===targetDate) renderLeaveTable(targetDate);
+        if(document.getElementById("leaveStartDate").value===targetDate) renderLeaveTable(targetDate);
         setMessage("editLeaveMessage","선택 항목을 삭제했습니다.","success");
       }catch(e){ setMessage("editLeaveMessage", e.message, "error"); }
     });
