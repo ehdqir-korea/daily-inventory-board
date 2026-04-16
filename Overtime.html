@@ -1,5 +1,11 @@
 <!DOCTYPE html>
 <!--
+[PC UI 정리 버전]
+- 계산 후 저장 버튼 중앙 정렬
+- 구매 신청 열기 / 구매 신청 취소 버튼 우측 정렬
+- 모바일 UI는 기존 구조 유지
+-->
+<!--
 [전체 코드 TXT]
 - 구매 신청 열기 옆에 구매 신청 취소 버튼 추가
 - 담당자 입력 후 해당 담당자가 올린 물품 목록 조회
@@ -37,9 +43,10 @@
     h1,h2,h3{margin:0 0 12px}
     .subtitle{color:var(--muted);margin-bottom:16px;font-size:14px;line-height:1.5}
     .section-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.single-btn{display:flex;justify-content:flex-end;margin-top:10px}
     .section-header h2{margin:0}
     .inline-btn{width:auto;min-width:100px;margin-top:0;padding:10px 14px}
-.header-actions{display:flex;gap:6px;align-items:center}
+.header-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end}
 .btn-small{width:auto;min-width:64px;min-height:auto;margin-top:0;padding:7px 12px;font-size:13px;border-radius:8px}
     label{display:block;font-size:13px;color:var(--muted);margin:10px 0 6px}
     input,select,button,textarea{width:100%;font:inherit;min-height:44px}
@@ -52,6 +59,7 @@
     .btn-success{background:#dcfce7;color:#166534}
     .btn-danger{background:#fee2e2;color:#991b1b}
     .btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.btn-row.single-wide{grid-template-columns:minmax(260px,520px);justify-content:center}
     .btn-row-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-top:8px}
     .single-btn{margin-top:10px}
     .result-box{background:#f8fafc;border:1px dashed var(--line);border-radius:12px;padding:14px;margin-top:12px;line-height:1.7;font-size:14px}
@@ -87,7 +95,7 @@
 .mobile-item summary{cursor:pointer;color:#1e3a8a;font-weight:700}
 .mobile-item .summary-line{font-weight:700}
     @media (max-width:767px){
-      .container{padding:12px}.card{padding:14px}.btn-row,.btn-row-4,.field-grid-2,.field-grid-3{grid-template-columns:1fr}
+      .container{padding:12px}.card{padding:14px}.btn-row,.btn-row-4,.field-grid-2,.field-grid-3,.btn-row.single-wide{grid-template-columns:1fr}
       .subtitle,.notice{font-size:12px}.modal-content{padding:14px}.section-header{flex-direction:column;align-items:stretch}
       .header-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}
       .inline-btn,.btn-small{width:100%}.desktop-table{display:none}.mobile-list{display:flex}
@@ -214,7 +222,7 @@
       <div id="workFileName" class="preview-file"></div>
       <img id="workPreview" class="thumb" alt="연장근무 첨부 미리보기" />
 
-      <div class="btn-row">
+      <div class="btn-row single-wide">
         <button class="btn-secondary" id="saveBtn">계산 후 저장</button>
       </div>
 
