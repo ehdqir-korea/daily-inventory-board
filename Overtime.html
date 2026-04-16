@@ -1,5 +1,25 @@
 <!DOCTYPE html>
 <!--
+[최종 안정화본]
+- queryDate / leaveQueryDate 참조 제거
+- 휴가 조회는 leaveStartDate 기준 동작
+- 구매 신청 취소 기능 포함
+- 모바일 카드형 / 휴가 저장 / 연장근무 계산 포함
+-->
+<!--
+[전체 코드 TXT]
+- 구매 신청 열기 옆에 구매 신청 취소 버튼 추가
+- 담당자 입력 후 해당 담당자가 올린 물품 목록 조회
+- 체크 후 선택 항목 취소 기능 추가
+-->
+<!--
+[전체 코드 TXT]
+- 휴가 상신 저장 버튼을 상단 수정 버튼 옆 작은 버튼으로 이동
+- 휴가 조회 버튼 문구를 '휴가시작일 기준 조회'로 변경
+- 휴가 저장 후 자동으로 휴가시작일 기준 조회 실행
+- 연장근무 입력의 계산 버튼을 오른쪽 위 작은 버튼으로 이동
+-->
+<!--
 [전체 코드 TXT]
 - 조회기준일 필드 제거
 - 휴가 조회는 leaveStartDate(조회일자) 기준으로 기간 포함 검색
@@ -26,6 +46,8 @@
     .section-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
     .section-header h2{margin:0}
     .inline-btn{width:auto;min-width:100px;margin-top:0;padding:10px 14px}
+.header-actions{display:flex;gap:6px;align-items:center}
+.btn-small{width:auto;min-width:64px;min-height:auto;margin-top:0;padding:7px 12px;font-size:13px;border-radius:8px}
     label{display:block;font-size:13px;color:var(--muted);margin:10px 0 6px}
     input,select,button,textarea{width:100%;font:inherit;min-height:44px}
     input,select,textarea{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff}
@@ -74,7 +96,8 @@
     @media (max-width:767px){
       .container{padding:12px}.card{padding:14px}.btn-row,.btn-row-4,.field-grid-2,.field-grid-3{grid-template-columns:1fr}
       .subtitle,.notice{font-size:12px}.modal-content{padding:14px}.section-header{flex-direction:column;align-items:stretch}
-      .inline-btn{width:100%}.desktop-table{display:none}.mobile-list{display:flex}
+      .header-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}
+      .inline-btn,.btn-small{width:100%}.desktop-table{display:none}.mobile-list{display:flex}
     }
     @media (min-width:768px){
       .desktop-table{display:block}.mobile-list{display:none}.scroll-hint{display:block}
@@ -89,7 +112,10 @@
     <div class="card">
       <div class="section-header">
         <h2>1. 휴가 상신</h2>
-        <button class="btn-secondary inline-btn" id="openEditLeaveBtn">수정</button>
+        <div class="header-actions">
+          <button class="btn-primary btn-small" id="saveLeaveBtn">저장</button>
+          <button class="btn-secondary btn-small" id="openEditLeaveBtn">수정</button>
+        </div>
       </div>
 
       <div class="subsection">
@@ -152,8 +178,7 @@
       </select>
 
       <div class="btn-row">
-        <button class="btn-primary" id="saveLeaveBtn">저장</button>
-        <button class="btn-secondary" id="searchLeaveBtn">조회</button>
+        <button class="btn-secondary" id="searchLeaveBtn">휴가시작일 기준 조회</button>
       </div>
 
       <div id="leaveMessage" class="message"></div>
@@ -164,7 +189,12 @@
     </div>
 
     <div class="card">
-      <h2>2. 연장근무 입력</h2>
+      <div class="section-header">
+        <h2>2. 연장근무 입력</h2>
+        <div class="header-actions">
+          <button class="btn-primary btn-small" id="previewBtn">계산</button>
+        </div>
+      </div>
 
       <label for="workDate">날짜</label>
       <input type="date" id="workDate" />
@@ -192,7 +222,6 @@
       <img id="workPreview" class="thumb" alt="연장근무 첨부 미리보기" />
 
       <div class="btn-row">
-        <button class="btn-primary" id="previewBtn">계산</button>
         <button class="btn-secondary" id="saveBtn">계산 후 저장</button>
       </div>
 
@@ -220,11 +249,16 @@
       <div id="historyMobileList" class="mobile-list"></div>
     </div>
 
-    <div class="single-btn"><button class="btn-primary" id="openPurchaseBtn">구매 신청 열기</button></div>
+    <div class="single-btn">
+      <div class="header-actions">
+        <button class="btn-primary inline-btn" id="openPurchaseBtn">구매 신청 열기</button>
+        <button class="btn-danger inline-btn" id="openPurchaseCancelBtn">구매 신청 취소</button>
+      </div>
+    </div>
 
     <div class="card">
       <h2>4. 구매 신청 목록</h2>
-      <p class="notice">구매 신청은 저장된 순서대로 계속 쌓이며, 제품입고 시 김남혁사원에게 마감요청.</p>
+      <p class="notice">구매 신청은 저장된 순서대로 계속 쌓이며, 마감은 비밀번호 1004 입력 후에만 가능합니다.</p>
       <div id="purchaseHistorySummary" class="message"></div>
       <div class="scroll-hint">PC에서는 표, 모바일에서는 카드형으로 표시됩니다.</div>
       <div class="table-wrap desktop-table"><table id="purchaseHistoryTable"></table></div>
@@ -345,6 +379,32 @@
       <div id="editLeaveFileName" class="preview-file"></div><img id="editLeavePreview" class="thumb" alt="휴가 수정 첨부 미리보기" />
       <div class="btn-row"><button class="btn-primary" id="saveEditLeaveBtn">수정 저장</button><button class="btn-danger" id="deleteEditLeaveBtn">선택 항목 삭제</button></div>
       <div id="editLeaveMessage" class="message"></div>
+    </div>
+  </div>
+
+
+  <div class="modal" id="purchaseCancelModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>구매 신청 취소</h2>
+        <button type="button" class="close-btn" id="closePurchaseCancelBtn">닫기</button>
+      </div>
+
+      <label for="purchaseCancelApplicant">담당자</label>
+      <input id="purchaseCancelApplicant" data-worker-input="true" placeholder="담당자 이름 입력" />
+
+      <button class="btn-primary" id="loadPurchaseCancelBtn">담당자 물품 조회</button>
+
+      <div id="purchaseCancelMessage" class="message"></div>
+
+      <div class="table-wrap desktop-table">
+        <table id="purchaseCancelTable"></table>
+      </div>
+      <div id="purchaseCancelMobileList" class="mobile-list"></div>
+
+      <div class="btn-row">
+        <button class="btn-danger" id="confirmPurchaseCancelBtn">선택 항목 취소</button>
+      </div>
     </div>
   </div>
 
@@ -610,6 +670,72 @@
       document.getElementById("historyMobileList").innerHTML = history.map(item=>`<div class="mobile-item"><div class="title">${item.workerName} / ${item.actionText}</div><div class="summary-line">총근무: ${item.totalWork}</div><details><summary>상세보기</summary><div class="row">구분: ${item.dept}</div><div class="row">연장: ${item.overtime}${item.overtimeHours||item.overtimeHours===0?` (${item.overtimeHours}시간)`:""}</div><div class="row">비고: ${item.note||"-"}</div><div class="row">첨부파일: ${item.imageData?`<img src="${item.imageData}" class="purchase-img" alt="첨부">`:"-"}</div></details></div>`).join("");
     }
 
+
+    function openPurchaseCancelModal(){
+      document.getElementById("purchaseCancelModal").classList.add("show");
+      document.getElementById("purchaseCancelApplicant").value="";
+      document.getElementById("purchaseCancelTable").innerHTML="";
+      document.getElementById("purchaseCancelMobileList").innerHTML="";
+      setMessage("purchaseCancelMessage","", "success");
+    }
+
+    function closePurchaseCancelModal(){
+      document.getElementById("purchaseCancelModal").classList.remove("show");
+    }
+
+    function getPurchasesByApplicant(applicant){
+      return getPurchases()
+        .map((item,index)=>({...item,__index:index}))
+        .filter(item=>!applicant || item.applicant===applicant);
+    }
+
+    function renderPurchaseCancelTable(applicant){
+      const rows = getPurchasesByApplicant(applicant);
+
+      if(!applicant){
+        setMessage("purchaseCancelMessage","담당자를 입력해 주세요.","error");
+        document.getElementById("purchaseCancelTable").innerHTML="";
+        document.getElementById("purchaseCancelMobileList").innerHTML="";
+        return;
+      }
+
+      if(rows.length===0){
+        setMessage("purchaseCancelMessage","해당 담당자가 올린 구매 신청이 없습니다.","error");
+      }else{
+        setMessage("purchaseCancelMessage",`${rows.length}건을 불러왔습니다. 체크 후 취소하세요.`,"success");
+      }
+
+      let html = "<tr><th>선택</th><th>신청일</th><th>담당자</th><th>품목명</th><th>링크</th><th>사진</th><th>비고</th></tr>";
+      rows.forEach(item=>{
+        const linkHtml = item.link ? `<div class="link-cell"><a href="${item.link}" target="_blank" rel="noopener noreferrer">${item.link}</a></div>` : "-";
+        const imgHtml = item.imageData ? `<img src="${item.imageData}" alt="구매 이미지" class="purchase-img" />` : "-";
+        html += `<tr>
+          <td><input type="checkbox" class="purchase-cancel-check" value="${item.__index}"></td>
+          <td>${item.date}</td>
+          <td>${item.applicant}</td>
+          <td>${item.itemName}</td>
+          <td>${linkHtml}</td>
+          <td>${imgHtml}</td>
+          <td>${item.note || "-"}</td>
+        </tr>`;
+      });
+      document.getElementById("purchaseCancelTable").innerHTML = html;
+
+      document.getElementById("purchaseCancelMobileList").innerHTML = rows.map(item=>`
+        <div class="mobile-item">
+          <div class="title">${item.itemName}</div>
+          <div class="row">신청일: ${item.date}</div>
+          <div class="row">담당자: ${item.applicant}</div>
+          <div class="row">비고: ${item.note || "-"}</div>
+          <div class="row">링크: ${item.link ? `<a href="${item.link}" target="_blank" rel="noopener noreferrer">${item.link}</a>` : "-"}</div>
+          <div class="row">사진: ${item.imageData ? `<img src="${item.imageData}" class="purchase-img" alt="구매 이미지">` : "-"}</div>
+          <div class="mobile-actions">
+            <label><input type="checkbox" class="purchase-cancel-check" value="${item.__index}"> 선택</label>
+          </div>
+        </div>
+      `).join("");
+    }
+
     function renderPurchaseHistory(){
       const items=getPurchases();
       document.getElementById("purchaseHistorySummary").className="message";
@@ -777,7 +903,7 @@
         const note=document.getElementById("leaveNote").value.trim();
         const file=document.getElementById("leaveFile").files[0];
 
-        if(!queryDate) throw new Error("조회일자을 입력해 주세요.");
+        if(!date) throw new Error("조회일자을 입력해 주세요.");
         if(!startDate) throw new Error("휴가 시작일을 입력해 주세요.");
         if(!endDate) throw new Error("휴가 종료일을 입력해 주세요.");
         if(endDate < startDate) throw new Error("휴가 종료일은 시작일보다 빠를 수 없습니다.");
@@ -791,15 +917,15 @@
         const rows=getLeave();
         rows.push({startDate,endDate,name,dept,band,type,note,imageData,submittedAt:new Date().toLocaleString("ko-KR",{hour12:false})});
         setLeave(rows);
-        renderLeaveTable(queryDate);
+        renderLeaveTable(date);
         setMessage("leaveMessage","휴가 상신을 저장했습니다.","success");
       }catch(e){ setMessage("leaveMessage", e.message, "error"); }
     });
 
     document.getElementById("searchLeaveBtn").addEventListener("click", ()=>{
-      const queryDate=document.getElementById("leaveStartDate").value;
-      if(!queryDate){ setMessage("leaveMessage","조회할 날짜를 입력해 주세요.","error"); return; }
-      renderLeaveTable(queryDate);
+      const date=document.getElementById("leaveStartDate").value;
+      if(!date){ setMessage("leaveMessage","조회할 날짜를 입력해 주세요.","error"); return; }
+      renderLeaveTable(date);
       setMessage("leaveMessage","조회가 완료되었습니다.","success");
     });
 
@@ -869,8 +995,31 @@
     });
 
     document.getElementById("openPurchaseBtn").addEventListener("click", openPurchaseModal);
+    document.getElementById("openPurchaseCancelBtn").addEventListener("click", openPurchaseCancelModal);
     document.getElementById("closePurchaseBtn").addEventListener("click", closePurchaseModal);
+    document.getElementById("closePurchaseCancelBtn").addEventListener("click", closePurchaseCancelModal);
     document.getElementById("clearPurchaseBtn").addEventListener("click", clearPurchaseForm);
+    document.getElementById("loadPurchaseCancelBtn").addEventListener("click", ()=>{
+      const applicant = document.getElementById("purchaseCancelApplicant").value.trim();
+      renderPurchaseCancelTable(applicant);
+    });
+    document.getElementById("confirmPurchaseCancelBtn").addEventListener("click", ()=>{
+      const checks = [...document.querySelectorAll(".purchase-cancel-check:checked")];
+      if(checks.length===0){
+        setMessage("purchaseCancelMessage","취소할 항목을 체크해 주세요.","error");
+        return;
+      }
+      const indexes = checks.map(x=>Number(x.value)).sort((a,b)=>b-a);
+      const items = getPurchases();
+      indexes.forEach(idx=>{
+        if(idx>=0 && idx<items.length) items.splice(idx,1);
+      });
+      setPurchases(items);
+      renderPurchaseHistory();
+      const applicant = document.getElementById("purchaseCancelApplicant").value.trim();
+      renderPurchaseCancelTable(applicant);
+      setMessage("purchaseCancelMessage","선택 항목을 취소했습니다.","success");
+    });
 
     document.getElementById("savePurchaseBtn").addEventListener("click", async ()=>{
       try{
@@ -1013,8 +1162,8 @@
         populateEditLeaveRows(document.getElementById("editLeaveTargetDate").value, document.getElementById("editLeaveSearchDept").value, document.getElementById("editLeaveSearchBand").value);
         document.getElementById("editLeaveRowSelect").value=String(selectedIndex);
         fillEditLeaveFormByIndex(String(selectedIndex));
-        const currentQueryDate = document.getElementById("leaveStartDate").value;
-        if(currentQueryDate && startDate <= currentQueryDate && currentQueryDate <= endDate) renderLeaveTable(currentQueryDate);
+        const currentDate = document.getElementById("leaveStartDate").value;
+        if(currentDate && startDate <= currentDate && currentDate <= endDate) renderLeaveTable(currentDate);
         setMessage("editLeaveMessage","휴가 상신 내역을 수정했습니다.","success");
       }catch(e){ setMessage("editLeaveMessage", e.message, "error"); }
     });
@@ -1043,6 +1192,7 @@
     });
 
     document.getElementById("purchaseModal").addEventListener("click", e=>{ if(e.target.id==="purchaseModal") closePurchaseModal(); });
+    document.getElementById("purchaseCancelModal").addEventListener("click", e=>{ if(e.target.id==="purchaseCancelModal") closePurchaseCancelModal(); });
     document.getElementById("passwordModal").addEventListener("click", e=>{ if(e.target.id==="passwordModal") closePasswordModal(); });
     document.getElementById("editHistoryModal").addEventListener("click", e=>{ if(e.target.id==="editHistoryModal") closeEditHistoryModal(); });
     document.getElementById("editLeaveModal").addEventListener("click", e=>{ if(e.target.id==="editLeaveModal") closeEditLeaveModal(); });
