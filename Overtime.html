@@ -1,5 +1,11 @@
 <!DOCTYPE html>
 <!--
+[공용 DB API 연결 버전]
+- localStorage 저장 제거
+- Flask API(/api/...) 기반 저장/조회/수정/삭제
+- 계산 엔진/반변경/휴가/구매 UI 유지
+-->
+<!--
 [구매신청 버튼 위치/크기 통일]
 - 구매 신청 열기 / 구매 신청 취소 버튼을 4. 구매 신청 목록 헤더 오른쪽으로 이동
 - PC: 1.휴가상신 / 2.연장근무 입력 상단 버튼과 동일한 스타일/크기 계열로 정렬
@@ -435,11 +441,8 @@
   </div>
 
   <script>
-    const STORAGE_KEYS = { workers:"overtime_workers_v20", history:"overtime_history_v20", purchases:"purchase_history_v13", leave:"leave_history_v1" };
     const EDIT_PASSWORD = "1004";
     const IS_MOBILE = window.matchMedia("(max-width: 767px)").matches;
-
-    const defaultWorkers = JSON.parse(document.getElementById('workersList') ? '[]' : '[]'); // placeholder
   </script>
   <script>
     // default workers inserted separately to keep file smaller in generation
@@ -454,17 +457,45 @@
     let pendingPurchaseCloseIndex = null;
     let pendingLeaveCloseIndex = null;
 
-    function load(key, fallback){ try{ const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }catch{ return fallback; } }
-    function saveData(key, value){ localStorage.setItem(key, JSON.stringify(value)); }
-    function normalizeWorkers(workers){ return workers.map(w=>({name:String(w.name||"").trim(),band:String(w.band||"").trim(),dept:String(w.dept||"").trim()})).filter(w=>w.name&&w.dept); }
-    function getWorkers(){ return normalizeWorkers(load(STORAGE_KEYS.workers, [])); }
-    function setWorkers(workers){ saveData(STORAGE_KEYS.workers, normalizeWorkers(workers)); }
-    function getHistory(){ return load(STORAGE_KEYS.history, []); }
-    function setHistory(v){ saveData(STORAGE_KEYS.history, v); }
-    function getPurchases(){ return load(STORAGE_KEYS.purchases, []); }
-    function setPurchases(v){ saveData(STORAGE_KEYS.purchases, v); }
-    function getLeave(){ return load(STORAGE_KEYS.leave, []); }
-    function setLeave(v){ saveData(STORAGE_KEYS.leave, v); }
+    async function apiGet(url){
+      const res = await fetch(url);
+      if(!res.ok) throw new Error(`조회 실패: ${url}`);
+      return await res.json();
+    }
+    async function apiPost(url, data){
+      const res = await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
+      if(!res.ok) throw new Error(`저장 실패: ${url}`);
+      return await res.json();
+    }
+    async function apiPut(url, data){
+      const res = await fetch(url,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
+      if(!res.ok) throw new Error(`수정 실패: ${url}`);
+      return await res.json();
+    }
+    async function apiDelete(url){
+      const res = await fetch(url,{method:"DELETE"});
+      if(!res.ok) throw new Error(`삭제 실패: ${url}`);
+      return await res.json();
+    }
+
+    function normalizeWorkers(workers){ return workers.map(w=>({id:w.id,name:String(w.name||"").trim(),band:String(w.band||"").trim(),dept:String(w.dept||"").trim()})).filter(w=>w.name&&w.dept); }
+    async function getWorkers(){ return normalizeWorkers(await apiGet("/api/workers")); }
+    async function addWorkerToDB(worker){ return await apiPost("/api/workers", worker); }
+    async function deleteWorkerFromDB(id){ return await apiDelete(`/api/workers/${id}`); }
+
+    async function getLeave(){ return await apiGet("/api/leaves"); }
+    async function addLeaveToDB(item){ return await apiPost("/api/leaves", item); }
+    async function updateLeaveInDB(id,item){ return await apiPut(`/api/leaves/${id}`, item); }
+    async function deleteLeaveFromDB(id){ return await apiDelete(`/api/leaves/${id}`); }
+
+    async function getHistory(){ return await apiGet("/api/overtime"); }
+    async function addHistoryToDB(item){ return await apiPost("/api/overtime", item); }
+    async function updateHistoryInDB(id,item){ return await apiPut(`/api/overtime/${id}`, item); }
+    async function deleteHistoryFromDB(id){ return await apiDelete(`/api/overtime/${id}`); }
+
+    async function getPurchases(){ return await apiGet("/api/purchases"); }
+    async function addPurchaseToDB(item){ return await apiPost("/api/purchases", item); }
+    async function deletePurchaseFromDB(id){ return await apiDelete(`/api/purchases/${id}`); }
 
     function parseDate(dateStr){ const [y,m,d]=dateStr.split("-").map(Number); return new Date(y,m-1,d); }
     function formatDate(date){ return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`; }
@@ -550,12 +581,12 @@
       return `${absentName}${absenceType ? " "+absenceType : ""}대체`;
     }
 
-    function calculateWorkResult({date, workerName, absentName, absenceType, note, imageData=""}){
+    async function calculateWorkResult({date, workerName, absentName, absenceType, note, imageData=""}){
       if(!date) throw new Error("날짜를 입력해 주세요.");
       if(!workerName) throw new Error("본인 이름을 입력해 주세요.");
       if(!absentName) throw new Error("휴가자 이름을 입력해 주세요.");
 
-      const workers=getWorkers();
+      const workers=await getWorkers();
       const worker=workers.find(w=>w.name===workerName);
       if(!worker) throw new Error("본인 이름이 인원목록에 없습니다.");
 
@@ -599,24 +630,24 @@
       });
     }
 
-    function renderWorkerList(){
-      const workers=getWorkers().sort((a,b)=>a.dept.localeCompare(b.dept,"ko")||a.name.localeCompare(b.name,"ko"));
+    async function renderWorkerList(){
+      const workers=(await getWorkers()).sort((a,b)=>a.dept.localeCompare(b.dept,"ko")||a.name.localeCompare(b.name,"ko"));
       const extraOptions='<option value="잔업특근">잔업특근</option>';
       document.getElementById("workersList").innerHTML = workers.map(w=>`<option value="${w.name}">${w.name} (${w.band}/${w.dept})</option>`).join("") + extraOptions;
       enableDesktopDatalistOnly();
     }
 
-    function renderWorkerTable(){
-      const workers=getWorkers().sort((a,b)=>a.dept.localeCompare(b.dept,"ko")||a.name.localeCompare(b.name,"ko"));
+    async function renderWorkerTable(){
+      const workers=(await getWorkers()).sort((a,b)=>a.dept.localeCompare(b.dept,"ko")||a.name.localeCompare(b.name,"ko"));
       let html="<tr><th>성명</th><th>반</th><th>부서</th></tr>";
       workers.forEach(w=> html += `<tr><td>${w.name}</td><td>${w.band||"-"}</td><td>${w.dept}</td></tr>`);
       document.getElementById("workerTable").innerHTML=html;
     }
 
-    function renderWorkerDeleteTable(){
-      const workers=getWorkers().sort((a,b)=>a.dept.localeCompare(b.dept,"ko")||a.name.localeCompare(b.name,"ko"));
+    async function renderWorkerDeleteTable(){
+      const workers=(await getWorkers()).sort((a,b)=>a.dept.localeCompare(b.dept,"ko")||a.name.localeCompare(b.name,"ko"));
       let html="<tr><th>성명</th><th>반</th><th>부서</th><th>삭제</th></tr>";
-      workers.forEach((w,idx)=> html += `<tr><td>${w.name}</td><td>${w.band||"-"}</td><td>${w.dept}</td><td><button class="btn-danger" onclick="deleteWorkerBySortedIndex(${idx})">삭제</button></td></tr>`);
+      workers.forEach((w,idx)=> html += `<tr><td>${w.name}</td><td>${w.band||"-"}</td><td>${w.dept}</td><td><button class="btn-danger" onclick="deleteWorkerById(${w.id})">삭제</button></td></tr>`);
       document.getElementById("workerDeleteTable").innerHTML=html;
     }
 
@@ -638,8 +669,8 @@
         <div><b>첨부파일</b>: ${result.imageData ? `<br><img src="${result.imageData}" class="purchase-img" alt="첨부">` : "-"}</div>`;
     }
 
-    function getLeaveRows(date="", deptFilter="전체", bandFilter="전체"){
-      let rows=getLeave().map((item,index)=>({...item,__index:index}));
+    async function getLeaveRows(date="", deptFilter="전체", bandFilter="전체"){
+      let rows=(await getLeave()).map(item=>({...item,__index:item.id}));
       if(date){
         rows=rows.filter(item=>{
           const start=item.startDate || item.date || "";
@@ -652,10 +683,10 @@
       return rows;
     }
 
-    function renderLeaveTable(date){
+    async function renderLeaveTable(date){
       const deptFilter=document.getElementById("leaveSearchDept").value || "전체";
       const bandFilter=document.getElementById("leaveSearchBand").value || "전체";
-      const rows=getLeaveRows(date, deptFilter, bandFilter);
+      const rows=await getLeaveRows(date, deptFilter, bandFilter);
 
       let html=`<tr><th>휴가기간</th><th>상신일시</th><th>부서</th><th>반</th><th>이름</th><th>사유</th><th>비고</th><th>첨부파일</th><th>처리</th></tr>`;
       rows.forEach(item=>{
@@ -673,8 +704,8 @@
       }).join("");
     }
 
-    function renderHistory(date, deptFilter="전체"){
-      let history=getHistory().filter(x=>x.date===date);
+    async function renderHistory(date, deptFilter="전체"){
+      let history=(await getHistory()).filter(x=>x.date===date);
       if(deptFilter!=="전체") history=history.filter(x=>x.dept===deptFilter);
       document.getElementById("historySummary").className="message";
       document.getElementById("historySummary").textContent=`${date} / ${deptFilter} 조회 결과 ${history.length}건`;
@@ -700,14 +731,14 @@
       document.getElementById("purchaseCancelModal").classList.remove("show");
     }
 
-    function getPurchasesByApplicant(applicant){
-      return getPurchases()
-        .map((item,index)=>({...item,__index:index}))
+    async function getPurchasesByApplicant(applicant){
+      return (await getPurchases())
+        .map(item=>({...item,__index:item.id}))
         .filter(item=>!applicant || item.applicant===applicant);
     }
 
-    function renderPurchaseCancelTable(applicant){
-      const rows = getPurchasesByApplicant(applicant);
+    async function renderPurchaseCancelTable(applicant){
+      const rows = await getPurchasesByApplicant(applicant);
 
       if(!applicant){
         setMessage("purchaseCancelMessage","담당자를 입력해 주세요.","error");
@@ -753,19 +784,19 @@
       `).join("");
     }
 
-    function renderPurchaseHistory(){
-      const items=getPurchases();
+    async function renderPurchaseHistory(){
+      const items=await getPurchases();
       document.getElementById("purchaseHistorySummary").className="message";
       document.getElementById("purchaseHistorySummary").textContent=`총 ${items.length}건`;
 
       let html="<tr><th>신청일</th><th>신청자</th><th>품목명</th><th>링크</th><th>사진</th><th>비고</th><th>처리</th></tr>";
-      items.forEach((item,index)=>{
+      items.forEach((item)=>{
         const linkHtml=item.link?`<div class="link-cell"><a href="${item.link}" target="_blank" rel="noopener noreferrer">${item.link}</a></div>`:"-";
         const imgHtml=item.imageData?`<img src="${item.imageData}" alt="구매 이미지" class="purchase-img" />`:"-";
-        html += `<tr><td>${item.date}</td><td>${item.applicant}</td><td>${item.itemName}</td><td>${linkHtml}</td><td>${imgHtml}</td><td>${item.note||"-"}</td><td><button class="btn-danger" onclick="requestPurchaseClose(${index})">마감</button></td></tr>`;
+        html += `<tr><td>${item.date}</td><td>${item.applicant}</td><td>${item.itemName}</td><td>${linkHtml}</td><td>${imgHtml}</td><td>${item.note||"-"}</td><td><button class="btn-danger" onclick="requestPurchaseClose(${item.id})">마감</button></td></tr>`;
       });
       document.getElementById("purchaseHistoryTable").innerHTML=html;
-      document.getElementById("purchaseMobileList").innerHTML = items.map((item,index)=>`<div class="mobile-item"><div class="title">${item.itemName}</div><div class="summary-line">신청일: ${item.date} / 신청자: ${item.applicant}</div><details><summary>상세보기</summary><div class="row">링크: ${item.link?`<a href="${item.link}" target="_blank" rel="noopener noreferrer">${item.link}</a>`:"-"}</div><div class="row">사진: ${item.imageData?`<img src="${item.imageData}" class="purchase-img" alt="구매 이미지">`:"-"}</div><div class="row">비고: ${item.note||"-"}</div><div class="mobile-actions"><button class="btn-danger" onclick="requestPurchaseClose(${index})">마감</button></div></details></div>`).join("");
+      document.getElementById("purchaseMobileList").innerHTML = items.map((item)=>`<div class="mobile-item"><div class="title">${item.itemName}</div><div class="summary-line">신청일: ${item.date} / 신청자: ${item.applicant}</div><details><summary>상세보기</summary><div class="row">링크: ${item.link?`<a href="${item.link}" target="_blank" rel="noopener noreferrer">${item.link}</a>`:"-"}</div><div class="row">사진: ${item.imageData?`<img src="${item.imageData}" class="purchase-img" alt="구매 이미지">`:"-"}</div><div class="row">비고: ${item.note||"-"}</div><div class="mobile-actions"><button class="btn-danger" onclick="requestPurchaseClose(${item.id})">마감</button></div></details></div>`).join("");
     }
 
     function openPurchaseModal(){ document.getElementById("purchaseModal").classList.add("show"); }
@@ -810,7 +841,7 @@
     }
     function closeEditLeaveModal(){ document.getElementById("editLeaveModal").classList.remove("show"); }
 
-    function openWorkerDeleteModal(){ document.getElementById("workerDeleteModal").classList.add("show"); renderWorkerDeleteTable(); setMessage("workerDeleteMessage","", "success"); }
+    async function openWorkerDeleteModal(){ document.getElementById("workerDeleteModal").classList.add("show"); await renderWorkerDeleteTable(); setMessage("workerDeleteMessage","", "success"); }
     function closeWorkerDeleteModal(){ document.getElementById("workerDeleteModal").classList.remove("show"); }
 
     function clearPurchaseForm(){
@@ -827,31 +858,29 @@
       document.getElementById("purchaseMessage").className="message";
     }
 
-    function closeLeaveItem(index){ const items=getLeave(); items.splice(index,1); setLeave(items); renderLeaveTable(document.getElementById("leaveStartDate").value || ""); }
-    function requestLeaveClose(index){ pendingLeaveCloseIndex=index; openPasswordModal("휴가 상신 마감 인증","leave-close"); }
-    function closePurchaseItem(index){ const items=getPurchases(); items.splice(index,1); setPurchases(items); renderPurchaseHistory(); }
-    function requestPurchaseClose(index){ pendingPurchaseCloseIndex=index; openPasswordModal("구매신청 마감 인증","purchase-close"); }
+    async function closeLeaveItem(id){ await deleteLeaveFromDB(id); await renderLeaveTable(document.getElementById("leaveStartDate").value || ""); }
+    function requestLeaveClose(id){ pendingLeaveCloseIndex=id; openPasswordModal("휴가 상신 마감 인증","leave-close"); }
+    async function closePurchaseItem(id){ await deletePurchaseFromDB(id); await renderPurchaseHistory(); }
+    function requestPurchaseClose(id){ pendingPurchaseCloseIndex=id; openPasswordModal("구매신청 마감 인증","purchase-close"); }
 
-    function deleteWorkerBySortedIndex(sortedIndex){
-      const sortedWorkers=getWorkers().sort((a,b)=>a.dept.localeCompare(b.dept,"ko")||a.name.localeCompare(b.name,"ko"));
-      const target=sortedWorkers[sortedIndex]; if(!target) return;
-      const originalWorkers=getWorkers();
-      const idx=originalWorkers.findIndex(w=>w.name===target.name && w.band===target.band && w.dept===target.dept);
-      if(idx<0) return;
-      originalWorkers.splice(idx,1); setWorkers(originalWorkers);
-      renderWorkerDeleteTable(); renderWorkerList(); renderWorkerTable();
-      setMessage("workerDeleteMessage",`${target.name} / ${target.dept} 삭제 완료`,"success");
-      setMessage("workerMessage",`${target.name} / ${target.dept} 삭제 후 반영 완료`,"success");
+    async function deleteWorkerById(id){
+      await deleteWorkerFromDB(id);
+      await renderWorkerDeleteTable();
+      await renderWorkerList();
+      await renderWorkerTable();
+      setMessage("workerDeleteMessage","삭제 완료","success");
+      setMessage("workerMessage","삭제 후 반영 완료","success");
     }
 
-    function getHistoryByDate(date, deptFilter="전체"){
-      let rows=getHistory().map((item,index)=>({...item,__index:index})).filter(item=>item.date===date);
+
+    async function getHistoryByDate(date, deptFilter="전체"){
+      let rows=(await getHistory()).map(item=>({...item,__index:item.id})).filter(item=>item.date===date);
       if(deptFilter!=="전체") rows=rows.filter(item=>item.dept===deptFilter);
       return rows;
     }
 
-    function populateEditRows(date, deptFilter="전체"){
-      const rows=getHistoryByDate(date, deptFilter);
+    async function populateEditRows(date, deptFilter="전체"){
+      const rows=await getHistoryByDate(date, deptFilter);
       const select=document.getElementById("editRowSelect");
       let html='<option value="">선택</option>';
       rows.forEach(row=> html += `<option value="${row.__index}">${row.workerName} / ${row.actionText} / ${row.totalWork}</option>`);
@@ -859,9 +888,9 @@
       setMessage("editHistoryMessage", rows.length===0?"해당 조건의 조회결과가 없습니다.":`${deptFilter} / ${rows.length}건을 불러왔습니다.`, rows.length===0?"error":"success");
     }
 
-    function fillEditFormByIndex(index){
+    async function fillEditFormByIndex(index){
       if(index==="") return;
-      const row=getHistory()[Number(index)];
+      const row=(await getHistory()).find(x=>String(x.id)===String(index));
       if(!row) return;
       document.getElementById("editWorkerName").value=row.workerName;
       document.getElementById("editAbsentName").value=row.absentName;
@@ -872,8 +901,8 @@
       document.getElementById("editManualOvertimeHours").value=row.overtimeHours ?? "";
     }
 
-    function populateEditLeaveRows(date, deptFilter="전체", bandFilter="전체"){
-      const rows=getLeaveRows(date, deptFilter, bandFilter);
+    async function populateEditLeaveRows(date, deptFilter="전체", bandFilter="전체"){
+      const rows=await getLeaveRows(date, deptFilter, bandFilter);
       const select=document.getElementById("editLeaveRowSelect");
       let html='<option value="">선택</option>';
       rows.forEach(row=> html += `<option value="${row.__index}">${row.date} / ${row.dept||"-"} / ${row.band||"-"} / ${row.name} / ${row.type||"-"}</option>`);
@@ -881,9 +910,9 @@
       setMessage("editLeaveMessage", rows.length===0?"해당 조건의 휴가 상신 내역이 없습니다.":`${rows.length}건을 불러왔습니다.`, rows.length===0?"error":"success");
     }
 
-    function fillEditLeaveFormByIndex(index){
+    async function fillEditLeaveFormByIndex(index){
       if(index==="") return;
-      const row=getLeave()[Number(index)];
+      const row=(await getLeave()).find(x=>String(x.id)===String(index));
       if(!row) return;
       document.getElementById("editLeaveStartDate").value=row.startDate || row.date || "";
       document.getElementById("editLeaveEndDate").value=row.endDate || row.date || row.startDate || "";
@@ -905,9 +934,9 @@
       document.getElementById("workerTableWrap").style.display=workerPanelOpen ? "block" : "none";
     }
 
-    function updateWorkersView(){ renderWorkerList(); renderWorkerTable(); setMessage("workerMessage","현재 저장된 인원 데이터를 반영했습니다.","success"); }
-    function fillLeaveWorkerInfoByName(name){ const worker=getWorkers().find(w=>w.name===name); if(!worker) return; document.getElementById("leaveDept").value=worker.dept || ""; document.getElementById("leaveBand").value=worker.band || ""; }
-    function fillEditLeaveWorkerInfoByName(name){ const worker=getWorkers().find(w=>w.name===name); if(!worker) return; document.getElementById("editLeaveDept").value=worker.dept || ""; document.getElementById("editLeaveBand").value=worker.band || ""; }
+    async function updateWorkersView(){ await renderWorkerList(); await renderWorkerTable(); setMessage("workerMessage","현재 저장된 인원 데이터를 반영했습니다.","success"); }
+    async function fillLeaveWorkerInfoByName(name){ const worker=(await getWorkers()).find(w=>w.name===name); if(!worker) return; document.getElementById("leaveDept").value=worker.dept || ""; document.getElementById("leaveBand").value=worker.band || ""; }
+    async function fillEditLeaveWorkerInfoByName(name){ const worker=(await getWorkers()).find(w=>w.name===name); if(!worker) return; document.getElementById("editLeaveDept").value=worker.dept || ""; document.getElementById("editLeaveBand").value=worker.band || ""; }
 
     document.getElementById("saveLeaveBtn").addEventListener("click", async ()=>{
       try{
@@ -927,34 +956,32 @@
         if(!dept) throw new Error("부서를 선택해 주세요.");
         if(!band) throw new Error("반을 선택해 주세요.");
         if(!type) throw new Error("사유 유형을 선택해 주세요.");
-        if(!getWorkers().some(w=>w.name===name)) throw new Error("이름은 인원관리 목록에 있는 이름만 사용할 수 있습니다.");
+if(!(await getWorkers()).some(w=>w.name===name)) throw new Error("이름은 인원관리 목록에 있는 이름만 사용할 수 있습니다.");
 
         const imageData=file ? await readFileAsDataURL(file) : "";
-        const rows=getLeave();
-        rows.push({startDate,endDate,name,dept,band,type,note,imageData,submittedAt:new Date().toLocaleString("ko-KR",{hour12:false})});
-        setLeave(rows);
-        renderLeaveTable(startDate);
+        await addLeaveToDB({startDate,endDate,name,dept,band,type,note,imageData,submittedAt:new Date().toLocaleString("ko-KR",{hour12:false})});
+        await renderLeaveTable(startDate);
         setMessage("leaveMessage","휴가 상신을 저장했고, 휴가시작일 기준으로 바로 조회했습니다.","success");
       }catch(e){ setMessage("leaveMessage", e.message, "error"); }
     });
 
-    document.getElementById("searchLeaveBtn").addEventListener("click", ()=>{
+    document.getElementById("searchLeaveBtn").addEventListener("click", async ()=>{
       const queryDate=document.getElementById("leaveStartDate").value;
       if(!queryDate){ setMessage("leaveMessage","조회할 날짜를 입력해 주세요.","error"); return; }
-      renderLeaveTable(queryDate);
+      await renderLeaveTable(queryDate);
       setMessage("leaveMessage","조회가 완료되었습니다.","success");
     });
 
-    document.getElementById("leaveName").addEventListener("change", e=>fillLeaveWorkerInfoByName(e.target.value.trim()));
-    document.getElementById("leaveName").addEventListener("input", e=>fillLeaveWorkerInfoByName(e.target.value.trim()));
-    document.getElementById("editLeaveName").addEventListener("change", e=>fillEditLeaveWorkerInfoByName(e.target.value.trim()));
-    document.getElementById("editLeaveName").addEventListener("input", e=>fillEditLeaveWorkerInfoByName(e.target.value.trim()));
+    document.getElementById("leaveName").addEventListener("change", async e=>await fillLeaveWorkerInfoByName(e.target.value.trim()));
+    document.getElementById("leaveName").addEventListener("input", async e=>await fillLeaveWorkerInfoByName(e.target.value.trim()));
+    document.getElementById("editLeaveName").addEventListener("change", async e=>await fillEditLeaveWorkerInfoByName(e.target.value.trim()));
+    document.getElementById("editLeaveName").addEventListener("input", async e=>await fillEditLeaveWorkerInfoByName(e.target.value.trim()));
 
     document.getElementById("previewBtn").addEventListener("click", async ()=>{
       try{
         const file=document.getElementById("workFile").files[0];
         const imageData=file ? await readFileAsDataURL(file) : "";
-        const result=calculateWorkResult({date:document.getElementById("workDate").value, workerName:document.getElementById("workerName").value.trim(), absentName:document.getElementById("absentName").value.trim(), absenceType:document.getElementById("absenceType").value, note:document.getElementById("note").value.trim(), imageData});
+        const result=await calculateWorkResult({date:document.getElementById("workDate").value, workerName:document.getElementById("workerName").value.trim(), absentName:document.getElementById("absentName").value.trim(), absenceType:document.getElementById("absenceType").value, note:document.getElementById("note").value.trim(), imageData});
         renderCalcResult(result);
         setMessage("calcMessage","계산이 완료되었습니다.","success");
       }catch(e){
@@ -967,8 +994,8 @@
       try{
         const file=document.getElementById("workFile").files[0];
         const imageData=file ? await readFileAsDataURL(file) : "";
-        const result=calculateWorkResult({date:document.getElementById("workDate").value, workerName:document.getElementById("workerName").value.trim(), absentName:document.getElementById("absentName").value.trim(), absenceType:document.getElementById("absenceType").value, note:document.getElementById("note").value.trim(), imageData});
-        const history=getHistory();
+        const result=await calculateWorkResult({date:document.getElementById("workDate").value, workerName:document.getElementById("workerName").value.trim(), absentName:document.getElementById("absentName").value.trim(), absenceType:document.getElementById("absenceType").value, note:document.getElementById("note").value.trim(), imageData});
+        const history=await getHistory();
         const isDuplicate = history.some(item =>
           item.date === result.date &&
           item.workerName === result.workerName &&
@@ -976,38 +1003,38 @@
           item.absenceType === result.absenceType
         );
         if(isDuplicate) throw new Error("이미 저장된 연장근무입니다.");
-        history.push(result); setHistory(history);
+        await addHistoryToDB(result);
         renderCalcResult(result);
         setMessage("calcMessage","계산 후 저장했습니다.","success");
-        if(document.getElementById("historyDate").value===result.date) renderHistory(result.date, document.getElementById("historyDept").value);
+        if(document.getElementById("historyDate").value===result.date) await renderHistory(result.date, document.getElementById("historyDept").value);
       }catch(e){
         document.getElementById("calcResult").style.display="none";
         setMessage("calcMessage", e.message, "error");
       }
     });
 
-    document.getElementById("addWorkerBtn").addEventListener("click", ()=>{
+    document.getElementById("addWorkerBtn").addEventListener("click", async ()=>{
       const name=document.getElementById("newName").value.trim();
       const band=document.getElementById("newBand").value;
       const dept=document.getElementById("newDept").value;
       if(!name){ setMessage("workerMessage","이름을 입력해 주세요.","error"); return; }
-      const workers=getWorkers();
+      const workers=await getWorkers();
       if(workers.some(w=>w.name===name && w.dept===dept)){ setMessage("workerMessage","같은 부서에 동일 이름이 이미 있습니다.","error"); return; }
-      workers.push({name,band,dept}); setWorkers(workers);
+      await addWorkerToDB({name,band,dept});
       document.getElementById("newName").value="";
-      renderWorkerList(); renderWorkerTable();
+      await renderWorkerList(); await renderWorkerTable();
       setMessage("workerMessage","인원을 추가했고 이름 목록에도 바로 반영했습니다.","success");
     });
 
     document.getElementById("toggleWorkerPanelBtn").addEventListener("click", toggleWorkerPanel);
-    document.getElementById("updateWorkersBtn").addEventListener("click", updateWorkersView);
+    document.getElementById("updateWorkersBtn").addEventListener("click", async ()=>await updateWorkersView());
     document.getElementById("openWorkerDeleteBtn").addEventListener("click", ()=>openPasswordModal("인원 삭제 인증","worker-delete"));
 
-    document.getElementById("searchHistoryBtn").addEventListener("click", ()=>{
+    document.getElementById("searchHistoryBtn").addEventListener("click", async ()=>{
       const date=document.getElementById("historyDate").value;
       const dept=document.getElementById("historyDept").value;
       if(!date){ setMessage("historySummary","조회 날짜를 입력해 주세요.","error"); return; }
-      renderHistory(date, dept);
+      await renderHistory(date, dept);
     });
 
     document.getElementById("openPurchaseBtn").addEventListener("click", openPurchaseModal);
@@ -1015,11 +1042,11 @@
     document.getElementById("closePurchaseBtn").addEventListener("click", closePurchaseModal);
     document.getElementById("closePurchaseCancelBtn").addEventListener("click", closePurchaseCancelModal);
     document.getElementById("clearPurchaseBtn").addEventListener("click", clearPurchaseForm);
-    document.getElementById("loadPurchaseCancelBtn").addEventListener("click", ()=>{
+    document.getElementById("loadPurchaseCancelBtn").addEventListener("click", async ()=>{
       const applicant = document.getElementById("purchaseCancelApplicant").value.trim();
-      renderPurchaseCancelTable(applicant);
+      await renderPurchaseCancelTable(applicant);
     });
-    document.getElementById("confirmPurchaseCancelBtn").addEventListener("click", ()=>{
+    document.getElementById("confirmPurchaseCancelBtn").addEventListener("click", async ()=>{
       const checks = [...document.querySelectorAll(".purchase-cancel-check:checked")];
       if(checks.length===0){
         setMessage("purchaseCancelMessage","취소할 항목을 체크해 주세요.","error");
@@ -1033,7 +1060,7 @@
       setPurchases(items);
       renderPurchaseHistory();
       const applicant = document.getElementById("purchaseCancelApplicant").value.trim();
-      renderPurchaseCancelTable(applicant);
+      await renderPurchaseCancelTable(applicant);
       setMessage("purchaseCancelMessage","선택 항목을 취소했습니다.","success");
     });
 
@@ -1050,9 +1077,8 @@
         if(!itemName) throw new Error("품목명을 입력해 주세요.");
         if(!getWorkers().some(w=>w.name===applicant)) throw new Error("신청자는 인원관리 목록에 있는 이름만 사용할 수 있습니다.");
         const imageData=file ? await readFileAsDataURL(file) : "";
-        const purchases=getPurchases();
-        purchases.push({date,applicant,itemName,link,note,imageData}); setPurchases(purchases);
-        renderPurchaseHistory();
+        await addPurchaseToDB({date,applicant,itemName,link,note,imageData});
+        await renderPurchaseHistory();
         setMessage("purchaseMessage","구매 신청을 저장했습니다.","success");
       }catch(e){ setMessage("purchaseMessage", e.message, "error"); }
     });
@@ -1062,30 +1088,30 @@
     document.getElementById("closePasswordBtn").addEventListener("click", closePasswordModal);
     document.getElementById("cancelPasswordBtn").addEventListener("click", closePasswordModal);
 
-    document.getElementById("confirmPasswordBtn").addEventListener("click", ()=>{
+    document.getElementById("confirmPasswordBtn").addEventListener("click", async ()=>{
       const pw=document.getElementById("editPassword").value;
       if(pw!==EDIT_PASSWORD){ setMessage("passwordMessage","비밀번호가 일치하지 않습니다.","error"); return; }
       const action=passwordAction, purchaseIndex=pendingPurchaseCloseIndex, leaveIndex=pendingLeaveCloseIndex;
       closePasswordModal();
       if(action==="history-edit") openEditHistoryModal();
-      else if(action==="worker-delete") openWorkerDeleteModal();
-      else if(action==="purchase-close" && purchaseIndex!==null) closePurchaseItem(purchaseIndex);
+      else if(action==="worker-delete") await openWorkerDeleteModal();
+      else if(action==="purchase-close" && purchaseIndex!==null) await closePurchaseItem(purchaseIndex);
       else if(action==="leave-edit") openEditLeaveModal();
-      else if(action==="leave-close" && leaveIndex!==null) closeLeaveItem(leaveIndex);
+      else if(action==="leave-close" && leaveIndex!==null) await closeLeaveItem(leaveIndex);
     });
 
     document.getElementById("closeEditHistoryBtn").addEventListener("click", closeEditHistoryModal);
     document.getElementById("closeEditLeaveBtn").addEventListener("click", closeEditLeaveModal);
     document.getElementById("closeWorkerDeleteBtn").addEventListener("click", closeWorkerDeleteModal);
 
-    document.getElementById("loadEditRowsBtn").addEventListener("click", ()=>{
+    document.getElementById("loadEditRowsBtn").addEventListener("click", async ()=>{
       const date=document.getElementById("editTargetDate").value, dept=document.getElementById("editTargetDept").value;
       if(!date){ setMessage("editHistoryMessage","수정 대상 날짜를 입력해 주세요.","error"); return; }
-      populateEditRows(date, dept);
+      await populateEditRows(date, dept);
     });
-    document.getElementById("editRowSelect").addEventListener("change", e=>fillEditFormByIndex(e.target.value));
+    document.getElementById("editRowSelect").addEventListener("change", async e=>await fillEditFormByIndex(e.target.value));
 
-    document.getElementById("saveEditHistoryBtn").addEventListener("click", ()=>{
+    document.getElementById("saveEditHistoryBtn").addEventListener("click", async ()=>{
       try{
         const selectedIndex=document.getElementById("editRowSelect").value;
         if(selectedIndex==="") throw new Error("수정할 항목을 선택해 주세요.");
@@ -1094,11 +1120,11 @@
         const absentName=document.getElementById("editAbsentName").value.trim();
         const absenceType=document.getElementById("editAbsenceType").value;
         const note=document.getElementById("editNote").value.trim();
-        const history=getHistory();
+        const history=await getHistory();
         const oldRow=history[Number(selectedIndex)];
         if(!oldRow) throw new Error("대상 데이터를 찾을 수 없습니다.");
 
-        const recalculated=calculateWorkResult({date,workerName,absentName,absenceType,note,imageData:oldRow.imageData||""});
+        const recalculated=await calculateWorkResult({date,workerName,absentName,absenceType,note,imageData:oldRow.imageData||""});
         const manualTotalWork=document.getElementById("editManualTotalWork").value.trim();
         const manualOvertime=document.getElementById("editManualOvertime").value.trim();
         const manualOvertimeHours=document.getElementById("editManualOvertimeHours").value.trim();
@@ -1109,22 +1135,22 @@
         history[Number(selectedIndex)] = recalculated;
         setHistory(history);
         const dept=document.getElementById("editTargetDept").value;
-        populateEditRows(date, dept);
+        await populateEditRows(date, dept);
         document.getElementById("editRowSelect").value=String(selectedIndex);
         fillEditFormByIndex(String(selectedIndex));
-        if(document.getElementById("historyDate").value===date) renderHistory(date, document.getElementById("historyDept").value);
+        if(document.getElementById("historyDate").value===date) await renderHistory(date, document.getElementById("historyDept").value);
         setMessage("editHistoryMessage","조회결과를 수정했습니다.","success");
       }catch(e){ setMessage("editHistoryMessage", e.message, "error"); }
     });
 
-    document.getElementById("deleteEditHistoryBtn").addEventListener("click", ()=>{
+    document.getElementById("deleteEditHistoryBtn").addEventListener("click", async ()=>{
       try{
         const selectedIndex=document.getElementById("editRowSelect").value;
         const date=document.getElementById("editTargetDate").value;
         if(selectedIndex==="") throw new Error("삭제할 항목을 선택해 주세요.");
-        const history=getHistory(); history.splice(Number(selectedIndex),1); setHistory(history);
+        const history=await getHistory(); history.splice(Number(selectedIndex),1); setHistory(history);
         const dept=document.getElementById("editTargetDept").value;
-        populateEditRows(date, dept);
+        await populateEditRows(date, dept);
         document.getElementById("editWorkerName").value="";
         document.getElementById("editAbsentName").value="";
         document.getElementById("editAbsenceType").value="";
@@ -1132,19 +1158,19 @@
         document.getElementById("editManualTotalWork").value="";
         document.getElementById("editManualOvertime").value="";
         document.getElementById("editManualOvertimeHours").value="";
-        if(document.getElementById("historyDate").value===date) renderHistory(date, document.getElementById("historyDept").value);
+        if(document.getElementById("historyDate").value===date) await renderHistory(date, document.getElementById("historyDept").value);
         setMessage("editHistoryMessage","선택 항목을 삭제했습니다.","success");
       }catch(e){ setMessage("editHistoryMessage", e.message, "error"); }
     });
 
-    document.getElementById("loadEditLeaveRowsBtn").addEventListener("click", ()=>{
+    document.getElementById("loadEditLeaveRowsBtn").addEventListener("click", async ()=>{
       const date=document.getElementById("editLeaveTargetDate").value;
       const dept=document.getElementById("editLeaveSearchDept").value;
       const band=document.getElementById("editLeaveSearchBand").value;
       if(!date){ setMessage("editLeaveMessage","조회 날짜를 입력해 주세요.","error"); return; }
-      populateEditLeaveRows(date, dept, band);
+      await populateEditLeaveRows(date, dept, band);
     });
-    document.getElementById("editLeaveRowSelect").addEventListener("change", e=>fillEditLeaveFormByIndex(e.target.value));
+    document.getElementById("editLeaveRowSelect").addEventListener("change", async e=>await fillEditLeaveFormByIndex(e.target.value));
 
     document.getElementById("saveEditLeaveBtn").addEventListener("click", async ()=>{
       try{
@@ -1166,31 +1192,30 @@
         if(!dept) throw new Error("부서를 선택해 주세요.");
         if(!band) throw new Error("반을 선택해 주세요.");
         if(!type) throw new Error("사유 유형을 선택해 주세요.");
-        if(!getWorkers().some(w=>w.name===name)) throw new Error("이름은 인원관리 목록에 있는 이름만 사용할 수 있습니다.");
+if(!(await getWorkers()).some(w=>w.name===name)) throw new Error("이름은 인원관리 목록에 있는 이름만 사용할 수 있습니다.");
 
-        const rows=getLeave();
-        const oldRow=rows[Number(selectedIndex)];
+        const rows=await getLeave();
+        const oldRow=rows.find(x=>String(x.id)===String(selectedIndex));
         if(!oldRow) throw new Error("대상 데이터를 찾을 수 없습니다.");
         const imageData=file ? await readFileAsDataURL(file) : (oldRow.imageData || "");
 
-        rows[Number(selectedIndex)] = {startDate,endDate,name,dept,band,type,note,imageData,submittedAt:oldRow.submittedAt || new Date().toLocaleString("ko-KR",{hour12:false})};
-        setLeave(rows);
-        populateEditLeaveRows(document.getElementById("editLeaveTargetDate").value, document.getElementById("editLeaveSearchDept").value, document.getElementById("editLeaveSearchBand").value);
+        await updateLeaveInDB(selectedIndex, {startDate,endDate,name,dept,band,type,note,imageData,submittedAt:oldRow.submittedAt || new Date().toLocaleString("ko-KR",{hour12:false})});
+        await populateEditLeaveRows(document.getElementById("editLeaveTargetDate").value, document.getElementById("editLeaveSearchDept").value, document.getElementById("editLeaveSearchBand").value);
         document.getElementById("editLeaveRowSelect").value=String(selectedIndex);
-        fillEditLeaveFormByIndex(String(selectedIndex));
+        await fillEditLeaveFormByIndex(String(selectedIndex));
         const currentQueryDate = document.getElementById("leaveStartDate").value;
-        if(currentQueryDate && startDate <= currentQueryDate && currentQueryDate <= endDate) renderLeaveTable(currentQueryDate);
+        if(currentQueryDate && startDate <= currentQueryDate && currentQueryDate <= endDate) await renderLeaveTable(currentQueryDate);
         setMessage("editLeaveMessage","휴가 상신 내역을 수정했습니다.","success");
       }catch(e){ setMessage("editLeaveMessage", e.message, "error"); }
     });
 
-    document.getElementById("deleteEditLeaveBtn").addEventListener("click", ()=>{
+    document.getElementById("deleteEditLeaveBtn").addEventListener("click", async ()=>{
       try{
         const selectedIndex=document.getElementById("editLeaveRowSelect").value;
         const targetDate=document.getElementById("editLeaveTargetDate").value;
         if(selectedIndex==="") throw new Error("삭제할 항목을 선택해 주세요.");
-        const rows=getLeave(); rows.splice(Number(selectedIndex),1); setLeave(rows);
-        populateEditLeaveRows(targetDate, document.getElementById("editLeaveSearchDept").value, document.getElementById("editLeaveSearchBand").value);
+        await deleteLeaveFromDB(selectedIndex);
+        await populateEditLeaveRows(targetDate, document.getElementById("editLeaveSearchDept").value, document.getElementById("editLeaveSearchBand").value);
         document.getElementById("editLeaveStartDate").value="";
         document.getElementById("editLeaveEndDate").value="";
         document.getElementById("editLeaveName").value="";
@@ -1202,7 +1227,7 @@
         document.getElementById("editLeaveFileName").textContent="";
         document.getElementById("editLeavePreview").src="";
         document.getElementById("editLeavePreview").style.display="none";
-        if(document.getElementById("leaveStartDate").value===targetDate) renderLeaveTable(targetDate);
+        if(document.getElementById("leaveStartDate").value===targetDate) await renderLeaveTable(targetDate);
         setMessage("editLeaveMessage","선택 항목을 삭제했습니다.","success");
       }catch(e){ setMessage("editLeaveMessage", e.message, "error"); }
     });
@@ -1214,11 +1239,18 @@
     document.getElementById("editLeaveModal").addEventListener("click", e=>{ if(e.target.id==="editLeaveModal") closeEditLeaveModal(); });
     document.getElementById("workerDeleteModal").addEventListener("click", e=>{ if(e.target.id==="workerDeleteModal") closeWorkerDeleteModal(); });
 
-    function init(){
-      const savedWorkers=getWorkers();
-      if(!savedWorkers.length) setWorkers(DEFAULT_WORKERS_DATA);
-      renderWorkerList();
-      renderWorkerTable();
+    async function seedDefaultWorkersIfEmpty(){
+      const savedWorkers=await getWorkers();
+      if(savedWorkers.length) return;
+      for(const w of DEFAULT_WORKERS_DATA){
+        await addWorkerToDB(w);
+      }
+    }
+
+    async function init(){
+      await seedDefaultWorkersIfEmpty();
+      await renderWorkerList();
+      await renderWorkerTable();
       const today=formatDate(new Date());
       document.getElementById("leaveStartDate").value=today;
       document.getElementById("leaveEndDate").value=today;
@@ -1227,10 +1259,11 @@
       document.getElementById("purchaseDate").value=today;
       document.getElementById("workerTableWrap").style.display="none";
       document.getElementById("toggleWorkerPanelBtn").textContent="열기";
-      renderLeaveTable(today);
-      renderHistory(today, "전체");
-      renderPurchaseHistory();
+      await renderLeaveTable(today);
+      await renderHistory(today, "전체");
+      await renderPurchaseHistory();
     }
+
 
     setFilePreview("leaveFile","leavePreview","leaveFileName");
     setFilePreview("workFile","workPreview","workFileName");
