@@ -1,4 +1,6 @@
 <!DOCTYPE html>
+<!-- UI/중복저장 개선: 저장 버튼 색상/문구, 카드 검정 테두리, 휴가/연장/구매 중복저장 방지 -->
+<!-- DB/API bugfix: history edit/delete uses id, purchase save awaits getWorkers, purchase cancel deletes by id -->
 <!--
 [공용 DB API 연결 버전]
 - localStorage 저장 제거
@@ -57,7 +59,7 @@
     *{box-sizing:border-box}
     body{margin:0;font-family:Arial,"Malgun Gothic",sans-serif;background:var(--bg);color:var(--text)}
     .container{max-width:1100px;margin:0 auto;padding:16px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:16px;box-shadow:0 4px 14px rgba(0,0,0,.04)}
+    .card{background:var(--card);border:2px solid #111827;border-radius:16px;padding:16px;margin-bottom:16px;box-shadow:0 4px 14px rgba(0,0,0,.04)}
     h1,h2,h3{margin:0 0 12px}
     .subtitle{color:var(--muted);margin-bottom:16px;font-size:14px;line-height:1.5}
     .section-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
@@ -246,7 +248,7 @@
       <img id="workPreview" class="thumb" alt="연장근무 첨부 미리보기" />
 
       <div class="btn-row single-wide">
-        <button class="btn-secondary" id="saveBtn">계산 후 저장</button>
+        <button class="btn-primary" id="saveBtn">저장</button>
       </div>
 
       <div id="calcMessage" class="message"></div>
@@ -496,6 +498,34 @@
     async function getPurchases(){ return await apiGet("/api/purchases"); }
     async function addPurchaseToDB(item){ return await apiPost("/api/purchases", item); }
     async function deletePurchaseFromDB(id){ return await apiDelete(`/api/purchases/${id}`); }
+
+    function normText(value){
+      return String(value ?? "").trim();
+    }
+
+    function isSameLeaveRecord(a,b){
+      return normText(a.startDate) === normText(b.startDate)
+        && normText(a.endDate) === normText(b.endDate)
+        && normText(a.name) === normText(b.name)
+        && normText(a.dept) === normText(b.dept)
+        && normText(a.band) === normText(b.band)
+        && normText(a.type) === normText(b.type);
+    }
+
+    function isSameOvertimeRecord(a,b){
+      return normText(a.date) === normText(b.date)
+        && normText(a.workerName) === normText(b.workerName)
+        && normText(a.absentName) === normText(b.absentName)
+        && normText(a.absenceType) === normText(b.absenceType);
+    }
+
+    function isSamePurchaseRecord(a,b){
+      return normText(a.date) === normText(b.date)
+        && normText(a.applicant) === normText(b.applicant)
+        && normText(a.itemName) === normText(b.itemName)
+        && normText(a.link) === normText(b.link);
+    }
+
 
     function parseDate(dateStr){ const [y,m,d]=dateStr.split("-").map(Number); return new Date(y,m-1,d); }
     function formatDate(date){ return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`; }
@@ -996,16 +1026,11 @@ if(!(await getWorkers()).some(w=>w.name===name)) throw new Error("이름은 인�
         const imageData=file ? await readFileAsDataURL(file) : "";
         const result=await calculateWorkResult({date:document.getElementById("workDate").value, workerName:document.getElementById("workerName").value.trim(), absentName:document.getElementById("absentName").value.trim(), absenceType:document.getElementById("absenceType").value, note:document.getElementById("note").value.trim(), imageData});
         const history=await getHistory();
-        const isDuplicate = history.some(item =>
-          item.date === result.date &&
-          item.workerName === result.workerName &&
-          item.absentName === result.absentName &&
-          item.absenceType === result.absenceType
-        );
+        const isDuplicate = history.some(item => isSameOvertimeRecord(item, result));
         if(isDuplicate) throw new Error("이미 저장된 연장근무입니다.");
         await addHistoryToDB(result);
         renderCalcResult(result);
-        setMessage("calcMessage","계산 후 저장했습니다.","success");
+        setMessage("calcMessage","저장했습니다.","success");
         if(document.getElementById("historyDate").value===result.date) await renderHistory(result.date, document.getElementById("historyDept").value);
       }catch(e){
         document.getElementById("calcResult").style.display="none";
@@ -1052,13 +1077,11 @@ if(!(await getWorkers()).some(w=>w.name===name)) throw new Error("이름은 인�
         setMessage("purchaseCancelMessage","취소할 항목을 체크해 주세요.","error");
         return;
       }
-      const indexes = checks.map(x=>Number(x.value)).sort((a,b)=>b-a);
-      const items = getPurchases();
-      indexes.forEach(idx=>{
-        if(idx>=0 && idx<items.length) items.splice(idx,1);
-      });
-      setPurchases(items);
-      renderPurchaseHistory();
+      const ids = [...new Set(checks.map(x=>Number(x.value)).filter(id=>!Number.isNaN(id)))];
+      for(const id of ids){
+        await deletePurchaseFromDB(id);
+      }
+      await renderPurchaseHistory();
       const applicant = document.getElementById("purchaseCancelApplicant").value.trim();
       await renderPurchaseCancelTable(applicant);
       setMessage("purchaseCancelMessage","선택 항목을 취소했습니다.","success");
@@ -1075,7 +1098,14 @@ if(!(await getWorkers()).some(w=>w.name===name)) throw new Error("이름은 인�
         if(!date) throw new Error("신청일을 입력해 주세요.");
         if(!applicant) throw new Error("신청자를 입력해 주세요.");
         if(!itemName) throw new Error("품목명을 입력해 주세요.");
-        if(!getWorkers().some(w=>w.name===applicant)) throw new Error("신청자는 인원관리 목록에 있는 이름만 사용할 수 있습니다.");
+        if(!(await getWorkers()).some(w=>w.name===applicant)) throw new Error("신청자는 인원관리 목록에 있는 이름만 사용할 수 있습니다.");
+
+        const purchaseDraft = {date,applicant,itemName,link};
+        const existingPurchases = await getPurchases();
+        if(existingPurchases.some(item=>isSamePurchaseRecord(item, purchaseDraft))){
+          throw new Error("이미 저장된 구매신청입니다.");
+        }
+
         const imageData=file ? await readFileAsDataURL(file) : "";
         await addPurchaseToDB({date,applicant,itemName,link,note,imageData});
         await renderPurchaseHistory();
@@ -1121,7 +1151,7 @@ if(!(await getWorkers()).some(w=>w.name===name)) throw new Error("이름은 인�
         const absenceType=document.getElementById("editAbsenceType").value;
         const note=document.getElementById("editNote").value.trim();
         const history=await getHistory();
-        const oldRow=history[Number(selectedIndex)];
+        const oldRow=history.find(x=>String(x.id)===String(selectedIndex));
         if(!oldRow) throw new Error("대상 데이터를 찾을 수 없습니다.");
 
         const recalculated=await calculateWorkResult({date,workerName,absentName,absenceType,note,imageData:oldRow.imageData||""});
@@ -1132,12 +1162,11 @@ if(!(await getWorkers()).some(w=>w.name===name)) throw new Error("이름은 인�
         if(manualOvertime) recalculated.overtime=manualOvertime;
         if(manualOvertimeHours!=="") recalculated.overtimeHours=Number(manualOvertimeHours);
 
-        history[Number(selectedIndex)] = recalculated;
-        setHistory(history);
+        await updateHistoryInDB(selectedIndex, recalculated);
         const dept=document.getElementById("editTargetDept").value;
         await populateEditRows(date, dept);
         document.getElementById("editRowSelect").value=String(selectedIndex);
-        fillEditFormByIndex(String(selectedIndex));
+        await fillEditFormByIndex(String(selectedIndex));
         if(document.getElementById("historyDate").value===date) await renderHistory(date, document.getElementById("historyDept").value);
         setMessage("editHistoryMessage","조회결과를 수정했습니다.","success");
       }catch(e){ setMessage("editHistoryMessage", e.message, "error"); }
@@ -1148,7 +1177,7 @@ if(!(await getWorkers()).some(w=>w.name===name)) throw new Error("이름은 인�
         const selectedIndex=document.getElementById("editRowSelect").value;
         const date=document.getElementById("editTargetDate").value;
         if(selectedIndex==="") throw new Error("삭제할 항목을 선택해 주세요.");
-        const history=await getHistory(); history.splice(Number(selectedIndex),1); setHistory(history);
+        await deleteHistoryFromDB(selectedIndex);
         const dept=document.getElementById("editTargetDept").value;
         await populateEditRows(date, dept);
         document.getElementById("editWorkerName").value="";
