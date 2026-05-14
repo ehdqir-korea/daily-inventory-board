@@ -38,7 +38,7 @@ def init_db():
 # =========================
 @app.route("/")
 def index():
-    return send_from_directory(".", "Overtime.html")
+    return send_from_directory(".", "index.html")
 
 
 # =========================
