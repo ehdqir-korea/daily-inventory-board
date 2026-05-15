@@ -1,6 +1,4 @@
 <!DOCTYPE html>
-<!-- PC 휴가상신 이름 클릭 시 인원목록 표시 기능 추가 -->
-<!-- 인원목록 복구 + 휴가상신 부서/반 필터 안정화 + 마감건 삭제 버튼 추가 -->
 <!-- 휴가상신 마감건 표시 개선: 마감 후 삭제하지 않고 옅은 파란색 + 마감됨 표시 -->
 <!-- 팝업 알림/휴가상신 부서·반별 이름목록/기타 사유유형 추가 반영 -->
 <!-- UI/중복저장 개선: 저장 버튼 색상/문구, 카드 검정 테두리, 휴가/연장/구매 중복저장 방지 -->
@@ -137,36 +135,6 @@
     .leave-closed-card{background:#eaf4ff !important;border-color:#93c5fd !important;}
     .status-closed{display:inline-block;padding:3px 8px;border-radius:999px;background:#bfdbfe;color:#1e3a8a;font-size:12px;font-weight:800;}
     .status-open{display:inline-block;padding:3px 8px;border-radius:999px;background:#f3f4f6;color:#374151;font-size:12px;font-weight:700;}
-  
-    .name-suggest-wrap{position:relative;}
-    .name-suggest-box{
-      display:none;
-      position:absolute;
-      left:0;
-      right:0;
-      top:100%;
-      z-index:50;
-      max-height:260px;
-      overflow-y:auto;
-      background:#ffffff;
-      border:1px solid #111827;
-      border-radius:12px;
-      box-shadow:0 12px 24px rgba(15,23,42,.18);
-      margin-top:4px;
-      padding:6px;
-    }
-    .name-suggest-box.show{display:block;}
-    .name-suggest-item{
-      padding:10px 12px;
-      border-radius:8px;
-      cursor:pointer;
-      font-size:14px;
-      line-height:1.35;
-    }
-    .name-suggest-item:hover{background:#eaf4ff;}
-    .name-suggest-main{font-weight:800;color:#111827;}
-    .name-suggest-sub{font-size:12px;color:#64748b;margin-top:2px;}
-
   </style>
 </head>
 <body>
@@ -194,21 +162,20 @@
       <div class="field-grid-3">
         <div>
           <label for="leaveName">이름</label>
-          <div class="name-suggest-wrap">
-            <input id="leaveName" data-worker-input="true" placeholder="이름 입력" />
-            <div id="leaveNameSuggestBox" class="name-suggest-box"></div>
-          </div>
+          <input id="leaveName" data-worker-input="true" placeholder="이름 입력" />
         </div>
         <div>
           <label for="leaveDept">부서</label>
-          <select id="leaveDept"><option value="" selected>선택</option>
+          <select id="leaveDept">
+            <option value="">선택</option>
             <option value="제분">제분</option><option value="정선">정선</option><option value="대포장">대포장</option>
             <option value="소포장">소포장</option><option value="품질관리">품질관리</option><option value="기술">기술</option><option value="생산2팀">생산2팀</option>
           </select>
         </div>
         <div>
           <label for="leaveBand">반</label>
-          <select id="leaveBand"><option value="" selected>선택</option>
+          <select id="leaveBand">
+            <option value="">선택</option>
             <option value="갑">갑</option><option value="을">을</option><option value="병">병</option><option value="없음">없음</option>
           </select>
         </div>
@@ -425,20 +392,17 @@
       <label for="editLeaveEndDate">휴가 종료일</label><input type="date" id="editLeaveEndDate" />
       <div class="field-grid-3">
         <div>
-          <label for="editLeaveName">이름</label>
-        <div class="name-suggest-wrap">
-          <input id="editLeaveName" data-worker-input="true" placeholder="이름 입력" />
-          <div id="editLeaveNameSuggestBox" class="name-suggest-box"></div>
-        </div>
+          <label for="editLeaveName">이름</label><input id="editLeaveName" data-worker-input="true" placeholder="이름 입력" />
         </div>
         <div>
           <label for="editLeaveDept">부서</label>
-          <select id="editLeaveDept"><option value="" selected>선택</option><option value="제분">제분</option><option value="정선">정선</option><option value="대포장">대포장</option>
+          <select id="editLeaveDept">
+            <option value="">선택</option><option value="제분">제분</option><option value="정선">정선</option><option value="대포장">대포장</option>
             <option value="소포장">소포장</option><option value="품질관리">품질관리</option><option value="기술">기술</option><option value="생산2팀">생산2팀</option>
           </select>
         </div>
         <div>
-          <label for="editLeaveBand">반</label><select id="editLeaveBand"><option value="" selected>선택</option><option value="갑">갑</option><option value="을">을</option><option value="병">병</option><option value="없음">없음</option></select>
+          <label for="editLeaveBand">반</label><select id="editLeaveBand"><option value="">선택</option><option value="갑">갑</option><option value="을">을</option><option value="병">병</option><option value="없음">없음</option></select>
         </div>
       </div>
       <label for="editLeaveType">사유 유형</label>
@@ -750,65 +714,6 @@
       });
     }
 
-async function getFilteredLeaveWorkers(deptSelectId, bandSelectId){
-      const dept = document.getElementById(deptSelectId)?.value || "";
-      const band = document.getElementById(bandSelectId)?.value || "";
-      const workers = await getWorkers();
-
-      return workers
-        .filter(w => !dept || w.dept === dept)
-        .filter(w => !band || w.band === band)
-        .sort((a,b)=>a.name.localeCompare(b.name,"ko"));
-    }
-
-    async function renderNameSuggestBox({boxId, inputId, deptSelectId, bandSelectId, onSelect}){
-      const box = document.getElementById(boxId);
-      const input = document.getElementById(inputId);
-      if(!box || !input) return;
-
-      if(IS_MOBILE){
-        box.classList.remove("show");
-        box.innerHTML = "";
-        return;
-      }
-
-      const workers = await getFilteredLeaveWorkers(deptSelectId, bandSelectId);
-      if(!workers.length){
-        box.innerHTML = `<div class="name-suggest-item"><div class="name-suggest-main">해당 조건의 인원이 없습니다</div></div>`;
-      }else{
-        box.innerHTML = workers.map(w=>`
-          <div class="name-suggest-item" data-name="${w.name}" data-dept="${w.dept}" data-band="${w.band}">
-            <div class="name-suggest-main">${w.name}</div>
-            <div class="name-suggest-sub">${w.band || "-"} / ${w.dept || "-"}</div>
-          </div>
-        `).join("");
-
-        box.querySelectorAll(".name-suggest-item[data-name]").forEach(el=>{
-          el.addEventListener("mousedown", e=>{
-            e.preventDefault();
-            input.value = el.dataset.name || "";
-            if(typeof onSelect === "function"){
-              onSelect({
-                name: el.dataset.name || "",
-                dept: el.dataset.dept || "",
-                band: el.dataset.band || ""
-              });
-            }
-            box.classList.remove("show");
-          });
-        });
-      }
-
-      box.classList.add("show");
-    }
-
-    function hideNameSuggestBox(boxId){
-      setTimeout(()=>{
-        const box = document.getElementById(boxId);
-        if(box) box.classList.remove("show");
-      }, 150);
-    }
-
     function readFileAsDataURL(file){ return new Promise((resolve,reject)=>{ if(!file){ resolve(""); return; } const reader=new FileReader(); reader.onload=()=>resolve(reader.result); reader.onerror=reject; reader.readAsDataURL(file); }); }
     function setFilePreview(fileInputId, previewId, fileNameId){
       const input=document.getElementById(fileInputId), preview=document.getElementById(previewId), fileName=document.getElementById(fileNameId);
@@ -833,13 +738,13 @@ async function getFilteredLeaveWorkers(deptSelectId, bandSelectId){
       });
     }
 
-    async async function renderWorkerList(){
+    async function renderWorkerList(){
       const workers=(await getWorkers()).sort((a,b)=>a.dept.localeCompare(b.dept,"ko")||a.name.localeCompare(b.name,"ko"));
       const extraOptions='<option value="잔업특근">잔업특근</option>';
       document.getElementById("workersList").innerHTML = workers.map(w=>`<option value="${w.name}">${w.name} (${w.band}/${w.dept})</option>`).join("") + extraOptions;
       enableDesktopDatalistOnly();
-      await updateLeaveNameList();
-      await updateEditLeaveNameList();
+      updateLeaveNameList();
+      updateEditLeaveNameList();
     }
 
     async function renderWorkerTable(){
@@ -901,7 +806,7 @@ async function getFilteredLeaveWorkers(deptSelectId, bandSelectId){
         const closed = isLeaveClosed(item);
         const noteText = displayLeaveNote(item.note);
         const statusHtml = closed
-          ? `<span class="status-closed">마감됨</span> <button class="btn-danger" onclick="deleteClosedLeave(${item.__index})">삭제</button>`
+          ? `<span class="status-closed">마감됨</span>`
           : `<button class="btn-danger" onclick="requestLeaveClose(${item.__index})">마감</button>`;
         html += `<tr class="${closed ? "leave-closed-row" : ""}"><td>${period}</td><td>${item.submittedAt||"-"}</td><td>${item.dept||"-"}</td><td>${item.band||"-"}</td><td>${item.name}</td><td>${item.type||"-"}</td><td>${noteText}</td><td>${item.imageData?`<img src="${item.imageData}" class="purchase-img" alt="첨부">`:"-"}</td><td>${statusHtml}</td></tr>`;
       });
@@ -913,7 +818,7 @@ async function getFilteredLeaveWorkers(deptSelectId, bandSelectId){
         const closed = isLeaveClosed(item);
         const noteText = displayLeaveNote(item.note);
         const statusHtml = closed
-          ? `<span class="status-closed">마감됨</span> <button class="btn-danger" onclick="deleteClosedLeave(${item.__index})">삭제</button>`
+          ? `<span class="status-closed">마감됨</span>`
           : `<button class="btn-danger" onclick="requestLeaveClose(${item.__index})">마감</button>`;
         return `<div class="mobile-item ${closed ? "leave-closed-card" : ""}"><div class="title">${item.name} / ${item.type||"-"} ${closed ? `<span class="status-closed">마감됨</span>` : ""}</div><div class="summary-line">휴가기간: ${period}</div><details><summary>상세보기</summary><div class="row">상신일시: ${item.submittedAt||"-"}</div><div class="row">부서/반: ${item.dept||"-"} / ${item.band||"-"}</div><div class="row">비고: ${noteText}</div><div class="row">첨부파일: ${item.imageData?`<img src="${item.imageData}" class="purchase-img" alt="첨부">`:"-"}</div><div class="mobile-actions">${statusHtml}</div></details></div>`;
       }).join("");
@@ -1053,7 +958,7 @@ async function getFilteredLeaveWorkers(deptSelectId, bandSelectId){
       document.getElementById("editLeavePreview").src="";
       document.getElementById("editLeavePreview").style.display="none";
       setMessage("editLeaveMessage","", "success");
-      await updateEditLeaveNameList();
+      updateEditLeaveNameList();
     }
     function closeEditLeaveModal(){ document.getElementById("editLeaveModal").classList.remove("show"); }
 
@@ -1098,28 +1003,6 @@ async function getFilteredLeaveWorkers(deptSelectId, bandSelectId){
         submittedAt: target.submittedAt || ""
       });
 
-
-      await renderLeaveTable(document.getElementById("leaveStartDate").value || "");
-    }
-
-    async function deleteClosedLeave(id){
-      const leaves = await getLeave();
-      const target = leaves.find(item=>Number(item.id)===Number(id));
-      if(!target){
-        showPopup("삭제할 휴가 상신 건을 찾을 수 없습니다.");
-        return;
-      }
-
-      if(!isLeaveClosed(target)){
-        showPopup("마감된 휴가만 삭제할 수 있습니다.");
-        return;
-      }
-
-      if(!confirm("마감된 휴가 상신 건을 삭제하시겠습니까?")){
-        return;
-      }
-
-      await deleteLeaveFromDB(id);
       await renderLeaveTable(document.getElementById("leaveStartDate").value || "");
     }
     function requestLeaveClose(id){ pendingLeaveCloseIndex=id; openPasswordModal("휴가 상신 마감 인증","leave-close"); }
