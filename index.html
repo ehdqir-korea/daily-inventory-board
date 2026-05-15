@@ -1,7 +1,5 @@
 <!DOCTYPE html>
-<!-- matchedWorker 오류 수정 + 휴가상신 부서/반 필터 안정화 + DB 인원 유지 -->
-<!-- 휴가상신 부서 선택값을 인원관리 부서 기준으로 자동 구성하도록 수정 -->
-<!-- 휴가상신 이름목록 필터 기본값 수정 + 마감됨 옆 삭제 버튼 추가 -->
+<!-- 인원목록 복구 + 휴가상신 부서/반 필터 안정화 + 마감건 삭제 버튼 추가 -->
 <!-- 휴가상신 마감건 표시 개선: 마감 후 삭제하지 않고 옅은 파란색 + 마감됨 표시 -->
 <!-- 팝업 알림/휴가상신 부서·반별 이름목록/기타 사유유형 추가 반영 -->
 <!-- UI/중복저장 개선: 저장 버튼 색상/문구, 카드 검정 테두리, 휴가/연장/구매 중복저장 방지 -->
@@ -169,7 +167,10 @@
         </div>
         <div>
           <label for="leaveDept">부서</label>
-          <select id="leaveDept"><option value="" selected>선택</option></select>
+          <select id="leaveDept"><option value="" selected>선택</option>
+            <option value="제분">제분</option><option value="정선">정선</option><option value="대포장">대포장</option>
+            <option value="소포장">소포장</option><option value="품질관리">품질관리</option><option value="기술">기술</option><option value="생산2팀">생산2팀</option>
+          </select>
         </div>
         <div>
           <label for="leaveBand">반</label>
@@ -394,7 +395,9 @@
         </div>
         <div>
           <label for="editLeaveDept">부서</label>
-          <select id="editLeaveDept"><option value="" selected>선택</option></select>
+          <select id="editLeaveDept"><option value="" selected>선택</option><option value="제분">제분</option><option value="정선">정선</option><option value="대포장">대포장</option>
+            <option value="소포장">소포장</option><option value="품질관리">품질관리</option><option value="기술">기술</option><option value="생산2팀">생산2팀</option>
+          </select>
         </div>
         <div>
           <label for="editLeaveBand">반</label><select id="editLeaveBand"><option value="" selected>선택</option><option value="갑">갑</option><option value="을">을</option><option value="병">병</option><option value="없음">없음</option></select>
@@ -681,14 +684,6 @@
       input.setAttribute("list", datalistId);
 
       const workers = await getWorkers();
-
-      /*
-        휴가상신 이름 목록 필터 규칙
-        1) 부서/반 둘 다 선택 안 함: 전체 인원 표시
-        2) 부서만 선택: 해당 부서 전체 표시
-        3) 반만 선택: 해당 반 전체 표시
-        4) 부서+반 선택: 해당 부서+반 인원만 표시
-      */
       const filtered = workers
         .filter(w => !dept || w.dept === dept)
         .filter(w => !band || w.band === band)
@@ -717,31 +712,6 @@
       });
     }
 
-async function renderLeaveDeptOptions(){
-      const workers = await getWorkers();
-      const depts = [...new Set(workers.map(w=>w.dept).filter(Boolean))]
-        .sort((a,b)=>a.localeCompare(b,"ko"));
-
-      const optionHtml = '<option value="" selected>선택</option>' +
-        depts.map(d=>`<option value="${d}">${d}</option>`).join("");
-
-      const leaveDept = document.getElementById("leaveDept");
-      const editLeaveDept = document.getElementById("editLeaveDept");
-
-      const oldLeaveDept = leaveDept?.value || "";
-      const oldEditLeaveDept = editLeaveDept?.value || "";
-
-      if(leaveDept){
-        leaveDept.innerHTML = optionHtml;
-        if(depts.includes(oldLeaveDept)) leaveDept.value = oldLeaveDept;
-      }
-
-      if(editLeaveDept){
-        editLeaveDept.innerHTML = optionHtml;
-        if(depts.includes(oldEditLeaveDept)) editLeaveDept.value = oldEditLeaveDept;
-      }
-    }
-
     function readFileAsDataURL(file){ return new Promise((resolve,reject)=>{ if(!file){ resolve(""); return; } const reader=new FileReader(); reader.onload=()=>resolve(reader.result); reader.onerror=reject; reader.readAsDataURL(file); }); }
     function setFilePreview(fileInputId, previewId, fileNameId){
       const input=document.getElementById(fileInputId), preview=document.getElementById(previewId), fileName=document.getElementById(fileNameId);
@@ -766,12 +736,11 @@ async function renderLeaveDeptOptions(){
       });
     }
 
-    async async async function renderWorkerList(){
+    async async function renderWorkerList(){
       const workers=(await getWorkers()).sort((a,b)=>a.dept.localeCompare(b.dept,"ko")||a.name.localeCompare(b.name,"ko"));
       const extraOptions='<option value="잔업특근">잔업특근</option>';
       document.getElementById("workersList").innerHTML = workers.map(w=>`<option value="${w.name}">${w.name} (${w.band}/${w.dept})</option>`).join("") + extraOptions;
       enableDesktopDatalistOnly();
-      await renderLeaveDeptOptions();
       await updateLeaveNameList();
       await updateEditLeaveNameList();
     }
@@ -987,7 +956,7 @@ async function renderLeaveDeptOptions(){
       document.getElementById("editLeavePreview").src="";
       document.getElementById("editLeavePreview").style.display="none";
       setMessage("editLeaveMessage","", "success");
-      updateEditLeaveNameList();
+      await updateEditLeaveNameList();
     }
     function closeEditLeaveModal(){ document.getElementById("editLeaveModal").classList.remove("show"); }
 
@@ -1036,9 +1005,9 @@ async function renderLeaveDeptOptions(){
       await renderLeaveTable(document.getElementById("leaveStartDate").value || "");
     }
 
-    async function deleteClosedLeave(index){
+    async function deleteClosedLeave(id){
       const leaves = await getLeave();
-      const target = leaves[index];
+      const target = leaves.find(item=>Number(item.id)===Number(id));
       if(!target){
         showPopup("삭제할 휴가 상신 건을 찾을 수 없습니다.");
         return;
@@ -1053,7 +1022,7 @@ async function renderLeaveDeptOptions(){
         return;
       }
 
-      await deleteLeaveFromDB(target.id);
+      await deleteLeaveFromDB(id);
       await renderLeaveTable(document.getElementById("leaveStartDate").value || "");
     }
     function requestLeaveClose(id){ pendingLeaveCloseIndex=id; openPasswordModal("휴가 상신 마감 인증","leave-close"); }
@@ -1153,7 +1122,7 @@ async function renderLeaveDeptOptions(){
         if(!dept) throw new Error("부서를 선택해 주세요.");
         if(!band) throw new Error("반을 선택해 주세요.");
         if(!type) throw new Error("사유 유형을 선택해 주세요.");
-if(!matchedWorker) throw new Error("이름은 인원관리 목록에 있는 이름만 사용할 수 있습니다.");
+if(!(await getWorkers()).some(w=>w.name===name)) throw new Error("이름은 인원관리 목록에 있는 이름만 사용할 수 있습니다.");
 
         const leaveDraft = {startDate,endDate,name,dept,band,type};
         const existingLeaves = await getLeave();
