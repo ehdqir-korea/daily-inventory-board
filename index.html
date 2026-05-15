@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- 휴가상신 이름목록 필터 기본값 수정 + 마감됨 옆 삭제 버튼 추가 -->
 <!-- 휴가상신 마감건 표시 개선: 마감 후 삭제하지 않고 옅은 파란색 + 마감됨 표시 -->
 <!-- 팝업 알림/휴가상신 부서·반별 이름목록/기타 사유유형 추가 반영 -->
 <!-- UI/중복저장 개선: 저장 버튼 색상/문구, 카드 검정 테두리, 휴가/연장/구매 중복저장 방지 -->
@@ -166,16 +167,14 @@
         </div>
         <div>
           <label for="leaveDept">부서</label>
-          <select id="leaveDept">
-            <option value="">선택</option>
+          <select id="leaveDept"><option value="" selected>선택</option>
             <option value="제분">제분</option><option value="정선">정선</option><option value="대포장">대포장</option>
             <option value="소포장">소포장</option><option value="품질관리">품질관리</option><option value="기술">기술</option><option value="생산2팀">생산2팀</option>
           </select>
         </div>
         <div>
           <label for="leaveBand">반</label>
-          <select id="leaveBand">
-            <option value="">선택</option>
+          <select id="leaveBand"><option value="" selected>선택</option>
             <option value="갑">갑</option><option value="을">을</option><option value="병">병</option><option value="없음">없음</option>
           </select>
         </div>
@@ -396,13 +395,12 @@
         </div>
         <div>
           <label for="editLeaveDept">부서</label>
-          <select id="editLeaveDept">
-            <option value="">선택</option><option value="제분">제분</option><option value="정선">정선</option><option value="대포장">대포장</option>
+          <select id="editLeaveDept"><option value="" selected>선택</option><option value="제분">제분</option><option value="정선">정선</option><option value="대포장">대포장</option>
             <option value="소포장">소포장</option><option value="품질관리">품질관리</option><option value="기술">기술</option><option value="생산2팀">생산2팀</option>
           </select>
         </div>
         <div>
-          <label for="editLeaveBand">반</label><select id="editLeaveBand"><option value="">선택</option><option value="갑">갑</option><option value="을">을</option><option value="병">병</option><option value="없음">없음</option></select>
+          <label for="editLeaveBand">반</label><select id="editLeaveBand"><option value="" selected>선택</option><option value="갑">갑</option><option value="을">을</option><option value="병">병</option><option value="없음">없음</option></select>
         </div>
       </div>
       <label for="editLeaveType">사유 유형</label>
@@ -686,6 +684,14 @@
       input.setAttribute("list", datalistId);
 
       const workers = await getWorkers();
+
+      /*
+        휴가상신 이름 목록 필터 규칙
+        1) 부서/반 둘 다 선택 안 함: 전체 인원 표시
+        2) 부서만 선택: 해당 부서 전체 표시
+        3) 반만 선택: 해당 반 전체 표시
+        4) 부서+반 선택: 해당 부서+반 인원만 표시
+      */
       const filtered = workers
         .filter(w => !dept || w.dept === dept)
         .filter(w => !band || w.band === band)
@@ -806,7 +812,7 @@
         const closed = isLeaveClosed(item);
         const noteText = displayLeaveNote(item.note);
         const statusHtml = closed
-          ? `<span class="status-closed">마감됨</span>`
+          ? `<span class="status-closed">마감됨</span> <button class="btn-danger" onclick="deleteClosedLeave(${item.__index})">삭제</button>`
           : `<button class="btn-danger" onclick="requestLeaveClose(${item.__index})">마감</button>`;
         html += `<tr class="${closed ? "leave-closed-row" : ""}"><td>${period}</td><td>${item.submittedAt||"-"}</td><td>${item.dept||"-"}</td><td>${item.band||"-"}</td><td>${item.name}</td><td>${item.type||"-"}</td><td>${noteText}</td><td>${item.imageData?`<img src="${item.imageData}" class="purchase-img" alt="첨부">`:"-"}</td><td>${statusHtml}</td></tr>`;
       });
@@ -818,7 +824,7 @@
         const closed = isLeaveClosed(item);
         const noteText = displayLeaveNote(item.note);
         const statusHtml = closed
-          ? `<span class="status-closed">마감됨</span>`
+          ? `<span class="status-closed">마감됨</span> <button class="btn-danger" onclick="deleteClosedLeave(${item.__index})">삭제</button>`
           : `<button class="btn-danger" onclick="requestLeaveClose(${item.__index})">마감</button>`;
         return `<div class="mobile-item ${closed ? "leave-closed-card" : ""}"><div class="title">${item.name} / ${item.type||"-"} ${closed ? `<span class="status-closed">마감됨</span>` : ""}</div><div class="summary-line">휴가기간: ${period}</div><details><summary>상세보기</summary><div class="row">상신일시: ${item.submittedAt||"-"}</div><div class="row">부서/반: ${item.dept||"-"} / ${item.band||"-"}</div><div class="row">비고: ${noteText}</div><div class="row">첨부파일: ${item.imageData?`<img src="${item.imageData}" class="purchase-img" alt="첨부">`:"-"}</div><div class="mobile-actions">${statusHtml}</div></details></div>`;
       }).join("");
@@ -1003,6 +1009,28 @@
         submittedAt: target.submittedAt || ""
       });
 
+
+      await renderLeaveTable(document.getElementById("leaveStartDate").value || "");
+    }
+
+    async function deleteClosedLeave(index){
+      const leaves = await getLeave();
+      const target = leaves[index];
+      if(!target){
+        showPopup("삭제할 휴가 상신 건을 찾을 수 없습니다.");
+        return;
+      }
+
+      if(!isLeaveClosed(target)){
+        showPopup("마감된 휴가만 삭제할 수 있습니다.");
+        return;
+      }
+
+      if(!confirm("마감된 휴가 상신 건을 삭제하시겠습니까?")){
+        return;
+      }
+
+      await deleteLeaveFromDB(target.id);
       await renderLeaveTable(document.getElementById("leaveStartDate").value || "");
     }
     function requestLeaveClose(id){ pendingLeaveCloseIndex=id; openPasswordModal("휴가 상신 마감 인증","leave-close"); }
@@ -1102,7 +1130,7 @@
         if(!dept) throw new Error("부서를 선택해 주세요.");
         if(!band) throw new Error("반을 선택해 주세요.");
         if(!type) throw new Error("사유 유형을 선택해 주세요.");
-if(!(await getWorkers()).some(w=>w.name===name)) throw new Error("이름은 인원관리 목록에 있는 이름만 사용할 수 있습니다.");
+if(!matchedWorker) throw new Error("이름은 인원관리 목록에 있는 이름만 사용할 수 있습니다.");
 
         const leaveDraft = {startDate,endDate,name,dept,band,type};
         const existingLeaves = await getLeave();
