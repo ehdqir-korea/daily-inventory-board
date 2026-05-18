@@ -1395,13 +1395,21 @@ if(!(await getWorkers()).some(w=>w.name===name)) throw new Error("이름은 인�
     document.getElementById("editLeaveModal").addEventListener("click", e=>{ if(e.target.id==="editLeaveModal") closeEditLeaveModal(); });
     document.getElementById("workerDeleteModal").addEventListener("click", e=>{ if(e.target.id==="workerDeleteModal") closeWorkerDeleteModal(); });
 
-    async function seedDefaultWorkersIfEmpty(){
-      const savedWorkers=await getWorkers();
-      if(savedWorkers.length) return;
-      for(const w of DEFAULT_WORKERS_DATA){
-        await addWorkerToDB(w);
-      }
+async function seedDefaultWorkersIfEmpty(){
+  const savedWorkers = await getWorkers();
+
+  for(const w of DEFAULT_WORKERS_DATA){
+    const exists = savedWorkers.some(x =>
+      x.name === w.name &&
+      x.band === w.band &&
+      x.dept === w.dept
+    );
+
+    if(!exists){
+      await addWorkerToDB(w);
     }
+  }
+}
 
     async function init(){
       await seedDefaultWorkersIfEmpty();
