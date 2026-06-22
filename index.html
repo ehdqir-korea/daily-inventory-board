@@ -645,9 +645,15 @@
       return 9;
     }
 
+    function getActionSortKey(actionText){
+      // 작업내용 정렬 기준: 전체 문구가 아니라 앞 3글자 기준
+      // 예: "공민규 대체근무", "공민규 휴가대체" → 둘 다 "공민규" 기준 정렬
+      return String(actionText || "").trim().slice(0,3);
+    }
+
     function sortHistoryRows(rows){
       return rows.sort((a,b)=>{
-        const actionCompare = String(a.actionText || "").localeCompare(String(b.actionText || ""),"ko");
+        const actionCompare = getActionSortKey(a.actionText).localeCompare(getActionSortKey(b.actionText),"ko");
         if(actionCompare !== 0) return actionCompare;
 
         const timeCompare = getTotalWorkSortRank(a.totalWork) - getTotalWorkSortRank(b.totalWork);
